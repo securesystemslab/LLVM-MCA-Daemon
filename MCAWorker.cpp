@@ -1,5 +1,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -64,13 +66,17 @@ static cl::opt<unsigned>
                    cl::desc("Number of MCA simulation iteration"),
                    cl::init(1U));
 
-MCAWorker::MCAWorker(const MCSubtargetInfo &TheSTI,
+MCAWorker::MCAWorker(const Target &T,
+                     const MCSubtargetInfo &TheSTI,
                      mca::Context &MCA,
                      const mca::PipelineOptions &PO,
                      mca::InstrBuilder &IB,
+                     MCContext &C,
+                     const MCAsmInfo &AI,
                      const MCInstrInfo &II,
                      MCInstPrinter &IP)
-  : STI(TheSTI), MCAIB(IB), MCII(II), MIP(IP),
+  : TheTarget(T), STI(TheSTI),
+    MCAIB(IB), Ctx(C), MAI(AI), MCII(II), MIP(IP),
     TraceMIs(), GetTraceMISize([this]{ return TraceMIs.size(); }),
     GetRecycledInst([this](const mca::InstrDesc &Desc) -> mca::Instruction* {
                       if (RecycledInsts.count(&Desc)) {

@@ -13,7 +13,9 @@
 #include "Brokers/Broker.h"
 
 namespace llvm {
+class Target;
 class ToolOutputFile;
+class MCAsmInfo;
 class MCContext;
 class MCSubtargetInfo;
 class MCInst;
@@ -31,8 +33,11 @@ class Instruction;
 
 namespace mcad {
 class MCAWorker {
+  const Target &TheTarget;
   const MCSubtargetInfo &STI;
   mca::InstrBuilder &MCAIB;
+  MCContext &Ctx;
+  const MCAsmInfo &MAI;
   const MCInstrInfo &MCII;
   MCInstPrinter &MIP;
   std::unique_ptr<mca::Pipeline> MCAPipeline;
@@ -53,17 +58,20 @@ class MCAWorker {
 
   TimerGroup Timers;
 
-  Optional<Broker> TheBroker;
+  std::unique_ptr<Broker> TheBroker;
 
   Error runPipeline();
 
 public:
   MCAWorker() = delete;
 
-  MCAWorker(const MCSubtargetInfo &STI,
+  MCAWorker(const Target &T,
+            const MCSubtargetInfo &STI,
             mca::Context &MCA,
             const mca::PipelineOptions &PO,
             mca::InstrBuilder &IB,
+            MCContext &Ctx,
+            const MCAsmInfo &MAI,
             const MCInstrInfo &II,
             MCInstPrinter &IP);
 
@@ -78,8 +86,24 @@ public:
     explicit BrokerFacade(MCAWorker &W) : Worker(W) {}
 
   public:
-    void setBroker(Broker &&B) {
+    void setBroker(std::unique_ptr<Broker> &&B) {
       Worker.TheBroker = std::move(B);
+    }
+
+    const Target &getTarget() const {
+      return Worker.TheTarget;
+    }
+
+    MCContext &getCtx() const {
+      return Worker.Ctx;
+    }
+
+    const MCAsmInfo &getAsmInfo() const {
+      return Worker.MAI;
+    }
+
+    const MCInstrInfo &getInstrInfo() const {
+      return Worker.MCII;
     }
 
     const MCSubtargetInfo &getSTI() const {

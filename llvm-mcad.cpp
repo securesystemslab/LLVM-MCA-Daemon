@@ -33,6 +33,7 @@
 #include "llvm/Support/WithColor.h"
 #include <string>
 
+#include "Brokers/AsmFileBroker.h"
 #include "MCAWorker.h"
 #include "PipelinePrinter.h"
 
@@ -179,7 +180,11 @@ int main(int argc, char **argv) {
                           /*AssumeNoAlias=*/true,
                           /*EnableBottleneckAnalysis=*/false);
 
-  mcad::MCAWorker Worker(*STI, MCA, PO, IB, *MCII, *IP);
+  mcad::MCAWorker Worker(*TheTarget, *STI,
+                         MCA, PO, IB,
+                         *Ctx, *MAI, *MCII, *IP);
+
+  mcad::AsmFileBroker::Register(Worker.getBrokerFacade());
 
   if(auto E = Worker.run()) {
     // TODO: Better error message
@@ -198,6 +203,11 @@ int main(int argc, char **argv) {
     return 1;
   }
   Worker.printMCA(OF);
+
+  if (EnableTimer)
+    llvm::TimerGroup::printAll(errs());
+  else
+    llvm::TimerGroup::clearAll();
 
   return 0;
 }

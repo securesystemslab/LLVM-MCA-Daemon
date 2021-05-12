@@ -80,12 +80,16 @@ if (LLVM_MCAD_ENABLE_TCMALLOC OR LLVM_MCAD_ENABLE_PROFILER)
   list(APPEND _EXTRA_LIBS ${GPERFTOOLS_LIBRARIES})
 endif()
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 set(LLVM_LINK_COMPONENTS
+    AllTargetsAsmParsers
     AllTargetsDescs
     AllTargetsDisassemblers
     AllTargetsInfos
     MC
     MCA
+    MCParser
     Support
     )
 
@@ -96,6 +100,9 @@ set(_MCAVIEWS_SOURCE_FILES
 
 set(_BROKERS_SOURCE_FILES
     Brokers/RawBytesBroker.cpp
+    Brokers/AsmFileBroker.cpp
+    Brokers/AsmUtils/CodeRegion.cpp
+    Brokers/AsmUtils/CodeRegionGenerator.cpp
     )
 
 set(_SOURCE_FILES
@@ -114,6 +121,5 @@ target_link_libraries(llvm-mcad
   )
 
 if (LLVM_MCAD_BUILD_PLUGINS)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR})
   add_subdirectory(plugins)
 endif()
