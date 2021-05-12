@@ -8,8 +8,11 @@
 #include <unordered_map>
 #include <set>
 
+#include "Brokers/Broker.h"
+
 namespace llvm {
 class ToolOutputFile;
+class MCContext;
 class MCSubtargetInfo;
 class MCInst;
 class MCInstPrinter;
@@ -46,6 +49,8 @@ class MCAWorker {
 
   TimerGroup Timers;
 
+  Broker TheBroker;
+
   // The thread worker
   void addTraceInstsImpl() {}
 
@@ -59,6 +64,29 @@ public:
             const mca::PipelineOptions &PO,
             mca::InstrBuilder &IB,
             const MCInstPrinter &IP);
+
+  // An interface that provides objects that might be needed
+  // to build a Broker. It's also the interface to register a
+  // Broker.
+  // This class is trivially-copyable
+  class BrokerFacade {
+    friend class MCAWorker;
+    MCAWorker &Worker;
+
+    explicit BrokerFacade(MCAWorker &W) : Worker(W) {}
+
+  public:
+    void setBroker(Broker &&B) {
+      Worker.TheBroker = std::move(B);
+    }
+
+    const MCSubtargetInfo &getSTI() const {
+      return Worker.STI;
+    }
+  };
+  BrokerFacade getBrokerFacade() {
+    return BrokerFacade(*this);
+  }
 
   void printMCA(ToolOutputFile &OF) {}
 };

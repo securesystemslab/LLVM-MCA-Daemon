@@ -89,13 +89,21 @@ set(LLVM_LINK_COMPONENTS
     Support
     )
 
-set(_SOURCE_FILES
-    llvm-mcad.cpp
+set(_MCAVIEWS_SOURCE_FILES
     MCAViews/SummaryView.cpp
     MCAViews/View.cpp
+    )
+
+set(_BROKERS_SOURCE_FILES
+    Brokers/RawBytesBroker.cpp
+    )
+
+set(_SOURCE_FILES
+    llvm-mcad.cpp
+    ${_MCAVIEWS_SOURCE_FILES}
+    ${_BROKERS_SOURCE_FILES}
     MCAWorker.cpp
     PipelinePrinter.cpp
-    RawBytesProtocol.cpp
     )
 
 add_llvm_executable(llvm-mcad
