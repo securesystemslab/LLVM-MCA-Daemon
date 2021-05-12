@@ -179,7 +179,25 @@ int main(int argc, char **argv) {
                           /*AssumeNoAlias=*/true,
                           /*EnableBottleneckAnalysis=*/false);
 
-  mcad::MCAWorker Worker(*STI, MCA, PO, IB, *IP);
+  mcad::MCAWorker Worker(*STI, MCA, PO, IB, *MCII, *IP);
+
+  if(auto E = Worker.run()) {
+    // TODO: Better error message
+    handleAllErrors(std::move(E),
+                    [](const ErrorInfoBase &E) {
+                      E.log(WithColor::error());
+                      errs() << "\n";
+                    });
+    return 1;
+  }
+
+  std::error_code EC;
+  ToolOutputFile OF(OutputFilename, EC, sys::fs::OF_Text);
+  if (EC) {
+    WithColor::error() << EC.message() << "\n";
+    return 1;
+  }
+  Worker.printMCA(OF);
 
   return 0;
 }

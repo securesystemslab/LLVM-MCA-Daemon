@@ -2,6 +2,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/Context.h"
 #include "llvm/MCA/InstrBuilder.h"
@@ -20,6 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/WithColor.h"
 #include <string>
+#include <system_error>
 
 #include "MCAWorker.h"
 #include "MCAViews/SummaryView.h"
@@ -46,10 +48,11 @@ static cl::opt<bool>
                    cl::desc("Include call instruction in MCA"),
                    cl::init(false));
 
+#define DEFAULT_MAX_NUM_PROCESSED 10000U
 static cl::opt<unsigned>
   MaxNumProcessedInst("mca-max-chunk-size",
                       cl::desc("Max number of instructions processed at a time"),
-                      cl::init(10000U));
+                      cl::init(DEFAULT_MAX_NUM_PROCESSED));
 #ifndef NDEBUG
 static cl::opt<bool>
   DumpSourceMgrStats("dump-mca-sourcemgr-stats",
@@ -65,8 +68,9 @@ MCAWorker::MCAWorker(const MCSubtargetInfo &TheSTI,
                      mca::Context &MCA,
                      const mca::PipelineOptions &PO,
                      mca::InstrBuilder &IB,
-                     const MCInstPrinter &IP)
-  : STI(TheSTI), MCAIB(IB), MIP(IP),
+                     const MCInstrInfo &II,
+                     MCInstPrinter &IP)
+  : STI(TheSTI), MCAIB(IB), MCII(II), MIP(IP),
     TraceMIs(), GetTraceMISize([this]{ return TraceMIs.size(); }),
     GetRecycledInst([this](const mca::InstrDesc &Desc) -> mca::Instruction* {
                       if (RecycledInsts.count(&Desc)) {
@@ -100,4 +104,115 @@ MCAWorker::MCAWorker(const MCSubtargetInfo &TheSTI,
     std::make_unique<mca::SummaryView>(SM, GetTraceMISize, 0U));
 }
 
+Error MCAWorker::run() {
+  if (!TheBroker) {
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "No Broker is set");
+  }
 
+  raw_ostream *TraceOS = nullptr;
+  std::unique_ptr<ToolOutputFile> TraceTOF;
+  if (TraceMCI) {
+    std::error_code EC;
+    TraceTOF
+      = std::make_unique<ToolOutputFile>(MCITraceFile, EC, sys::fs::OF_Text);
+    if (EC) {
+      errs() << "Failed to open trace file: " << EC.message() << "\n";
+    } else {
+      TraceOS = &TraceTOF->os();
+    }
+  }
+
+  SmallVector<const MCInst*, DEFAULT_MAX_NUM_PROCESSED>
+    TraceBuffer(MaxNumProcessedInst);
+
+  bool Continue = true;
+  while (Continue) {
+    int Len = TheBroker->fetch(TraceBuffer);
+    if (Len < 0) {
+      Len = 0;
+      SrcMgr.endOfStream();
+      Continue = false;
+    }
+    ArrayRef<const MCInst*> TraceBufferSlice(TraceBuffer);
+    TraceBufferSlice = TraceBufferSlice.take_front(Len);
+
+    static Timer TheTimer("MCAInstrBuild", "MCA Build Instruction", Timers);
+    {
+      TimeRegion TR(TheTimer);
+
+      // Convert MCInst to mca::Instruction
+      for (const MCInst *OrigMCI : TraceBufferSlice) {
+        TraceMIs.push_back(OrigMCI);
+        const MCInst &MCI = *TraceMIs.back();
+        const auto &MCID = MCII.get(MCI.getOpcode());
+        // Always ignore return instruction since it's
+        // not really meaningful
+        if (MCID.isReturn()) continue;
+        if (!PreserveCallInst)
+          if (MCID.isCall())
+            continue;
+
+        if (TraceOS) {
+          MIP.printInst(&MCI, 0, "", STI, *TraceOS);
+          (*TraceOS) << "\n";
+        }
+
+        mca::Instruction *RecycledInst = nullptr;
+        Expected<std::unique_ptr<mca::Instruction>> InstOrErr
+          = MCAIB.createInstruction(MCI);
+        if (!InstOrErr) {
+          if (auto NewE = handleErrors(
+                   InstOrErr.takeError(),
+                   [&](const mca::RecycledInstErr &RC) {
+                     RecycledInst = RC.getInst();
+                   })) {
+            return std::move(NewE);
+          }
+        }
+        if (RecycledInst)
+          SrcMgr.addRecycledInst(RecycledInst);
+        else
+          SrcMgr.addInst(std::move(InstOrErr.get()));
+      }
+    }
+
+    if (auto E = runPipeline())
+      return E;
+  }
+
+  if (TraceMCI && TraceTOF)
+    TraceTOF->keep();
+
+  return ErrorSuccess();
+}
+
+Error MCAWorker::runPipeline() {
+  assert(MCAPipeline);
+  static Timer TheTimer("RunMCAPipeline", "MCA Pipeline", Timers);
+  TimeRegion TR(TheTimer);
+
+  Expected<unsigned> Cycles = MCAPipeline->run();
+  if (!Cycles) {
+    if (!Cycles.errorIsA<mca::InstStreamPause>()) {
+      return Cycles.takeError();
+    } else {
+      // Consume the error
+      handleAllErrors(std::move(Cycles.takeError()),
+                      [](const mca::InstStreamPause &PE) {});
+    }
+  }
+
+  return ErrorSuccess();
+}
+
+void MCAWorker::printMCA(ToolOutputFile &OF) {
+  MCAPipelinePrinter->printReport(OF.os());
+  OF.keep();
+
+#ifndef NDEBUG
+  if (DumpSourceMgrStats)
+    SrcMgr.printStatistic(
+      dbgs() << "==== IncrementalSourceMgr Stats ====\n");
+#endif
+}

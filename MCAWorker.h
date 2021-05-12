@@ -1,6 +1,8 @@
 #ifndef MCAD_MCAWORKER_H
 #define MCAD_MCAWORKER_H
+#include "llvm/ADT/Optional.h"
 #include "llvm/MCA/SourceMgr.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/Timer.h"
 #include <functional>
 #include <utility>
@@ -16,6 +18,7 @@ class MCContext;
 class MCSubtargetInfo;
 class MCInst;
 class MCInstPrinter;
+class MCInstrInfo;
 namespace mca {
 class Context;
 class InstrBuilder;
@@ -30,7 +33,8 @@ namespace mcad {
 class MCAWorker {
   const MCSubtargetInfo &STI;
   mca::InstrBuilder &MCAIB;
-  const MCInstPrinter &MIP;
+  const MCInstrInfo &MCII;
+  MCInstPrinter &MIP;
   std::unique_ptr<mca::Pipeline> MCAPipeline;
   std::unique_ptr<mca::PipelinePrinter> MCAPipelinePrinter;
 
@@ -49,12 +53,9 @@ class MCAWorker {
 
   TimerGroup Timers;
 
-  Broker TheBroker;
+  Optional<Broker> TheBroker;
 
-  // The thread worker
-  void addTraceInstsImpl() {}
-
-  void runPipeline() {}
+  Error runPipeline();
 
 public:
   MCAWorker() = delete;
@@ -63,7 +64,8 @@ public:
             mca::Context &MCA,
             const mca::PipelineOptions &PO,
             mca::InstrBuilder &IB,
-            const MCInstPrinter &IP);
+            const MCInstrInfo &II,
+            MCInstPrinter &IP);
 
   // An interface that provides objects that might be needed
   // to build a Broker. It's also the interface to register a
@@ -88,7 +90,9 @@ public:
     return BrokerFacade(*this);
   }
 
-  void printMCA(ToolOutputFile &OF) {}
+  Error run();
+
+  void printMCA(ToolOutputFile &OF);
 };
 } // end namespace mcad
 } // end namespace llvm
