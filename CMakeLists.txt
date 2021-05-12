@@ -37,6 +37,8 @@ option(LLVM_MCAD_ENABLE_PROFILER "Enable CPU profiler in gpertools" OFF)
 
 option(LLVM_MCAD_FORCE_ENABLE_STATS "Always enable LLVM statistic" OFF)
 
+option(LLVM_MCAD_BUILD_PLUGINS "Build all MCAD plugins" OFF)
+
 # Sanitizers
 option(LLVM_MCAD_ENABLE_ASAN "Enable address sanitizer" OFF)
 
@@ -89,6 +91,11 @@ set(LLVM_LINK_COMPONENTS
 
 set(_SOURCE_FILES
     llvm-mcad.cpp
+    MCAViews/SummaryView.cpp
+    MCAViews/View.cpp
+    MCAWorker.cpp
+    PipelinePrinter.cpp
+    RawBytesProtocol.cpp
     )
 
 add_llvm_executable(llvm-mcad
@@ -98,3 +105,7 @@ target_link_libraries(llvm-mcad
   PRIVATE ${_EXTRA_LIBS}
   )
 
+if (LLVM_MCAD_BUILD_PLUGINS)
+  include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+  add_subdirectory(plugins)
+endif()
