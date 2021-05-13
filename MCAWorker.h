@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <set>
 
+#include "BrokerFacade.h"
 #include "Brokers/Broker.h"
 
 namespace llvm {
@@ -32,32 +33,6 @@ class Instruction;
 } // end namespace mca
 
 namespace mcad {
-class MCAWorker;
-
-// An interface that provides objects that might be needed
-// to build a Broker. It's also the interface to register a
-// Broker.
-// This class is trivially-copyable
-class BrokerFacade {
-  friend class MCAWorker;
-  MCAWorker &Worker;
-
-  explicit BrokerFacade(MCAWorker &W) : Worker(W) {}
-
-public:
-  void setBroker(std::unique_ptr<Broker> &&B);
-
-  const Target &getTarget() const;
-
-  MCContext &getCtx() const;
-
-  const MCAsmInfo &getAsmInfo() const;
-
-  const MCInstrInfo &getInstrInfo() const;
-
-  const MCSubtargetInfo &getSTI() const;
-};
-
 class MCAWorker {
   friend class BrokerFacade;
   const Target &TheTarget;
