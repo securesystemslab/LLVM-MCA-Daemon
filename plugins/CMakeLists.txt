@@ -1,1 +1,1 @@
-add_subdirectory(qemu-protocol)
+add_subdirectory(qemu-broker)

@@ -3,6 +3,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
@@ -34,63 +35,103 @@
 #include <string>
 
 #include "Brokers/AsmFileBroker.h"
+#include "Brokers/BrokerPlugin.h"
 #include "MCAWorker.h"
 #include "PipelinePrinter.h"
 
 using namespace llvm;
+using namespace mcad;
+
+#define DEBUG_TYPE  "llvm-mcad"
 
 static mc::RegisterMCTargetOptionsFlags MOF;
 
-static cl::opt<std::string>
-  TripleName("triple", cl::desc("Target triple to use"));
+static cl::OptionCategory CoreOptionsCat("MCAD Core Options");
 
 static cl::opt<std::string>
-  ArchName("arch", cl::desc("Target architecture"));
+  TripleName("mtriple", cl::desc("Target triple to use"),
+             cl::cat(CoreOptionsCat));
 
 static cl::opt<std::string>
-  CPUName("cpu", cl::value_desc("cpu-name"),
+  ArchName("march", cl::desc("Target architecture"),
+           cl::cat(CoreOptionsCat));
+
+static cl::opt<std::string>
+  CPUName("mcpu", cl::value_desc("cpu-name"),
           cl::desc("Specific CPU to use (i.e. `-mcpu`)"),
-          cl::init("native"));
+          cl::init("native"),
+          cl::cat(CoreOptionsCat));
 
 static cl::opt<std::string>
-  MAttr("mattr", cl::desc("Additional target feature"));
+  MAttr("mattr", cl::desc("Additional target feature"),
+        cl::cat(CoreOptionsCat));
+
+enum BrokerType {
+  // Builtin brokers
+  BT_AsmFile,  // Read from assembly file
+  BT_RawBytes, // Read raw bytes instructiions from socket
+
+  BT_Plugin    // Use broker plugin
+};
+static cl::opt<BrokerType>
+  UseBroker("broker", cl::desc("Select the broker to use"),
+            cl::values(
+              clEnumValN(BT_AsmFile,  "asm",    "Read from assembly file"),
+              clEnumValN(BT_RawBytes, "raw",    "Raw instructions via socket"),
+              clEnumValN(BT_Plugin,   "plugin", "Use plugin")
+            ),
+            cl::init(BT_AsmFile),
+            cl::cat(CoreOptionsCat));
+
+// This will replace UseBroker with BT_Plugin
+static cl::opt<std::string>
+  BrokerPluginPath("load-broker-plugin",
+                   cl::desc("Load broker plugin from <path>"),
+                   cl::value_desc("path"),
+                   cl::cat(CoreOptionsCat));
+
+// For example: `-broker-plugin-arg-foo=hello` will pass `-foo=hello`
+// to the plugin
+static cl::list<std::string>
+  BrokerPluginArg("broker-plugin-arg", cl::AlwaysPrefix,
+                  cl::desc("Argument passed to broker plugin"),
+                  cl::cat(CoreOptionsCat));
 
 static cl::opt<std::string>
   OutputFilename("mca-output", cl::desc("Path to export MCA analysis"),
-                 cl::init("-"));
+                 cl::init("-"),
+                 cl::cat(CoreOptionsCat));
 
 static cl::opt<std::string>
   AddressFilterFile("addr-filter-file",
                     cl::desc("Only analyze address ranges described "
-                                   "in this list"));
-
-static cl::opt<bool, true>
-  DebugLLVM("debug-llvm", cl::desc("Print debug messages from the LLVM side"),
-            cl::location(DebugFlag), cl::init(false));
+                                   "in this list"),
+                    cl::Hidden,
+                    cl::cat(CoreOptionsCat));
 
 static cl::opt<bool>
   EnableTimer("enable-timer", cl::desc("Print timing breakdown of each components"),
-              cl::init(false));
+              cl::init(false), cl::Hidden);
 
 #ifdef MCABRIDGE_ENABLE_TCMALLOC
 static cl::opt<bool>
   EnableHeapProfile("heap-profile",
                     cl::desc("Profiling heap usage"),
-                    cl::init(false));
+                    cl::init(false), cl::Hidden);
 static cl::opt<std::string>
   HeapProfileOutputPath("heap-profile-output",
                         cl::desc("Output path for the heap profiler"),
-                        cl::init(""));
+                        cl::init(""), cl::Hidden);
 #endif
 #ifdef MCABRIDGE_ENABLE_PROFILER
 static cl::opt<bool>
   EnableCpuProfile("cpu-profile",
                    cl::desc("Profiling CPU usage"),
-                   cl::init(false));
+                   cl::init(false), cl::Hidden);
 static cl::opt<std::string>
   CpuProfileOutputPath("cpu-profile-output",
                         cl::desc("Output path for the CPU profiler"),
-                        cl::init(""));
+                        cl::init(""), cl::Hidden);
 #endif
 
 static const llvm::Target *getLLVMTarget(const char *ProgName) {
@@ -184,7 +225,43 @@ int main(int argc, char **argv) {
                          MCA, PO, IB,
                          *Ctx, *MAI, *MCII, *IP);
 
-  mcad::AsmFileBroker::Register(Worker.getBrokerFacade());
+  if (!BrokerPluginPath.empty())
+    UseBroker = BT_Plugin;
+
+  // Select the broker
+  auto BF = Worker.getBrokerFacade();
+  switch (UseBroker) {
+  case BT_AsmFile:
+    LLVM_DEBUG(dbgs() << "Using AsmFile broker\n");
+    mcad::AsmFileBroker::Register(BF);
+    break;
+  case BT_RawBytes:
+    llvm_unreachable("Not implemented yet");
+    break;
+  case BT_Plugin: {
+    auto PluginOrErr = BrokerPlugin::Load(BrokerPluginPath);
+    if (!PluginOrErr) {
+      handleAllErrors(PluginOrErr.takeError(),
+                      [](const ErrorInfoBase &E) {
+                        E.log(WithColor::error());
+                        errs() << "\n";
+                      });
+      return 1;
+    }
+    BrokerPlugin &BP = *PluginOrErr;
+    LLVM_DEBUG(dbgs() << "Using broker plugin "
+                      << BP.getPluginName() << ", version "
+                      << BP.getPluginVersion() << "\n");
+
+    auto strToCstr = [](const std::string& Str) { return Str.c_str(); };
+    using iterator = mapped_iterator<typename cl::list<std::string>::iterator,
+                                     decltype(strToCstr)>;
+    std::vector<const char*> Args(iterator(BrokerPluginArg.begin(), strToCstr),
+                                  iterator(BrokerPluginArg.end(), strToCstr));
+    BP.registerBroker(Args, BF);
+    break;
+  }
+  }
 
   if(auto E = Worker.run()) {
     // TODO: Better error message

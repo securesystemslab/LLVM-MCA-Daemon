@@ -1,5 +1,6 @@
 #ifndef LLVM_MCAD_BROKER_BROKERPLUGIN_H
 #define LLVM_MCAD_BROKER_BROKERPLUGIN_H
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DynamicLibrary.h"
@@ -22,7 +23,8 @@ struct BrokerPluginLibraryInfo {
 
   const char *PluginVersion;
 
-  void (*BrokerRegistrationCallback)(BrokerFacade &);
+  void (*BrokerRegistrationCallback)(int argc, const char *const *argv,
+                                     BrokerFacade &);
 };
 }
 
@@ -37,8 +39,8 @@ struct BrokerPlugin {
 
   uint32_t getAPIVersion() const { return Info.APIVersion; }
 
-  void registerBroker(BrokerFacade &BF) const {
-    Info.BrokerRegistrationCallback(BF);
+  void registerBroker(ArrayRef<const char*> Args, BrokerFacade &BF) const {
+    Info.BrokerRegistrationCallback(Args.size(), Args.data(), BF);
   }
 
 private:
