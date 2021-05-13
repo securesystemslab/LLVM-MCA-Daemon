@@ -66,6 +66,30 @@ static cl::opt<unsigned>
                    cl::desc("Number of MCA simulation iteration"),
                    cl::init(1U));
 
+void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
+  Worker.TheBroker = std::move(B);
+}
+
+const Target &BrokerFacade::getTarget() const {
+  return Worker.TheTarget;
+}
+
+MCContext &BrokerFacade::getCtx() const {
+  return Worker.Ctx;
+}
+
+const MCAsmInfo &BrokerFacade::getAsmInfo() const {
+  return Worker.MAI;
+}
+
+const MCInstrInfo &BrokerFacade::getInstrInfo() const {
+  return Worker.MCII;
+}
+
+const MCSubtargetInfo &BrokerFacade::getSTI() const {
+  return Worker.STI;
+}
+
 MCAWorker::MCAWorker(const Target &T,
                      const MCSubtargetInfo &TheSTI,
                      mca::Context &MCA,

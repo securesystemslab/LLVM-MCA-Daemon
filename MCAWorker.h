@@ -32,7 +32,34 @@ class Instruction;
 } // end namespace mca
 
 namespace mcad {
+class MCAWorker;
+
+// An interface that provides objects that might be needed
+// to build a Broker. It's also the interface to register a
+// Broker.
+// This class is trivially-copyable
+class BrokerFacade {
+  friend class MCAWorker;
+  MCAWorker &Worker;
+
+  explicit BrokerFacade(MCAWorker &W) : Worker(W) {}
+
+public:
+  void setBroker(std::unique_ptr<Broker> &&B);
+
+  const Target &getTarget() const;
+
+  MCContext &getCtx() const;
+
+  const MCAsmInfo &getAsmInfo() const;
+
+  const MCInstrInfo &getInstrInfo() const;
+
+  const MCSubtargetInfo &getSTI() const;
+};
+
 class MCAWorker {
+  friend class BrokerFacade;
   const Target &TheTarget;
   const MCSubtargetInfo &STI;
   mca::InstrBuilder &MCAIB;
@@ -75,41 +102,6 @@ public:
             const MCInstrInfo &II,
             MCInstPrinter &IP);
 
-  // An interface that provides objects that might be needed
-  // to build a Broker. It's also the interface to register a
-  // Broker.
-  // This class is trivially-copyable
-  class BrokerFacade {
-    friend class MCAWorker;
-    MCAWorker &Worker;
-
-    explicit BrokerFacade(MCAWorker &W) : Worker(W) {}
-
-  public:
-    void setBroker(std::unique_ptr<Broker> &&B) {
-      Worker.TheBroker = std::move(B);
-    }
-
-    const Target &getTarget() const {
-      return Worker.TheTarget;
-    }
-
-    MCContext &getCtx() const {
-      return Worker.Ctx;
-    }
-
-    const MCAsmInfo &getAsmInfo() const {
-      return Worker.MAI;
-    }
-
-    const MCInstrInfo &getInstrInfo() const {
-      return Worker.MCII;
-    }
-
-    const MCSubtargetInfo &getSTI() const {
-      return Worker.STI;
-    }
-  };
   BrokerFacade getBrokerFacade() {
     return BrokerFacade(*this);
   }

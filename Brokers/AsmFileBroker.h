@@ -27,7 +27,7 @@ public:
                 const MCAsmInfo &A, const MCSubtargetInfo &S,
                 const MCInstrInfo &I);
 
-  static void Register(MCAWorker::BrokerFacade BF);
+  static void Register(BrokerFacade BF);
 
   const MCInst *fetch() override;
 

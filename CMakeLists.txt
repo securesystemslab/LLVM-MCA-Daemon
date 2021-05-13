@@ -99,6 +99,7 @@ set(_MCAVIEWS_SOURCE_FILES
     )
 
 set(_BROKERS_SOURCE_FILES
+    Brokers/BrokerPlugin.cpp
     Brokers/RawBytesBroker.cpp
     Brokers/AsmFileBroker.cpp
     Brokers/AsmUtils/CodeRegion.cpp

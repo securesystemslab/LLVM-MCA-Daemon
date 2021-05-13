@@ -35,7 +35,7 @@ AsmFileBroker::AsmFileBroker(const Target &T, MCContext &Ctx,
   SrcMgr.AddNewSourceBuffer(std::move(*ErrOrBuffer), SMLoc());
 }
 
-void AsmFileBroker::Register(MCAWorker::BrokerFacade BF) {
+void AsmFileBroker::Register(BrokerFacade BF) {
   BF.setBroker(
     std::make_unique<AsmFileBroker>(BF.getTarget(), BF.getCtx(),
                                     BF.getAsmInfo(), BF.getSTI(),
