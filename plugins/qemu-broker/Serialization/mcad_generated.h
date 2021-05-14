@@ -74,13 +74,13 @@ struct ExecTB FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   uint32_t Index() const {
     return GetField<uint32_t>(VT_INDEX, 0);
   }
-  uint32_t PC() const {
-    return GetField<uint32_t>(VT_PC, 0);
+  uint64_t PC() const {
+    return GetField<uint64_t>(VT_PC, 0);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint32_t>(verifier, VT_INDEX) &&
-           VerifyField<uint32_t>(verifier, VT_PC) &&
+           VerifyField<uint64_t>(verifier, VT_PC) &&
            verifier.EndTable();
   }
 };
@@ -91,8 +91,8 @@ struct ExecTBBuilder {
   void add_Index(uint32_t Index) {
     fbb_.AddElement<uint32_t>(ExecTB::VT_INDEX, Index, 0);
   }
-  void add_PC(uint32_t PC) {
-    fbb_.AddElement<uint32_t>(ExecTB::VT_PC, PC, 0);
+  void add_PC(uint64_t PC) {
+    fbb_.AddElement<uint64_t>(ExecTB::VT_PC, PC, 0);
   }
   explicit ExecTBBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -109,7 +109,7 @@ struct ExecTBBuilder {
 inline flatbuffers::Offset<ExecTB> CreateExecTB(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t Index = 0,
-    uint32_t PC = 0) {
+    uint64_t PC = 0) {
   ExecTBBuilder builder_(_fbb);
   builder_.add_PC(PC);
   builder_.add_Index(Index);

@@ -2,7 +2,7 @@ namespace llvm.mcad.fbs;
 
 table ExecTB {
   Index: uint;
-  PC: uint;
+  PC: uint64;
 }
 
 table Inst {
