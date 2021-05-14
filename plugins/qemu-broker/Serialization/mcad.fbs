@@ -1,0 +1,26 @@
+namespace llvm.mcad.fbs;
+
+table ExecTB {
+  Index: uint;
+  PC: uint;
+}
+
+table Inst {
+  Data: [ubyte];
+}
+
+table TranslatedBlock {
+  Index: uint;
+  Instructions: [Inst];
+}
+
+union Msg {
+  ExecTB,
+  TranslatedBlock
+}
+
+table Message {
+  Content: Msg;
+}
+
+root_type Message;
