@@ -115,7 +115,11 @@ set(_SOURCE_FILES
     )
 
 add_llvm_executable(llvm-mcad
-  ${_SOURCE_FILES})
+  ${_SOURCE_FILES}
+
+  SUPPORT_PLUGINS
+  )
+export_executable_symbols(llvm-mcad)
 
 target_link_libraries(llvm-mcad
   PRIVATE ${_EXTRA_LIBS}

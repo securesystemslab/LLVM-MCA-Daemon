@@ -239,8 +239,10 @@ Error MCAWorker::runPipeline() {
 }
 
 void MCAWorker::printMCA(ToolOutputFile &OF) {
-  MCAPipelinePrinter->printReport(OF.os());
-  OF.keep();
+  if (TraceMIs.size()) {
+    MCAPipelinePrinter->printReport(OF.os());
+    OF.keep();
+  }
 
 #ifndef NDEBUG
   if (DumpSourceMgrStats)
