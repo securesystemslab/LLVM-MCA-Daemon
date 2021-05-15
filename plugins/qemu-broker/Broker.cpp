@@ -53,7 +53,10 @@ raw_ostream &operator<<(raw_ostream &OS, const RawInstTy &RawInst) {
 
 struct TranslationBlock {
   SmallVector<RawInstTy, 5> RawInsts;
-  SmallVector<MCInst, 5> MCInsts;
+  // Owner of all MCInst instances
+  // Note that we caonnt use SmallVector<MCInst,...> here because
+  // when SmallVector resize all MCInst* retrieved previously will be invalid
+  SmallVector<std::unique_ptr<MCInst>, 5> MCInsts;
 
   uint64_t VAddr;
 
@@ -87,6 +90,9 @@ class QemuBroker : public Broker {
 
   // List of to-be-executed TB index
   SmallVector<size_t, 16> TBQueue;
+  // Instructions that can't be completely drained from TB
+  // in last round
+  SmallVector<const MCInst*, 4> ResidualInsts;
   std::mutex QueueMutex;
   std::condition_variable QueueCV;
 
@@ -310,7 +316,6 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
   uint64_t DisAsmSize;
   uint64_t Len;
   uint64_t VAddr = TB.VAddr;
-  MCInst MCI;
 
   // We don't want LSB to interfere the disassembling process
   if (TheTriple.isARM() || TheTriple.isThumb())
@@ -321,8 +326,8 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
     uint64_t Index = 0U;
     Len = InstBytes.size();
     while (Index < Len) {
-      MCI.clear();
-      Disassembled = CurDisAsm->getInstruction(MCI, DisAsmSize,
+      auto MCI = std::make_unique<MCInst>();
+      Disassembled = CurDisAsm->getInstruction(*MCI, DisAsmSize,
                                                InstBytes.slice(Index),
                                                VAddr + Index,
                                                nulls());
@@ -337,7 +342,7 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
       if (!DisAsmSize)
         DisAsmSize = 1;
 
-      TB.MCInsts.push_back(MCI);
+      TB.MCInsts.emplace_back(std::move(MCI));
       Index += DisAsmSize;
     }
     VAddr += RawInst.size();
@@ -345,7 +350,67 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
 }
 
 int QemuBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size) {
-  return -1;
+  if (!Size) return 0;
+  if (Size < 0 || Size > MCIS.size())
+    Size = MCIS.size();
+
+  int TotalSize = Size;
+
+  bool ReadResiduals = ResidualInsts.size();
+  if (ReadResiduals) {
+    int i, RS = ResidualInsts.size();
+    for (i = 0; i < RS && i < Size; ++i) {
+      MCIS[i] = ResidualInsts[i];
+    }
+    ResidualInsts.erase(ResidualInsts.begin(),
+                        i >= RS? ResidualInsts.end() :
+                                 ResidualInsts.begin() + i);
+    Size -= i;
+  }
+
+  if (Size <= 0)
+    return TotalSize;
+
+  SmallVector<size_t, 2> TBIndices;
+  {
+    std::unique_lock<std::mutex> Lock(QueueMutex);
+    // Only block if the queue is completely empty
+    if (TBQueue.empty()) {
+      if (ReadResiduals)
+        return TotalSize - Size;
+      else
+        QueueCV.wait(Lock, [this] { return !TBQueue.empty(); });
+    }
+
+    int S = Size;
+    // Fetch enough block indicies to fulfill the size requirement
+    while (S > 0 && !TBQueue.empty()) {
+      size_t TBIdx = TBQueue.front();
+      if (TBIdx < TBs.size() && TBs[TBIdx]) {
+        TBIndices.push_back(TBIdx);
+        S -= TBs[TBIdx]->MCInsts.size();
+      }
+      TBQueue.erase(TBQueue.begin());
+    }
+  }
+
+  for (auto TBIdx : TBIndices) {
+    const auto &MCInsts = TBs[TBIdx]->MCInsts;
+    int i, Len = MCInsts.size();
+    for (i = 0; i < Len && Size > 0; ++i, --Size) {
+      MCIS[TotalSize - Size] = MCInsts[i].get();
+    }
+    if (Size <= 0) {
+      // Put reset of the MCInst into residual queue
+      // (if there is any)
+      for (; i < Len; ++i) {
+        ResidualInsts.push_back(MCInsts[i].get());
+      }
+      break;
+    }
+  }
+
+  return Size > 0? TotalSize - Size : TotalSize;
 }
 
 extern "C" ::llvm::mcad::BrokerPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
