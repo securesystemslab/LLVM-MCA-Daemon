@@ -4,6 +4,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/WithColor.h"
@@ -47,6 +48,18 @@ static cl::opt<ActionKind>
          ),
          cl::init(AK_SendTB));
 
+static cl::opt<unsigned>
+  TBSentIdx("tb-sent-index", cl::desc("The index of the sent TB"),
+            cl::init(0U));
+
+static cl::opt<unsigned>
+  TBExecIdx("tb-exec", cl::desc("The index of the executed TB"),
+            cl::init(0U));
+
+static cl::opt<unsigned>
+  TBExecAddr("tb-exec-addr", cl::desc("The VAddr which TB is executed"),
+             cl::init(0U));
+
 static void sendTB(int Sockt) {
   auto ErrOrBuffer = MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
   if (!ErrOrBuffer) {
@@ -70,7 +83,7 @@ static void sendTB(int Sockt) {
     Bytes.clear();
     for (const StringRef &RawByte : RawBytes) {
       uint8_t Byte;
-      if (RawByte.trim().ltrim("0x").getAsInteger(16, Byte))
+      if (!RawByte.trim().getAsInteger(0, Byte))
         Bytes.push_back(Byte);
     }
     Insts.push_back(Bytes);
@@ -87,7 +100,7 @@ static void sendTB(int Sockt) {
     FbInsts.push_back(FbInst);
   }
   auto FbInstructions = Builder.CreateVector(FbInsts);
-  auto FbTB = fbs::CreateTranslatedBlock(Builder, 0, FbInstructions);
+  auto FbTB = fbs::CreateTranslatedBlock(Builder, TBSentIdx, FbInstructions);
   auto FbMessage = fbs::CreateMessage(Builder, fbs::Msg_TranslatedBlock,
                                       FbTB.Union());
   fbs::FinishSizePrefixedMessageBuffer(Builder, FbMessage);
@@ -95,6 +108,22 @@ static void sendTB(int Sockt) {
   errs() << "Sending TB with "
          << FbInsts.size() << " instructions "
          << ". Size = " << Builder.GetSize() << " bytes\n";
+  int NumBytesSent = write(Sockt, Builder.GetBufferPointer(), Builder.GetSize());
+  if (NumBytesSent < 0) {
+    ::perror("Failed to send TB data");
+  }
+  LLVM_DEBUG(dbgs() << "Sent " << NumBytesSent << " bytes\n");
+}
+
+static void tbExec(int Sockt) {
+  flatbuffers::FlatBufferBuilder Builder(128);
+  auto FbExecTB = fbs::CreateExecTB(Builder, TBExecIdx, TBExecAddr);
+  auto FbMessage = fbs::CreateMessage(Builder, fbs::Msg_ExecTB,
+                                      FbExecTB.Union());
+  fbs::FinishSizePrefixedMessageBuffer(Builder, FbMessage);
+
+  errs() << "Sending execution signal of TB " << TBExecIdx
+         << " with address " << format_hex(TBExecAddr, 16) << "\n";
   int NumBytesSent = write(Sockt, Builder.GetBufferPointer(), Builder.GetSize());
   if (NumBytesSent < 0) {
     ::perror("Failed to send TB data");
@@ -140,8 +169,9 @@ int main(int argc, char **argv) {
   case AK_SendTB:
     sendTB(Sockt);
     break;
-  default:
-    llvm_unreachable("Unimplemented");
+  case AK_TBExec:
+    tbExec(Sockt);
+    break;
   }
 
   return 0;

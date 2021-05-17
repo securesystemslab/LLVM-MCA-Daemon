@@ -11,6 +11,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
 #include <condition_variable>
 #include <memory>
@@ -279,6 +280,8 @@ void QemuBroker::recvWorker(addrinfo *AI) {
 }
 
 void QemuBroker::initializeDisassembler() {
+  llvm::InitializeAllDisassemblers();
+
   DisAsm.reset(TheTarget.createMCDisassembler(STI, Ctx));
   CurDisAsm = DisAsm.get();
 
@@ -321,11 +324,16 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
   if (TheTriple.isARM() || TheTriple.isThumb())
     VAddr &= (~0b1);
 
+  LLVM_DEBUG(dbgs() << "Disassembling " << TB.RawInsts.size()
+                    << " instructions\n");
   for (const auto &RawInst : TB.RawInsts) {
     ArrayRef<uint8_t> InstBytes(RawInst);
     uint64_t Index = 0U;
     Len = InstBytes.size();
     while (Index < Len) {
+      LLVM_DEBUG(dbgs() << "Try to disassemble instruction " << RawInst
+                        << " with Index = " << Index
+                        << ", VAddr = " << format_hex(VAddr + Index, 8) << "\n");
       auto MCI = std::make_unique<MCInst>();
       Disassembled = CurDisAsm->getInstruction(*MCI, DisAsmSize,
                                                InstBytes.slice(Index),
