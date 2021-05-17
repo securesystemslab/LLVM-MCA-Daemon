@@ -41,4 +41,4 @@ add_llvm_library(MCADQemuBroker SHARED
 add_dependencies(MCADQemuBroker generate-fbs)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-add_subdirectory(test)
+add_subdirectory(utils)
