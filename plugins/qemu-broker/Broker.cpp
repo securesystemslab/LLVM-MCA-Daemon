@@ -94,6 +94,7 @@ class QemuBroker : public Broker {
   // Instructions that can't be completely drained from TB
   // in last round
   SmallVector<const MCInst*, 4> ResidualInsts;
+  bool IsEndOfStream;
   std::mutex QueueMutex;
   std::condition_variable QueueCV;
 
@@ -124,8 +125,19 @@ class QemuBroker : public Broker {
   void disassemble(TranslationBlock &TB);
 
   void tbExec(const fbs::ExecTB &OrigTB) {
-    unsigned Idx = OrigTB.Index();
+    uint32_t Idx = OrigTB.Index();
     uint64_t PC = OrigTB.PC();
+
+    if (Idx == ~uint32_t(0U) && PC == ~uint64_t(0U)) {
+      // End signal
+      LLVM_DEBUG(dbgs() << "Receive end signal...\n");
+      {
+        std::lock_guard<std::mutex> Lock(QueueMutex);
+        IsEndOfStream = true;
+      }
+      QueueCV.notify_one();
+      return;
+    }
 
     if (Idx >= TBs.size() || !TBs[Idx]) {
       WithColor::error() << "Invalid TranslationBlock index\n";
@@ -173,7 +185,8 @@ QemuBroker::QemuBroker(StringRef Addr, StringRef Port,
   : ListenAddr(Addr.str()), ListenPort(Port.str()),
     ServSocktFD(-1), AI(nullptr),
     TheTarget(T), Ctx(C), STI(MSTI),
-    CurDisAsm(nullptr) {
+    CurDisAsm(nullptr),
+    IsEndOfStream(false) {
   initializeDisassembler();
 
   initializeServer();
@@ -226,8 +239,8 @@ void QemuBroker::recvWorker(addrinfo *AI) {
   int ClientSocktFD;
   uint8_t RecvBuffer[1024];
   SmallVector<uint8_t, 2048> MsgBuffer;
-  while (ClientSocktFD = accept(ServSocktFD,
-                                AI->ai_addr, &AI->ai_addrlen)) {
+  while ((ClientSocktFD = accept(ServSocktFD,
+                                 AI->ai_addr, &AI->ai_addrlen))) {
     if (ClientSocktFD < 0) {
       ::perror("Failed to accept client");
       continue;
@@ -383,12 +396,18 @@ int QemuBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size) {
   {
     std::unique_lock<std::mutex> Lock(QueueMutex);
     // Only block if the queue is completely empty
-    if (TBQueue.empty()) {
+    if (TBQueue.empty() && !IsEndOfStream) {
       if (ReadResiduals)
         return TotalSize - Size;
       else
-        QueueCV.wait(Lock, [this] { return !TBQueue.empty(); });
+        QueueCV.wait(Lock,
+                     [this] {
+                      return IsEndOfStream || !TBQueue.empty();
+                     });
     }
+
+    if (IsEndOfStream)
+      return -1;
 
     int S = Size;
     // Fetch enough block indicies to fulfill the size requirement
