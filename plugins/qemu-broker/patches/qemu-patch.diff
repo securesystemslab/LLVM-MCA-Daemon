@@ -1,0 +1,238 @@
+diff --git a/include/hw/core/cpu.h b/include/hw/core/cpu.h
+index c68bc3ba8a..c499f693f6 100644
+--- a/include/hw/core/cpu.h
++++ b/include/hw/core/cpu.h
+@@ -72,6 +72,14 @@ typedef enum MMUAccessType {
+     MMU_INST_FETCH = 2
+ } MMUAccessType;
+ 
++typedef union RegisterValue {
++    uint8_t    u8;
++    uint16_t   u16;
++    uint32_t   u32;
++    uint64_t   u64;
++    GByteArray *data;
++} RegisterValue;
++
+ typedef struct CPUWatchpoint CPUWatchpoint;
+ 
+ /* see tcg-cpu-ops.h */
+@@ -165,6 +173,9 @@ struct CPUClass {
+     hwaddr (*get_phys_page_attrs_debug)(CPUState *cpu, vaddr addr,
+                                         MemTxAttrs *attrs);
+     int (*asidx_from_attrs)(CPUState *cpu, MemTxAttrs attrs);
++    int (*get_register_info)(CPUState *cpu,
++                             const char *reg_name, uint8_t *size);
++    int (*read_register)(CPUState *cpu, RegisterValue *dest, int reg);
+     int (*gdb_read_register)(CPUState *cpu, GByteArray *buf, int reg);
+     int (*gdb_write_register)(CPUState *cpu, uint8_t *buf, int reg);
+ 
+diff --git a/include/qemu/qemu-plugin.h b/include/qemu/qemu-plugin.h
+index 97cdfd7761..173c05eeb3 100644
+--- a/include/qemu/qemu-plugin.h
++++ b/include/qemu/qemu-plugin.h
+@@ -525,6 +525,12 @@ qemu_plugin_register_vcpu_syscall_ret_cb(qemu_plugin_id_t id,
+ 
+ char *qemu_plugin_insn_disas(const struct qemu_plugin_insn *insn);
+ 
++int qemu_plugin_vcpu_get_register_info(const char *reg_name, uint8_t *size);
++/**
++ * Returns the number of bytes read, or -1 if failed
++ * */
++int32_t qemu_plugin_vcpu_read_register(int reg_id, void *val, uint8_t size);
++
+ /**
+  * qemu_plugin_vcpu_for_each() - iterate over the existing vCPU
+  * @id: plugin ID
+@@ -555,4 +561,6 @@ int qemu_plugin_n_max_vcpus(void);
+  */
+ void qemu_plugin_outs(const char *string);
+ 
++uint64_t qemu_plugin_vcpu_code_start_vaddr(void);
++
+ #endif /* QEMU_PLUGIN_API_H */
+diff --git a/plugins/api.c b/plugins/api.c
+index b22998cd7c..b6e4a8ca0b 100644
+--- a/plugins/api.c
++++ b/plugins/api.c
+@@ -46,6 +46,8 @@
+ #ifndef CONFIG_USER_ONLY
+ #include "qemu/plugin-memory.h"
+ #include "hw/boards.h"
++#else
++#include "qemu.h"
+ #endif
+ #include "trace/mem.h"
+ 
+@@ -235,6 +237,64 @@ char *qemu_plugin_insn_disas(const struct qemu_plugin_insn *insn)
+     return plugin_disas(cpu, insn->vaddr, insn->data->len);
+ }
+ 
++int qemu_plugin_vcpu_get_register_info(const char *reg_name, uint8_t *size)
++{
++    CPUState *cs = current_cpu;
++    CPUClass *cpu = CPU_GET_CLASS(cs);
++    if (cpu->get_register_info)
++        return cpu->get_register_info(cs, reg_name, size);
++
++    return -1;
++}
++
++int32_t qemu_plugin_vcpu_read_register(int reg_id, void *val, uint8_t size)
++{
++    CPUState *cs = current_cpu;
++    CPUClass *cpu = CPU_GET_CLASS(cs);
++    if (cpu->read_register) {
++        RegisterValue reg_value;
++        switch (size) {
++        case 1:
++        case 2:
++        case 4:
++        case 8:
++            break;
++        default:
++            reg_value.data = g_byte_array_new();
++        }
++
++        int32_t ret = cpu->read_register(cs, &reg_value, reg_id);
++        if (!ret) {
++            ret = size;
++            switch (size) {
++            case 1:
++                *((uint8_t*)val) = reg_value.u8;
++                break;
++            case 2:
++                *((uint16_t*)val) = reg_value.u16;
++                break;
++            case 4:
++                *((uint32_t*)val) = reg_value.u32;
++                break;
++            case 8:
++                *((uint64_t*)val) = reg_value.u64;
++                break;
++            default: {
++                GByteArray *buffer = reg_value.data;
++                uint32_t len = buffer->len;
++                len = len < size? len : size;
++                memcpy(val, buffer->data, len);
++                g_byte_array_free(buffer, TRUE);
++                ret = len;
++            }
++            }
++        }
++        return ret;
++    }
++
++    return -1;
++}
++
+ /*
+  * The memory queries allow the plugin to query information about a
+  * memory access.
+@@ -379,3 +439,15 @@ void qemu_plugin_outs(const char *string)
+ {
+     qemu_log_mask(CPU_LOG_PLUGIN, "%s", string);
+ }
++
++uint64_t qemu_plugin_vcpu_code_start_vaddr(void)
++{
++#ifdef CONFIG_USER_ONLY
++  CPUState *cpu = current_cpu;
++  TaskState *ts = (TaskState*)cpu->opaque;
++  const struct image_info *info = ts->info;
++  return info->start_code;
++#else
++  return 0;
++#endif
++}
+diff --git a/plugins/qemu-plugins.symbols b/plugins/qemu-plugins.symbols
+index 4bdb381f48..1b12729de7 100644
+--- a/plugins/qemu-plugins.symbols
++++ b/plugins/qemu-plugins.symbols
+@@ -36,5 +36,8 @@
+   qemu_plugin_vcpu_for_each;
+   qemu_plugin_n_vcpus;
+   qemu_plugin_n_max_vcpus;
++  qemu_plugin_vcpu_get_register_info;
++  qemu_plugin_vcpu_read_register;
+   qemu_plugin_outs;
++  qemu_plugin_vcpu_code_start_vaddr;
+ };
+diff --git a/target/arm/cpu.c b/target/arm/cpu.c
+index 0dd623e590..822aaf548f 100644
+--- a/target/arm/cpu.c
++++ b/target/arm/cpu.c
+@@ -1961,6 +1961,64 @@ static struct TCGCPUOps arm_tcg_ops = {
+ };
+ #endif /* CONFIG_TCG */
+ 
++static int arm_cpu_get_register_info(CPUState *cs, const char *reg_name,
++                                     uint8_t *size)
++{
++    ARMCPU *cpu = ARM_CPU(cs);
++    CPUARMState *env = &cpu->env;
++
++    *size = 4;
++
++    static const char *core_regs[16] = {
++        "r0", "r1", "r2", "r3", "r4", "r5", "r6",
++        "r7", "r8", "r9", "r10", "r11", "r12",
++        "sp", "lr", "pc"
++    };
++    int i;
++    for (i = 0; i < 16; ++i) {
++        if (!strcmp(reg_name, core_regs[i]))
++          return i;
++    }
++
++    if (arm_feature(env, ARM_FEATURE_M)) {
++        if (!strcmp(reg_name, "xpsr"))
++          return 25;
++    } else {
++        if (!strcmp(reg_name, "cpsr"))
++          return 25;
++    }
++
++    return -1;
++}
++
++static int arm_cpu_read_register(CPUState *cs, RegisterValue *dest, int reg_n)
++{
++    if (reg_n < 0) return reg_n;
++
++    ARMCPU *cpu = ARM_CPU(cs);
++    CPUARMState *env = &cpu->env;
++
++    if (reg_n < 16) {
++        /* Core integer registers */
++        dest->u32 = env->regs[reg_n];
++        return 0;
++    }
++
++    /* CPSR or XPSR register */
++    if (reg_n == 25) {
++        if (arm_feature(env, ARM_FEATURE_M))
++            /* XPSR */
++            dest->u32 = xpsr_read(env);
++        else
++            /* CPSR */
++            dest->u32 = cpsr_read(env);
++
++        return 0;
++    }
++
++    return -1;
++}
++
+ static void arm_cpu_class_init(ObjectClass *oc, void *data)
+ {
+     ARMCPUClass *acc = ARM_CPU_CLASS(oc);
+@@ -1977,6 +2035,8 @@ static void arm_cpu_class_init(ObjectClass *oc, void *data)
+     cc->has_work = arm_cpu_has_work;
+     cc->dump_state = arm_cpu_dump_state;
+     cc->set_pc = arm_cpu_set_pc;
++    cc->get_register_info = arm_cpu_get_register_info;
++    cc->read_register = arm_cpu_read_register;
+     cc->gdb_read_register = arm_cpu_gdb_read_register;
+     cc->gdb_write_register = arm_cpu_gdb_write_register;
+ #ifndef CONFIG_USER_ONLY
