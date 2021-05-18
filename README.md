@@ -55,3 +55,38 @@ Then, on the client side:
       arg="-addr=127.0.0.1",arg="-port=9487" \
       -d plugin ./hello_world
 ```
+
+Here are some other important command line arguments:
+ - `-mca-output=<file>`. Print the MCA analysis result to a file instead of STDOUT.
+ - `-broker=<asm|raw|plugin>`. Select the Broker to use.
+   - **asm**. Uses the `AsmFileBroker`, which reads the input from an assembly file. This broker essentially turns the tool into the original `llvm-mca`.
+   - **raw**. Uses the `RawBytesBroker`. Functionality TBD.
+   - **plugin**. Uses Broker plugin loaded by the `-load-broker-plugin` flag.
+ - `-load-broker-plugin=<plugin library file>`. Load a Broker plugin. This option implicitly selects the **plugin** Broker kind.
+ - `-broker-plugin-arg.*`. Supply addition arguments to the Broker plugin. For example, if `-broker-plugin-arg-foo=bar` is given, the plugin will receive `-foo=bar` argument when it's registering with the core component.
+
+## Design
+### Overview
+LLVM-MCAD is roughly splitted into two parts: The core component and the Broker. The core component manages and runs LLVM MCA. It is using a modified version of MCA which analyzes input instructions _incrementally_. That is, instead of retrieving all native instructions (from an assembly file, for example) and analyzing them at once, incremental MCA continuously fetches small batch of instructions and analyze them before fetching the next batch. The "native instructions" we're discussing here -- the input to MCA -- are represented by `llvm::MCInst` instances. And Broker is the one who supplies these `MCInst` batches to the core component.
+
+A Broker exposes a simple interface, defined by the `Broker` class, to the core component. You can either choose from one of the two built-in Brokers -- `AsmFileBroker` and `RawBytesBroker` (WIP) -- or create your own Brokers via the Broker plugin. There is basically no assumption on the execution model of a Broker, so you can either create a simple Broker like `AsmFileBroker`, which simply reads from an assembly file, or a complex one like `qemu-broker` in the `plugins` folder that interfaces with QEMU using TCP socket and multi-threading.
+
+Currently we're only displaying the MCA result using `SummaryView`, which print nothing but basic information like total cycle counts and number of uOps. In the future we're planning to support more variety of MCA views, or even another plugin system for customized views.
+
+### Goals
+ - **LLVM MCA for dynamic analysis**. A lightweight, general-purpose execution trace simulation and analysis framework.
+ - Able to perform online analysis whose target program runs for a long duration.
+ - Able to scale up with the input.
+   - Acceptable (analysis) performance
+   - Low memory footprint
+ - Good interoperatability with upstream LLVM
+   - Be able to upstream this project (the core component) in the future.
+
+### Non-Goals
+ - Fixed number of input sources.
+   - Different from the original `llvm-mca` tool, you can create your own Broker plugin to harvest `MCInst` from arbitrary medias like execution traces or object files.
+ - Multi-threading in the core component
+   - The core component should have a simple execution model, so we don't run MCA on a separate thread. You can, and _encouraged_ to, run your custom Broker on a separate thread to increase the throughput.
+ - Has any assumption on Broker plugin's execution model.
+ - Manage Broker plugin's lifecycle.
+   - We dont' have explicit callbacks for Broker plugin's lifecycle. Developers of Brokers are expected to manage the lifecycle on their own, and encouraged to execute tasks in an on-demand fashion (e.g. `AsmFileBroker` only parses the assembly file after the first invocation to its `fetch` method).
