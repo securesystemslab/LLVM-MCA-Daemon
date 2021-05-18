@@ -73,6 +73,11 @@ class QemuBroker : public Broker {
   int ServSocktFD;
   addrinfo *AI;
 
+  // Max number of connection to accept before fully
+  // cease operation. Or 0 for no limit.
+  // By default this value is one.
+  unsigned MaxNumAcceptedConnection;
+
   const Target &TheTarget;
   MCContext &Ctx;
   const MCSubtargetInfo &STI;
@@ -165,6 +170,7 @@ class QemuBroker : public Broker {
 
 public:
   QemuBroker(StringRef Addr, StringRef Port,
+             unsigned MaxNumConn,
              const MCSubtargetInfo &STI,
              MCContext &Ctx, const Target &T);
 
@@ -175,18 +181,21 @@ public:
       ReceiverThread->join();
 
       errs() << "Cleaning up worker thread...\n";
-      if (ServSocktFD >= 0) {
+      if (ServSocktFD >= 0)
         close(ServSocktFD);
-      }
+      if (AI)
+        freeaddrinfo(AI);
     }
   }
 };
 } // end anonymous namespace
 
 QemuBroker::QemuBroker(StringRef Addr, StringRef Port,
+                       unsigned MaxNumConn,
                        const MCSubtargetInfo &MSTI,
                        MCContext &C, const Target &T)
   : ListenAddr(Addr.str()), ListenPort(Port.str()),
+    MaxNumAcceptedConnection(MaxNumConn),
     ServSocktFD(-1), AI(nullptr),
     TheTarget(T), Ctx(C), STI(MSTI),
     CurDisAsm(nullptr),
@@ -324,6 +333,10 @@ void QemuBroker::recvWorker(addrinfo *AI) {
 
     LLVM_DEBUG(dbgs() << "Closing current client...\n");
     close(ClientSocktFD);
+
+    if (MaxNumAcceptedConnection > 0 &&
+        --MaxNumAcceptedConnection == 0)
+      break;
   }
 }
 
@@ -488,6 +501,7 @@ mcadGetBrokerPluginInfo() {
     [](int argc, const char *const *argv, BrokerFacade &BF) {
       StringRef Addr = "localhost",
                 Port = "9487";
+      unsigned MaxNumConn = 1;
 
       for (int i = 0; i < argc; ++i) {
         StringRef Arg(argv[i]);
@@ -499,9 +513,19 @@ mcadGetBrokerPluginInfo() {
             std::tie(Addr, Port) = RawHost.split(':');
           }
         }
+
+        // Try to parse the max number of accepted connection
+        if (Arg.startswith("-max-accepted-connection") &&
+            Arg.contains('=')) {
+          auto RawVal = Arg.split('=').second;
+          if (RawVal.trim().getAsInteger(0, MaxNumConn)) {
+            WithColor::error() << "Invalid number: " << RawVal << "\n";
+            ::exit(1);
+          }
+        }
       }
 
-      BF.setBroker(std::make_unique<QemuBroker>(Addr, Port,
+      BF.setBroker(std::make_unique<QemuBroker>(Addr, Port, MaxNumConn,
                                                 BF.getSTI(), BF.getCtx(),
                                                 BF.getTarget()));
     }
