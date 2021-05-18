@@ -238,6 +238,8 @@ void QemuBroker::recvWorker(addrinfo *AI) {
 
   int ClientSocktFD;
   uint8_t RecvBuffer[1024];
+  static_assert(sizeof(RecvBuffer) > sizeof(flatbuffers::uoffset_t),
+                "RecvBuffer is not larger than uoffset_t");
   SmallVector<uint8_t, 2048> MsgBuffer;
   while ((ClientSocktFD = accept(ServSocktFD,
                                  AI->ai_addr, &AI->ai_addrlen))) {
@@ -251,20 +253,49 @@ void QemuBroker::recvWorker(addrinfo *AI) {
       MsgBuffer.clear();
 
       bool MsgValid = false;
+      flatbuffers::uoffset_t TotalMsgSize = 0U;
       do {
-        ssize_t ReadLen = read(ClientSocktFD, RecvBuffer, sizeof(RecvBuffer));
+        ssize_t ReadLen, Offset = 0;
+        if (!TotalMsgSize) {
+          // Read the prefix first
+          ReadLen = read(ClientSocktFD, RecvBuffer, sizeof(TotalMsgSize));
+          // Reach EOF, exit normally
+          if (!ReadLen)
+            break;
+          if (ReadLen < sizeof(TotalMsgSize)) {
+            if (ReadLen < 0)
+              ::perror("Failed to read prefixed size");
+            else
+              // Don't try to print errno after a successful
+              // read, since errno is undefined in such case
+              errs() << "Failed to read prefixed size";
+            errs() << "\n";
+            break;
+          }
+
+          TotalMsgSize =
+            flatbuffers::ReadScalar<flatbuffers::uoffset_t>(RecvBuffer);
+          assert(TotalMsgSize);
+          LLVM_DEBUG(dbgs() << "Total message size: " << TotalMsgSize << "\n");
+          Offset = sizeof(TotalMsgSize);
+        }
+
+        ReadLen = std::min(size_t(TotalMsgSize),
+                           sizeof(RecvBuffer) - Offset);
+        ReadLen = read(ClientSocktFD, &RecvBuffer[Offset], ReadLen);
         if (ReadLen < 0) {
           ::perror("Failed to read from client");
           errs() << "\n";
           break;
         }
-        // Reach EOF
+        // Reach EOF, exit normally
         if (!ReadLen)
           break;
 
-        LLVM_DEBUG(dbgs() << "Reading message of size "
-                          << ReadLen << "\n");
-        MsgBuffer.append(RecvBuffer, &RecvBuffer[ReadLen]);
+        assert(TotalMsgSize >= ReadLen);
+        TotalMsgSize -= ReadLen;
+
+        MsgBuffer.append(RecvBuffer, &RecvBuffer[ReadLen + Offset]);
 
         flatbuffers::Verifier V(ArrayRef<uint8_t>(MsgBuffer).data(),
                                 MsgBuffer.size());
