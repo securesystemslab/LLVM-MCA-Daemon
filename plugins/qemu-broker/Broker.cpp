@@ -87,6 +87,7 @@ class QemuBroker : public Broker {
     return CurDisAsm;
   }
 
+  std::mutex TBsMutex;
   SmallVector<Optional<TranslationBlock>, 8> TBs;
 
   // List of to-be-executed TB index
@@ -105,6 +106,7 @@ class QemuBroker : public Broker {
 
   void addTB(const fbs::TranslatedBlock &TB) {
     if (TB.Index() >= TBs.size()) {
+      std::lock_guard<std::mutex> LK(TBsMutex);
       TBs.resize(TB.Index() + 1);
     }
 
@@ -117,6 +119,8 @@ class QemuBroker : public Broker {
       TBRawInsts[Idx++] = RawInstTy(InstBytes.begin(),
                                     InstBytes.end());
     }
+
+    std::lock_guard<std::mutex> LK(TBsMutex);
     TBs[TB.Index()] = std::move(NewTB);
   }
 
@@ -427,9 +431,11 @@ int QemuBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size) {
   {
     std::unique_lock<std::mutex> Lock(QueueMutex);
     // Only block if the queue is completely empty
-    if (TBQueue.empty() && !IsEndOfStream) {
+    if (TBQueue.empty()) {
       if (ReadResiduals)
         return TotalSize - Size;
+      else if (IsEndOfStream)
+        return -1;
       else
         QueueCV.wait(Lock,
                      [this] {
@@ -437,11 +443,12 @@ int QemuBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size) {
                      });
     }
 
-    if (IsEndOfStream)
+    if (TBQueue.empty() && ResidualInsts.empty() && IsEndOfStream)
       return -1;
 
     int S = Size;
     // Fetch enough block indicies to fulfill the size requirement
+    std::lock_guard<std::mutex> LK(TBsMutex);
     while (S > 0 && !TBQueue.empty()) {
       size_t TBIdx = TBQueue.front();
       if (TBIdx < TBs.size() && TBs[TBIdx]) {
@@ -452,19 +459,22 @@ int QemuBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size) {
     }
   }
 
-  for (auto TBIdx : TBIndices) {
-    const auto &MCInsts = TBs[TBIdx]->MCInsts;
-    int i, Len = MCInsts.size();
-    for (i = 0; i < Len && Size > 0; ++i, --Size) {
-      MCIS[TotalSize - Size] = MCInsts[i].get();
-    }
-    if (Size <= 0) {
-      // Put reset of the MCInst into residual queue
-      // (if there is any)
-      for (; i < Len; ++i) {
-        ResidualInsts.push_back(MCInsts[i].get());
+  {
+    std::lock_guard<std::mutex> LK(TBsMutex);
+    for (auto TBIdx : TBIndices) {
+      const auto &MCInsts = TBs[TBIdx]->MCInsts;
+      int i, Len = MCInsts.size();
+      for (i = 0; i < Len && Size > 0; ++i, --Size) {
+        MCIS[TotalSize - Size] = MCInsts[i].get();
       }
-      break;
+      if (Size <= 0) {
+        // Put reset of the MCInst into residual queue
+        // (if there is any)
+        for (; i < Len; ++i) {
+          ResidualInsts.push_back(MCInsts[i].get());
+        }
+        break;
+      }
     }
   }
 
