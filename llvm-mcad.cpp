@@ -39,6 +39,13 @@
 #include "MCAWorker.h"
 #include "PipelinePrinter.h"
 
+#ifdef LLVM_MCAD_ENABLE_TCMALLOC
+#include "gperftools/heap-profiler.h"
+#endif
+#ifdef LLVM_MCAD_ENABLE_PROFILER
+#include "gperftools/profiler.h"
+#endif
+
 using namespace llvm;
 using namespace mcad;
 
@@ -113,7 +120,7 @@ static cl::opt<bool>
   EnableTimer("enable-timer", cl::desc("Print timing breakdown of each components"),
               cl::init(false), cl::Hidden);
 
-#ifdef MCABRIDGE_ENABLE_TCMALLOC
+#ifdef LLVM_MCAD_ENABLE_TCMALLOC
 static cl::opt<bool>
   EnableHeapProfile("heap-profile",
                     cl::desc("Profiling heap usage"),
@@ -123,7 +130,7 @@ static cl::opt<std::string>
                         cl::desc("Output path for the heap profiler"),
                         cl::init(""), cl::Hidden);
 #endif
-#ifdef MCABRIDGE_ENABLE_PROFILER
+#ifdef LLVM_MCAD_ENABLE_PROFILER
 static cl::opt<bool>
   EnableCpuProfile("cpu-profile",
                    cl::desc("Profiling CPU usage"),
@@ -150,6 +157,43 @@ static const llvm::Target *getLLVMTarget(const char *ProgName) {
 
   // Return the found target.
   return TheTarget;
+}
+
+static inline int initializeProfilers() {
+#ifdef LLVM_MCAD_ENABLE_TCMALLOC
+  if (EnableHeapProfile) {
+    if (HeapProfileOutputPath.empty()) {
+      SmallString<20> TmpPath;
+      auto EC = llvm::sys::fs::createTemporaryFile("tmp_heap_profile", "hp",
+                                                   TmpPath);
+      if (EC) {
+        errs() << "Failed to create temporary heap profile file: "
+               << EC.message() << "\n";
+        return 1;
+      }
+      HeapProfileOutputPath = (std::string)TmpPath;
+    }
+    HeapProfilerStart(HeapProfileOutputPath.c_str());
+  }
+#endif
+
+#ifdef LLVM_MCAD_ENABLE_PROFILER
+  if (EnableCpuProfile) {
+    if (CpuProfileOutputPath.empty()) {
+      SmallString<20> TmpPath;
+      auto EC = llvm::sys::fs::createTemporaryFile("tmp_cpu_profile", "prof",
+                                                   TmpPath);
+      if (EC) {
+        errs() << "Failed to create temporary CPU profile file: "
+               << EC.message() << "\n";
+        return 1;
+      }
+      CpuProfileOutputPath = (std::string)TmpPath;
+    }
+    ProfilerStart(CpuProfileOutputPath.c_str());
+  }
+#endif
+  return 0;
 }
 
 int main(int argc, char **argv) {
@@ -225,6 +269,9 @@ int main(int argc, char **argv) {
                          MCA, PO, IB,
                          *Ctx, *MAI, *MCII, *IP);
 
+  if(int Ret = initializeProfilers())
+    return Ret;
+
   if (!BrokerPluginPath.empty())
     UseBroker = BT_Plugin;
 
@@ -285,6 +332,16 @@ int main(int argc, char **argv) {
     llvm::TimerGroup::printAll(errs());
   else
     llvm::TimerGroup::clearAll();
+
+#ifdef LLVM_MCAD_ENABLE_PROFILER
+  if (EnableCpuProfile)
+    ProfilerStop();
+#endif
+
+#ifdef LLVM_MCAD_ENABLE_TCMALLOC
+  if (EnableHeapProfile)
+    HeapProfilerStop();
+#endif
 
   return 0;
 }

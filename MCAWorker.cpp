@@ -50,7 +50,7 @@ static cl::opt<bool>
                    cl::desc("Include call instruction in MCA"),
                    cl::init(false));
 
-#define DEFAULT_MAX_NUM_PROCESSED 10000U
+#define DEFAULT_MAX_NUM_PROCESSED 1000U
 static cl::opt<unsigned>
   MaxNumProcessedInst("mca-max-chunk-size",
                       cl::desc("Max number of instructions processed at a time"),

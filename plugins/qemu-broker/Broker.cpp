@@ -250,10 +250,10 @@ void QemuBroker::recvWorker(addrinfo *AI) {
   outs() << "Listening on " << ListenAddr << ":" << ListenPort << "...\n";
 
   int ClientSocktFD;
-  uint8_t RecvBuffer[1024];
+  uint8_t RecvBuffer[128];
   static_assert(sizeof(RecvBuffer) > sizeof(flatbuffers::uoffset_t),
                 "RecvBuffer is not larger than uoffset_t");
-  SmallVector<uint8_t, 2048> MsgBuffer;
+  SmallVector<uint8_t, 128> MsgBuffer;
   while ((ClientSocktFD = accept(ServSocktFD,
                                  AI->ai_addr, &AI->ai_addrlen))) {
     if (ClientSocktFD < 0) {
