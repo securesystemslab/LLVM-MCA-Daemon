@@ -117,7 +117,7 @@ MCAWorker::MCAWorker(const Target &T,
                       const mca::InstrDesc &D = I->getDesc();
                       RecycledInsts[&D].insert(I);
                     }),
-    Timers("MCABridge", "Time consumption in each MCABridge stages") {
+    Timers("MCAWorker", "Time consumption in each MCA stages") {
   MCAIB.setInstRecycleCallback(GetRecycledInst);
 
   SrcMgr.setOnInstFreedCallback(AddRecycledInst);

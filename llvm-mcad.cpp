@@ -2,7 +2,6 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -328,9 +327,7 @@ int main(int argc, char **argv) {
   }
   Worker.printMCA(OF);
 
-  if (EnableTimer)
-    llvm::TimerGroup::printAll(errs());
-  else
+  if (!EnableTimer)
     llvm::TimerGroup::clearAll();
 
 #ifdef LLVM_MCAD_ENABLE_PROFILER

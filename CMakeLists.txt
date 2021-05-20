@@ -35,8 +35,6 @@ option(LLVM_MCAD_ENABLE_TCMALLOC "Enable tcmalloc in gpertools for memory profil
 
 option(LLVM_MCAD_ENABLE_PROFILER "Enable CPU profiler in gpertools" OFF)
 
-option(LLVM_MCAD_FORCE_ENABLE_STATS "Always enable LLVM statistic" OFF)
-
 option(LLVM_MCAD_BUILD_PLUGINS "Build all MCAD plugins" OFF)
 
 # Sanitizers
@@ -52,11 +50,6 @@ endif()
 if (LLVM_MCAD_ENABLE_ASAN)
   message(STATUS "Address sanitizer is enabled")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-endif()
-
-if (CMAKE_BUILD_TYPE STREQUAL "Debug" OR LLVM_MCAD_FORCE_ENABLE_STATS)
-  message(STATUS "Enable LLVM statistic")
-  add_compile_definitions(LLVM_MCAD_ENABLE_STATS)
 endif()
 
 set(_EXTRA_LIBS )
