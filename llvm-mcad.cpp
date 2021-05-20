@@ -264,8 +264,15 @@ int main(int argc, char **argv) {
                           /*AssumeNoAlias=*/true,
                           /*EnableBottleneckAnalysis=*/false);
 
+  std::error_code EC;
+  ToolOutputFile OF(OutputFilename, EC, sys::fs::OF_Text);
+  if (EC) {
+    WithColor::error() << EC.message() << "\n";
+    return 1;
+  }
+
   mcad::MCAWorker Worker(*TheTarget, *STI,
-                         MCA, PO, IB,
+                         MCA, PO, IB, OF,
                          *Ctx, *MAI, *MCII, *IP);
 
   if(int Ret = initializeProfilers())
@@ -319,13 +326,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::error_code EC;
-  ToolOutputFile OF(OutputFilename, EC, sys::fs::OF_Text);
-  if (EC) {
-    WithColor::error() << EC.message() << "\n";
-    return 1;
-  }
-  Worker.printMCA(OF);
+  OF.keep();
 
   if (!EnableTimer)
     llvm::TimerGroup::clearAll();

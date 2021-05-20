@@ -22,6 +22,8 @@ class AsmFileBroker : public Broker {
 
   bool parseIfNeeded();
 
+  const MCInst *fetch();
+
 public:
   AsmFileBroker(const Target &T, MCContext &C,
                 const MCAsmInfo &A, const MCSubtargetInfo &S,
@@ -29,9 +31,12 @@ public:
 
   static void Register(BrokerFacade BF);
 
-  const MCInst *fetch() override;
+  bool hasRegionFeature() const override { return true; }
 
   int fetch(MutableArrayRef<const MCInst*> MCIS, int Size = -1) override;
+
+  std::pair<int, bool> fetchRegion(MutableArrayRef<const MCInst*> MCIS,
+                                   int Size = -1) override;
 };
 } // end namespace mcad
 } // end namespace llvm

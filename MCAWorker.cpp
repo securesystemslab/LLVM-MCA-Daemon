@@ -95,12 +95,14 @@ MCAWorker::MCAWorker(const Target &T,
                      mca::Context &MCA,
                      const mca::PipelineOptions &PO,
                      mca::InstrBuilder &IB,
+                     ToolOutputFile &OF,
                      MCContext &C,
                      const MCAsmInfo &AI,
                      const MCInstrInfo &II,
                      MCInstPrinter &IP)
   : TheTarget(T), STI(TheSTI),
     MCAIB(IB), Ctx(C), MAI(AI), MCII(II), MIP(IP),
+    TheMCA(MCA), MCAPO(PO), MCAOF(OF),
     TraceMIs(), GetTraceMISize([this]{ return TraceMIs.size(); }),
     GetRecycledInst([this](const mca::InstrDesc &Desc) -> mca::Instruction* {
                       if (RecycledInsts.count(&Desc)) {
@@ -119,10 +121,18 @@ MCAWorker::MCAWorker(const Target &T,
                     }),
     Timers("MCAWorker", "Time consumption in each MCA stages") {
   MCAIB.setInstRecycleCallback(GetRecycledInst);
-
   SrcMgr.setOnInstFreedCallback(AddRecycledInst);
+  resetPipeline();
+}
 
-  MCAPipeline = std::move(MCA.createDefaultPipeline(PO, SrcMgr));
+void MCAWorker::resetPipeline() {
+  RecycledInsts.clear();
+  TraceMIs.clear();
+
+  MCAIB.clear();
+  SrcMgr.clear();
+
+  MCAPipeline = std::move(TheMCA.createDefaultPipeline(MCAPO, SrcMgr));
   assert(MCAPipeline);
 
   MCAPipelinePrinter
@@ -156,60 +166,82 @@ Error MCAWorker::run() {
   SmallVector<const MCInst*, DEFAULT_MAX_NUM_PROCESSED>
     TraceBuffer(MaxNumProcessedInst);
 
-  bool Continue = true;
-  while (Continue) {
-    int Len = TheBroker->fetch(TraceBuffer);
-    if (Len < 0) {
-      Len = 0;
-      SrcMgr.endOfStream();
-      Continue = false;
-    }
+  bool UseRegion = TheBroker->hasRegionFeature();
+  // The end of instruction streams in all regions
+  bool EndOfStream = false;
+  while (true) {
+    bool Continue = true;
+    while (Continue) {
+      bool EndOfRegion = false;
+      int Len = 0;
+      if (UseRegion)
+        std::tie(Len, EndOfRegion) = TheBroker->fetchRegion(TraceBuffer);
+      else
+        Len = TheBroker->fetch(TraceBuffer);
 
-    ArrayRef<const MCInst*> TraceBufferSlice(TraceBuffer);
-    TraceBufferSlice = TraceBufferSlice.take_front(Len);
-
-    static Timer TheTimer("MCAInstrBuild", "MCA Build Instruction", Timers);
-    {
-      TimeRegion TR(TheTimer);
-
-      // Convert MCInst to mca::Instruction
-      for (const MCInst *OrigMCI : TraceBufferSlice) {
-        TraceMIs.push_back(OrigMCI);
-        const MCInst &MCI = *TraceMIs.back();
-        const auto &MCID = MCII.get(MCI.getOpcode());
-        // Always ignore return instruction since it's
-        // not really meaningful
-        if (MCID.isReturn()) continue;
-        if (!PreserveCallInst)
-          if (MCID.isCall())
-            continue;
-
-        if (TraceOS) {
-          MIP.printInst(&MCI, 0, "", STI, *TraceOS);
-          (*TraceOS) << "\n";
+      if (Len < 0 || EndOfRegion) {
+        SrcMgr.endOfStream();
+        Continue = false;
+        if (Len < 0) {
+          Len = 0;
+          EndOfStream = true;
         }
+      }
 
-        mca::Instruction *RecycledInst = nullptr;
-        Expected<std::unique_ptr<mca::Instruction>> InstOrErr
-          = MCAIB.createInstruction(MCI);
-        if (!InstOrErr) {
-          if (auto NewE = handleErrors(
-                   InstOrErr.takeError(),
-                   [&](const mca::RecycledInstErr &RC) {
-                     RecycledInst = RC.getInst();
-                   })) {
-            return std::move(NewE);
+      ArrayRef<const MCInst*> TraceBufferSlice(TraceBuffer);
+      TraceBufferSlice = TraceBufferSlice.take_front(Len);
+
+      static Timer TheTimer("MCAInstrBuild", "MCA Build Instruction", Timers);
+      {
+        TimeRegion TR(TheTimer);
+
+        // Convert MCInst to mca::Instruction
+        for (const MCInst *OrigMCI : TraceBufferSlice) {
+          TraceMIs.push_back(OrigMCI);
+          const MCInst &MCI = *TraceMIs.back();
+          const auto &MCID = MCII.get(MCI.getOpcode());
+          // Always ignore return instruction since it's
+          // not really meaningful
+          if (MCID.isReturn()) continue;
+          if (!PreserveCallInst)
+            if (MCID.isCall())
+              continue;
+
+          if (TraceOS) {
+            MIP.printInst(&MCI, 0, "", STI, *TraceOS);
+            (*TraceOS) << "\n";
           }
+
+          mca::Instruction *RecycledInst = nullptr;
+          Expected<std::unique_ptr<mca::Instruction>> InstOrErr
+            = MCAIB.createInstruction(MCI);
+          if (!InstOrErr) {
+            if (auto NewE = handleErrors(
+                     InstOrErr.takeError(),
+                     [&](const mca::RecycledInstErr &RC) {
+                       RecycledInst = RC.getInst();
+                     })) {
+              return std::move(NewE);
+            }
+          }
+          if (RecycledInst)
+            SrcMgr.addRecycledInst(RecycledInst);
+          else
+            SrcMgr.addInst(std::move(InstOrErr.get()));
         }
-        if (RecycledInst)
-          SrcMgr.addRecycledInst(RecycledInst);
-        else
-          SrcMgr.addInst(std::move(InstOrErr.get()));
+      }
+
+      if (TraceMIs.size()) {
+        if (auto E = runPipeline())
+          return E;
       }
     }
+    printMCA();
 
-    if (auto E = runPipeline())
-      return E;
+    if (EndOfStream)
+      break;
+    if (UseRegion)
+      resetPipeline();
   }
 
   if (TraceMCI && TraceTOF)
@@ -237,12 +269,12 @@ Error MCAWorker::runPipeline() {
   return ErrorSuccess();
 }
 
-void MCAWorker::printMCA(ToolOutputFile &OF) {
-  if (TraceMIs.size()) {
-    MCAPipelinePrinter->printReport(OF.os());
-    OF.keep();
-  }
+void MCAWorker::printMCA() {
+  if (TraceMIs.size())
+    MCAPipelinePrinter->printReport(MCAOF.os());
+}
 
+MCAWorker::~MCAWorker() {
 #ifndef NDEBUG
   if (DumpSourceMgrStats)
     SrcMgr.printStatistic(

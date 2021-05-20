@@ -42,6 +42,9 @@ class MCAWorker {
   const MCAsmInfo &MAI;
   const MCInstrInfo &MCII;
   MCInstPrinter &MIP;
+  mca::Context &TheMCA;
+  const mca::PipelineOptions &MCAPO;
+  ToolOutputFile &MCAOF;
   std::unique_ptr<mca::Pipeline> MCAPipeline;
   std::unique_ptr<mca::PipelinePrinter> MCAPipelinePrinter;
 
@@ -62,7 +65,11 @@ class MCAWorker {
 
   std::unique_ptr<Broker> TheBroker;
 
+  void resetPipeline();
+
   Error runPipeline();
+
+  void printMCA();
 
 public:
   MCAWorker() = delete;
@@ -72,6 +79,7 @@ public:
             mca::Context &MCA,
             const mca::PipelineOptions &PO,
             mca::InstrBuilder &IB,
+            ToolOutputFile &OF,
             MCContext &Ctx,
             const MCAsmInfo &MAI,
             const MCInstrInfo &II,
@@ -83,7 +91,7 @@ public:
 
   Error run();
 
-  void printMCA(ToolOutputFile &OF);
+  ~MCAWorker();
 };
 } // end namespace mcad
 } // end namespace llvm

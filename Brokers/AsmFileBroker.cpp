@@ -96,3 +96,36 @@ int AsmFileBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size) {
   return int(i);
 }
 
+std::pair<int, bool>
+AsmFileBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size) {
+  assert(Size <= int(MCIS.size()));
+  size_t MaxLen = Size < 0? MCIS.size() : Size;
+
+  size_t i, NumInsts = 0U;
+  bool EndOfRegion = false;
+  for (i = 0U; i < MaxLen; ++i) {
+    const MCInst *MCI = fetch();
+    if (!MCI) {
+      // End of stream
+      if (!i)
+        return std::make_pair(-1, true);
+      else {
+        EndOfRegion = true;
+        break;
+      }
+    }
+    MCIS[i] = MCI;
+    if (!NumInsts)
+      NumInsts = (*IterRegion)->getInstructions().size();
+
+    if (CurInstIdx >= NumInsts) {
+      // Is going to switch to different region in the next
+      // `fetch` invocation
+      EndOfRegion = true;
+      ++i;
+      break;
+    }
+  }
+
+  return std::make_pair(int(i), EndOfRegion);
+}
