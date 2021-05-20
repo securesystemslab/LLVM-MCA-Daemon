@@ -164,7 +164,6 @@ Error MCAWorker::run() {
       SrcMgr.endOfStream();
       Continue = false;
     }
-    if (!Len) continue;
 
     ArrayRef<const MCInst*> TraceBufferSlice(TraceBuffer);
     TraceBufferSlice = TraceBufferSlice.take_front(Len);
