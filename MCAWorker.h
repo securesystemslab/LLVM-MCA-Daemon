@@ -69,7 +69,7 @@ class MCAWorker {
 
   Error runPipeline();
 
-  void printMCA();
+  void printMCA(StringRef RegionDescription = "");
 
 public:
   MCAWorker() = delete;

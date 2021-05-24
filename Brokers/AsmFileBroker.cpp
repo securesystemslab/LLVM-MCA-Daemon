@@ -96,10 +96,11 @@ int AsmFileBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size) {
   return int(i);
 }
 
-std::pair<int, bool>
+std::pair<int, Broker::RegionDescriptor>
 AsmFileBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size) {
   assert(Size <= int(MCIS.size()));
   size_t MaxLen = Size < 0? MCIS.size() : Size;
+  StringRef LastRegionDescription;
 
   size_t i, NumInsts = 0U;
   bool EndOfRegion = false;
@@ -108,15 +109,19 @@ AsmFileBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size) {
     if (!MCI) {
       // End of stream
       if (!i)
-        return std::make_pair(-1, true);
+        return std::make_pair(-1,
+                              RegionDescriptor(true, LastRegionDescription));
       else {
         EndOfRegion = true;
         break;
       }
     }
     MCIS[i] = MCI;
-    if (!NumInsts)
+    if (!NumInsts) {
+      assert(IterRegion != IterRegionEnd);
       NumInsts = (*IterRegion)->getInstructions().size();
+      LastRegionDescription = (*IterRegion)->getDescription();
+    }
 
     if (CurInstIdx >= NumInsts) {
       // Is going to switch to different region in the next
@@ -127,5 +132,6 @@ AsmFileBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size) {
     }
   }
 
-  return std::make_pair(int(i), EndOfRegion);
+  return std::make_pair(int(i),
+                        RegionDescriptor(EndOfRegion, LastRegionDescription));
 }

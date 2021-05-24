@@ -167,19 +167,20 @@ Error MCAWorker::run() {
     TraceBuffer(MaxNumProcessedInst);
 
   bool UseRegion = TheBroker->hasRegionFeature();
+  size_t RegionIdx = 0U;
   // The end of instruction streams in all regions
   bool EndOfStream = false;
   while (true) {
     bool Continue = true;
+    Broker::RegionDescriptor RD(/*IsEnd=*/false);
     while (Continue) {
-      bool EndOfRegion = false;
       int Len = 0;
       if (UseRegion)
-        std::tie(Len, EndOfRegion) = TheBroker->fetchRegion(TraceBuffer);
+        std::tie(Len, RD) = TheBroker->fetchRegion(TraceBuffer);
       else
         Len = TheBroker->fetch(TraceBuffer);
 
-      if (Len < 0 || EndOfRegion) {
+      if (Len < 0 || RD) {
         SrcMgr.endOfStream();
         Continue = false;
         if (Len < 0) {
@@ -236,7 +237,15 @@ Error MCAWorker::run() {
           return E;
       }
     }
-    printMCA();
+    if (UseRegion) {
+      if (!RD.Description.empty())
+        printMCA(RD.Description);
+      else
+        printMCA(std::string("Region [") +
+                 std::to_string(RegionIdx++) +
+                 std::string(1, ']'));
+    } else
+      printMCA();
 
     if (EndOfStream)
       break;
@@ -269,9 +278,16 @@ Error MCAWorker::runPipeline() {
   return ErrorSuccess();
 }
 
-void MCAWorker::printMCA() {
-  if (TraceMIs.size())
-    MCAPipelinePrinter->printReport(MCAOF.os());
+void MCAWorker::printMCA(StringRef RegionDescription) {
+  if (TraceMIs.empty()) return;
+
+  raw_ostream &OS = MCAOF.os();
+  // Print region description text if feasible
+  if (!RegionDescription.empty())
+    OS << "\n=== Printing report for "
+       << RegionDescription << " ===\n";
+
+  MCAPipelinePrinter->printReport(OS);
 }
 
 MCAWorker::~MCAWorker() {

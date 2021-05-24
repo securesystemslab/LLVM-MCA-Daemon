@@ -1,6 +1,7 @@
 #ifndef LLVM_MCAD_BROKERS_BROKER_H
 #define LLVM_MCAD_BROKERS_BROKER_H
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInst.h"
 #include <utility>
 
@@ -31,13 +32,24 @@ struct Broker {
   // use `fetchRegion` method instead.
   virtual bool hasRegionFeature() const { return false; }
 
+  struct RegionDescriptor {
+    bool IsEnd;
+    llvm::StringRef Description;
+
+    explicit RegionDescriptor(bool End, llvm::StringRef Text = "")
+      : IsEnd(End), Description(Text) {}
+
+    // Return true if it's the end of a region
+    inline operator bool() const { return IsEnd; }
+  };
+
   // Similar to `fetch`, but returns the number of MCInst fetched and whether
   // the last element in MCIS is also the last instructions in the current Region.
   // Note that MCIS always aligned with the boundary of Region (i.e. the last
   // instruction of a Region will not be in the middle of MCIS)
-  virtual std::pair<int, bool> fetchRegion(MutableArrayRef<const MCInst*> MCIS,
-                                           int Size = -1) {
-    return std::make_pair(-1, true);
+  virtual std::pair<int, RegionDescriptor>
+  fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size = -1) {
+    return std::make_pair(-1, RegionDescriptor(true));
   }
 
   virtual ~Broker() {}

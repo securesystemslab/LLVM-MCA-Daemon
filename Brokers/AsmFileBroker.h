@@ -35,8 +35,8 @@ public:
 
   int fetch(MutableArrayRef<const MCInst*> MCIS, int Size = -1) override;
 
-  std::pair<int, bool> fetchRegion(MutableArrayRef<const MCInst*> MCIS,
-                                   int Size = -1) override;
+  std::pair<int, RegionDescriptor>
+  fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size = -1) override;
 };
 } // end namespace mcad
 } // end namespace llvm

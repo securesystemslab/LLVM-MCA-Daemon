@@ -34,6 +34,11 @@ static cl::opt<unsigned>
   ConnectPort("port", cl::desc("Remote port to connect"),
               cl::Required);
 
+static cl::opt<bool>
+  OnlyMainCode("only-main-code", cl::desc("Only send instructions that "
+                                          "are part of the main executable"),
+               cl::init(false), cl::Hidden);
+
 QEMU_PLUGIN_EXPORT int qemu_plugin_version = QEMU_PLUGIN_VERSION;
 
 static StringRef CurrentQemuTarget;
@@ -88,9 +93,16 @@ static void tbExecCallback(unsigned int CPUId, void *Data) {
   }
 }
 
+// The starting address of the currently loaded binary
+// TODO: What about end address?
+static llvm::Optional<uint64_t> CodeStartAddr;
+
 static void tbTranslateCallback(qemu_plugin_id_t Id,
                                 struct qemu_plugin_tb *TB) {
   using namespace mcad;
+
+  if (!CodeStartAddr)
+    CodeStartAddr = qemu_plugin_vcpu_code_start_vaddr();
 
   size_t NumInsn = qemu_plugin_tb_n_insns(TB);
   std::vector<uint8_t> RawInst;
@@ -99,6 +111,13 @@ static void tbTranslateCallback(qemu_plugin_id_t Id,
     const auto *QI = qemu_plugin_tb_get_insn(TB, i);
     size_t InsnSize = qemu_plugin_insn_size(QI);
     const auto *I = (const uint8_t*)qemu_plugin_insn_data(QI);
+    uint64_t VAddr = qemu_plugin_insn_vaddr(QI);
+
+    // Filter by address
+    if (OnlyMainCode && VAddr < *CodeStartAddr)
+      // Ignore code that is not part of the main binary
+      // (e.g. interpreter)
+      continue;
 
     RawInst.clear();
     for (auto j = 0U; j < InsnSize; ++j)
