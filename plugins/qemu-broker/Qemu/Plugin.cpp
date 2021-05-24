@@ -56,6 +56,10 @@ std::unordered_map<const char*, RegisterInfo> RegInfoRegistry;
 static int RemoteSockt = -1;
 
 static size_t NumTranslationBlock = 0U;
+#ifndef NDEBUG
+static SmallVector<size_t, 8> TBNumInsts;
+static size_t NumExecInsts = 0U;
+#endif
 
 /// === QEMU Callbacks ===
 
@@ -63,6 +67,10 @@ static void tbExecCallback(unsigned int CPUId, void *Data) {
   using namespace mcad;
 
   auto TBIdx = (size_t)Data;
+#ifndef NDEBUG
+  if (TBIdx < TBNumInsts.size())
+    NumExecInsts += TBNumInsts[TBIdx];
+#endif
 
   uint64_t VAddr = TBIdx;
   if (CurrentQemuTarget.startswith_lower("arm") &&
@@ -150,6 +158,9 @@ static void tbTranslateCallback(qemu_plugin_id_t Id,
   }
 
   // Register exec callback
+#ifndef NDEBUG
+  TBNumInsts.push_back(RawInsts.size());
+#endif
   qemu_plugin_register_vcpu_tb_exec_cb(TB, tbExecCallback,
                                        QEMU_PLUGIN_CB_NO_REGS,
                                        (void*)NumTranslationBlock++);
@@ -184,6 +195,9 @@ static void tbTranslateCallback(qemu_plugin_id_t Id,
 
 static void onPluginExit(qemu_plugin_id_t Id, void *Data) {
   using namespace mcad;
+
+  LLVM_DEBUG(dbgs() << "Total number of executed instructions: "
+                    << NumExecInsts << "\n");
 
   if (RemoteSockt < 0)
     return;
