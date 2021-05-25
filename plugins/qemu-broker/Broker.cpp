@@ -190,23 +190,24 @@ class QemuBroker : public Broker {
     const BinaryRegion *Region = nullptr;
     if (BinRegions && BinRegions->size()) {
       size_t i = 0U, S = TB.VAddrOffsets.size();
-      if (!CurBinRegion && TB.VAddr >= CodeStartAddress) {
+      if (!CurBinRegion) {
         BeginIdx = EndIdx;
-        // Watch if there is any match on starting address
-        uint64_t VA = TB.VAddr - CodeStartAddress;
-        for (; i != S; ++i) {
-          uint8_t Offset = TB.VAddrOffsets[i];
-          VA += uint64_t(Offset);
-          CurBinRegion = BinRegions->lookup(VA);
-          if (CurBinRegion)
-            break;
-        }
-        if (i != S) {
-          BeginIdx = i;
-          LLVM_DEBUG(dbgs() << "Start to analyze region "
-                            << CurBinRegion->Description
-                            << " @ addr = " << format_hex(VA, 16)
-                            << "\n");
+        if (TB.VAddr >= CodeStartAddress) {
+          // Watch if there is any match on starting address
+          uint64_t VA = TB.VAddr - CodeStartAddress;
+          for (; i != S; ++i) {
+            uint8_t Offset = TB.VAddrOffsets[i];
+            CurBinRegion = BinRegions->lookup(VA + uint64_t(Offset));
+            if (CurBinRegion)
+              break;
+          }
+          if (i != S) {
+            BeginIdx = i;
+            LLVM_DEBUG(dbgs() << "Start to analyze region "
+                              << CurBinRegion->Description
+                              << " @ addr = " << format_hex(VA, 16)
+                              << "\n");
+          }
         }
       }
 
@@ -215,8 +216,7 @@ class QemuBroker : public Broker {
         uint64_t VA = TB.VAddr - CodeStartAddress;
         for (; i != S; ++i) {
           uint8_t Offset = TB.VAddrOffsets[i];
-          VA += uint64_t(Offset);
-          if (CurBinRegion->EndAddr == VA)
+          if (CurBinRegion->EndAddr == VA + uint64_t(Offset))
             break;
         }
         if (i != S) {

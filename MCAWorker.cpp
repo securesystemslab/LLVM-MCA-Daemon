@@ -249,8 +249,13 @@ Error MCAWorker::run() {
 
     if (EndOfStream)
       break;
-    if (UseRegion)
+    if (UseRegion) {
       resetPipeline();
+      if (TraceOS) {
+        (*TraceOS) << MAI.getCommentString()
+                   << " === End Of Region ===\n";
+      }
+    }
   }
 
   if (TraceMCI && TraceTOF)
