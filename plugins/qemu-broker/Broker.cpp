@@ -55,13 +55,16 @@ raw_ostream &operator<<(raw_ostream &OS, const RawInstTy &RawInst) {
 
 
 struct TranslationBlock {
-  SmallVector<RawInstTy, 5> RawInsts;
+  SmallVector<RawInstTy, 8> RawInsts;
   // Owner of all MCInst instances
   // Note that we caonnt use SmallVector<MCInst,...> here because
   // when SmallVector resize all MCInst* retrieved previously will be invalid
-  SmallVector<std::unique_ptr<MCInst>, 5> MCInsts;
+  SmallVector<std::unique_ptr<MCInst>, 8> MCInsts;
 
+  // The start address of this TB
   uint64_t VAddr;
+  // Address offsets to each MCInst in this TB
+  SmallVector<uint8_t, 8> VAddrOffsets;
 
   explicit TranslationBlock(size_t Size)
     : RawInsts(Size), VAddr(0U) {}
@@ -81,6 +84,9 @@ class QemuBroker : public Broker {
   unsigned MaxNumAcceptedConnection;
 
   std::unique_ptr<qemu_broker::BinaryRegions> BinRegions;
+  const qemu_broker::BinaryRegion *CurBinRegion;
+
+  uint64_t CodeStartAddress;
 
   const Target &TheTarget;
   MCContext &Ctx;
@@ -99,11 +105,19 @@ class QemuBroker : public Broker {
   std::mutex TBsMutex;
   SmallVector<Optional<TranslationBlock>, 8> TBs;
 
+  struct TBSlice {
+    // TB index
+    size_t Index;
+    // Creating a slice of [BeginIdx, EndIdx)
+    uint16_t BeginIdx, EndIdx;
+
+    // If it's non-null it's end of region
+    const qemu_broker::BinaryRegion *Region;
+
+    size_t size() const { return EndIdx - BeginIdx; }
+  };
   // List of to-be-executed TB index
-  SmallVector<size_t, 16> TBQueue;
-  // Instructions that can't be completely drained from TB
-  // in last round
-  SmallVector<const MCInst*, 4> ResidualInsts;
+  SmallVector<TBSlice, 16> TBQueue;
   bool IsEndOfStream;
   std::mutex QueueMutex;
   std::condition_variable QueueCV;
@@ -137,6 +151,10 @@ class QemuBroker : public Broker {
 
   void disassemble(TranslationBlock &TB);
 
+  void handleMetadata(const fbs::Metadata &MD) {
+    CodeStartAddress = MD.LoadAddr();
+  }
+
   void tbExec(const fbs::ExecTB &OrigTB) {
     using namespace qemu_broker;
     uint32_t Idx = OrigTB.Index();
@@ -164,24 +182,63 @@ class QemuBroker : public Broker {
       // Disassemble
       disassemble(TB);
 
+    const auto &TheTriple = STI.getTargetTriple();
+    if (TheTriple.isARM() || TheTriple.isThumb())
+      TB.VAddr &= (~0b1);
+
+    uint16_t BeginIdx = 0u, EndIdx = ~uint16_t(0u);
+    const BinaryRegion *Region = nullptr;
     if (BinRegions && BinRegions->size()) {
-      // We're assuming the number of BinRegions is pretty small.
-      // Also, BinRegions are all sorted so it should be pretty
-      // efficient in most cases.
-      // FIXME: This doesn't consider the actual loaded address
-      auto It = llvm::find_if(*BinRegions,
-                              [PC](const BinaryRegion &BR) {
-                                return BR.StartAddr == PC;
-                              });
-      if (It != BinRegions->end())
-        errs() << "Starting address for " << It->Description
-               << " matched!\n";
+      size_t i = 0U, S = TB.VAddrOffsets.size();
+      if (!CurBinRegion && TB.VAddr >= CodeStartAddress) {
+        BeginIdx = EndIdx;
+        // Watch if there is any match on starting address
+        uint64_t VA = TB.VAddr - CodeStartAddress;
+        for (; i != S; ++i) {
+          uint8_t Offset = TB.VAddrOffsets[i];
+          VA += uint64_t(Offset);
+          CurBinRegion = BinRegions->lookup(VA);
+          if (CurBinRegion)
+            break;
+        }
+        if (i != S) {
+          BeginIdx = i;
+          LLVM_DEBUG(dbgs() << "Start to analyze region "
+                            << CurBinRegion->Description
+                            << " @ addr = " << format_hex(VA, 16)
+                            << "\n");
+        }
+      }
+
+      if (CurBinRegion && TB.VAddr >= CodeStartAddress) {
+        // Watch if any instruction hit the ending address
+        uint64_t VA = TB.VAddr - CodeStartAddress;
+        for (; i != S; ++i) {
+          uint8_t Offset = TB.VAddrOffsets[i];
+          VA += uint64_t(Offset);
+          if (CurBinRegion->EndAddr == VA)
+            break;
+        }
+        if (i != S) {
+          // End of region
+          EndIdx = i + 1;
+          Region = CurBinRegion;
+          CurBinRegion = nullptr;
+          LLVM_DEBUG(dbgs() << "Terminating region "
+                            << Region->Description
+                            << "\n");
+        }
+      }
     }
+
+    // Empty slice
+    if (BeginIdx == EndIdx)
+      return;
 
     // Put into the queue
     {
       std::lock_guard<std::mutex> Lock(QueueMutex);
-      TBQueue.push_back(Idx);
+      TBQueue.push_back({Idx, BeginIdx, EndIdx, Region});
     }
     QueueCV.notify_one();
   }
@@ -193,7 +250,14 @@ public:
              const MCSubtargetInfo &STI,
              MCContext &Ctx, const Target &T);
 
+  bool hasRegionFeature() const override {
+    return BinRegions && BinRegions->size();
+  }
+
   int fetch(MutableArrayRef<const MCInst*> MCIS, int Size = -1) override;
+
+  std::pair<int, RegionDescriptor>
+  fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size = -1) override;
 
   ~QemuBroker() {
     if(ReceiverThread) {
@@ -215,8 +279,10 @@ QemuBroker::QemuBroker(StringRef Addr, StringRef Port,
                        const MCSubtargetInfo &MSTI,
                        MCContext &C, const Target &T)
   : ListenAddr(Addr.str()), ListenPort(Port.str()),
-    MaxNumAcceptedConnection(MaxNumConn),
     ServSocktFD(-1), AI(nullptr),
+    MaxNumAcceptedConnection(MaxNumConn),
+    CurBinRegion(nullptr),
+    CodeStartAddress(0U),
     TheTarget(T), Ctx(C), STI(MSTI),
     CurDisAsm(nullptr),
     IsEndOfStream(false) {
@@ -353,6 +419,9 @@ void QemuBroker::recvWorker(addrinfo *AI) {
 
       const fbs::Message *Msg = fbs::GetSizePrefixedMessage(MsgBuffer.data());
       switch (Msg->Content_type()) {
+      case fbs::Msg_Metadata:
+        handleMetadata(*Msg->Content_as_Metadata());
+        break;
       case fbs::Msg_TranslatedBlock:
         addTB(*Msg->Content_as_TranslatedBlock());
         break;
@@ -412,11 +481,12 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
   bool Disassembled;
   uint64_t DisAsmSize;
   uint64_t Len;
-  uint64_t VAddr = TB.VAddr;
-
+  uint64_t StartVAddr = TB.VAddr;
   // We don't want LSB to interfere the disassembling process
   if (TheTriple.isARM() || TheTriple.isThumb())
-    VAddr &= (~0b1);
+    StartVAddr &= (~0b1);
+
+  uint64_t VAddr = StartVAddr;
 
   LLVM_DEBUG(dbgs() << "Disassembling " << TB.RawInsts.size()
                     << " instructions\n");
@@ -445,43 +515,31 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
         DisAsmSize = 1;
 
       TB.MCInsts.emplace_back(std::move(MCI));
+      TB.VAddrOffsets.emplace_back(VAddr + Index - StartVAddr);
       Index += DisAsmSize;
     }
     VAddr += RawInst.size();
   }
 }
 
-int QemuBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size) {
-  if (!Size) return 0;
+std::pair<int, Broker::RegionDescriptor>
+QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size) {
+  using namespace qemu_broker;
+
+  if (!Size)
+    return std::make_pair(0, RegionDescriptor(false));
   if (Size < 0 || Size > MCIS.size())
     Size = MCIS.size();
 
   int TotalSize = Size;
 
-  bool ReadResiduals = ResidualInsts.size();
-  if (ReadResiduals) {
-    int i, RS = ResidualInsts.size();
-    for (i = 0; i < RS && i < Size; ++i) {
-      MCIS[i] = ResidualInsts[i];
-    }
-    ResidualInsts.erase(ResidualInsts.begin(),
-                        i >= RS? ResidualInsts.end() :
-                                 ResidualInsts.begin() + i);
-    Size -= i;
-  }
-
-  if (Size <= 0)
-    return TotalSize;
-
-  SmallVector<size_t, 2> TBIndices;
+  SmallVector<TBSlice, 2> SelectedSlices;
   {
     std::unique_lock<std::mutex> Lock(QueueMutex);
     // Only block if the queue is completely empty
     if (TBQueue.empty()) {
-      if (ReadResiduals)
-        return TotalSize - Size;
-      else if (IsEndOfStream)
-        return -1;
+      if (IsEndOfStream)
+        return std::make_pair(-1, RegionDescriptor(true));
       else
         QueueCV.wait(Lock,
                      [this] {
@@ -489,42 +547,68 @@ int QemuBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size) {
                      });
     }
 
-    if (TBQueue.empty() && ResidualInsts.empty() && IsEndOfStream)
-      return -1;
+    if (TBQueue.empty() && IsEndOfStream)
+      return std::make_pair(-1, RegionDescriptor(true));
 
-    int S = Size;
     // Fetch enough block indicies to fulfill the size requirement
     std::lock_guard<std::mutex> LK(TBsMutex);
-    while (S > 0 && !TBQueue.empty()) {
-      size_t TBIdx = TBQueue.front();
+    int S = Size;
+    bool EndOfRegion = false;
+    while (S > 0 && !TBQueue.empty() && !EndOfRegion) {
+      const auto &CurSlice = TBQueue.front();
+      size_t TBIdx = CurSlice.Index;
       if (TBIdx < TBs.size() && TBs[TBIdx]) {
-        TBIndices.push_back(TBIdx);
-        S -= TBs[TBIdx]->MCInsts.size();
+        size_t SliceLen = std::min(TBs[TBIdx]->MCInsts.size(), CurSlice.size());
+        if (SliceLen > S) {
+          // We need to split the current TB slice
+          TBSlice TakenSlice{TBIdx,
+                             CurSlice.BeginIdx,
+                             uint16_t(CurSlice.BeginIdx + S),
+                             nullptr};
+          TBSlice ResidualSlice{TBIdx,
+                                uint16_t(CurSlice.BeginIdx + S),
+                                CurSlice.EndIdx,
+                                CurSlice.Region};
+          SelectedSlices.push_back(TakenSlice);
+          // We will remove the first element later, so
+          // insert the residual one as its next element
+          TBQueue.insert(TBQueue.begin() + 1, ResidualSlice);
+          S = 0;
+        } else {
+          SelectedSlices.push_back(CurSlice);
+          S -= SliceLen;
+        }
       }
       TBQueue.erase(TBQueue.begin());
+      EndOfRegion = SelectedSlices.empty()? false :
+                                            bool(SelectedSlices.back().Region);
     }
   }
 
   {
     std::lock_guard<std::mutex> LK(TBsMutex);
-    for (auto TBIdx : TBIndices) {
+    for (const auto &Slice : SelectedSlices) {
+      size_t TBIdx = Slice.Index;
       const auto &MCInsts = TBs[TBIdx]->MCInsts;
-      int i, Len = MCInsts.size();
-      for (i = 0; i < Len && Size > 0; ++i, --Size) {
+      size_t i, End = std::min(MCInsts.size(), size_t(Slice.EndIdx));
+      assert(TotalSize >= Size);
+      for (i = Slice.BeginIdx; i != End && Size > 0; ++i, --Size) {
         MCIS[TotalSize - Size] = MCInsts[i].get();
-      }
-      if (Size <= 0) {
-        // Put reset of the MCInst into residual queue
-        // (if there is any)
-        for (; i < Len; ++i) {
-          ResidualInsts.push_back(MCInsts[i].get());
-        }
-        break;
       }
     }
   }
 
-  return Size > 0? TotalSize - Size : TotalSize;
+  if(SelectedSlices.size()) {
+    if (const auto *Region = SelectedSlices.back().Region)
+      // End of Region
+      return std::make_pair(TotalSize - Size,
+                            RegionDescriptor(true, Region->Description));
+  }
+  return std::make_pair(TotalSize - Size, RegionDescriptor(false));
+}
+
+int QemuBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size) {
+  return fetchRegion(MCIS, Size).first;
 }
 
 extern "C" ::llvm::mcad::BrokerPluginLibraryInfo LLVM_ATTRIBUTE_WEAK

@@ -10,6 +10,8 @@ namespace llvm {
 namespace mcad {
 namespace fbs {
 
+struct Metadata;
+
 struct ExecTB;
 
 struct Inst;
@@ -20,15 +22,17 @@ struct Message;
 
 enum Msg {
   Msg_NONE = 0,
-  Msg_ExecTB = 1,
-  Msg_TranslatedBlock = 2,
+  Msg_Metadata = 1,
+  Msg_ExecTB = 2,
+  Msg_TranslatedBlock = 3,
   Msg_MIN = Msg_NONE,
   Msg_MAX = Msg_TranslatedBlock
 };
 
-inline const Msg (&EnumValuesMsg())[3] {
+inline const Msg (&EnumValuesMsg())[4] {
   static const Msg values[] = {
     Msg_NONE,
+    Msg_Metadata,
     Msg_ExecTB,
     Msg_TranslatedBlock
   };
@@ -38,6 +42,7 @@ inline const Msg (&EnumValuesMsg())[3] {
 inline const char * const *EnumNamesMsg() {
   static const char * const names[] = {
     "NONE",
+    "Metadata",
     "ExecTB",
     "TranslatedBlock",
     nullptr
@@ -55,6 +60,10 @@ template<typename T> struct MsgTraits {
   static const Msg enum_value = Msg_NONE;
 };
 
+template<> struct MsgTraits<Metadata> {
+  static const Msg enum_value = Msg_Metadata;
+};
+
 template<> struct MsgTraits<ExecTB> {
   static const Msg enum_value = Msg_ExecTB;
 };
@@ -65,6 +74,46 @@ template<> struct MsgTraits<TranslatedBlock> {
 
 bool VerifyMsg(flatbuffers::Verifier &verifier, const void *obj, Msg type);
 bool VerifyMsgVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types);
+
+struct Metadata FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_LOADADDR = 4
+  };
+  uint64_t LoadAddr() const {
+    return GetField<uint64_t>(VT_LOADADDR, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint64_t>(verifier, VT_LOADADDR) &&
+           verifier.EndTable();
+  }
+};
+
+struct MetadataBuilder {
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_LoadAddr(uint64_t LoadAddr) {
+    fbb_.AddElement<uint64_t>(Metadata::VT_LOADADDR, LoadAddr, 0);
+  }
+  explicit MetadataBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  MetadataBuilder &operator=(const MetadataBuilder &);
+  flatbuffers::Offset<Metadata> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = flatbuffers::Offset<Metadata>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<Metadata> CreateMetadata(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint64_t LoadAddr = 0) {
+  MetadataBuilder builder_(_fbb);
+  builder_.add_LoadAddr(LoadAddr);
+  return builder_.Finish();
+}
 
 struct ExecTB FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
@@ -241,6 +290,9 @@ struct Message FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return GetPointer<const void *>(VT_CONTENT);
   }
   template<typename T> const T *Content_as() const;
+  const Metadata *Content_as_Metadata() const {
+    return Content_type() == Msg_Metadata ? static_cast<const Metadata *>(Content()) : nullptr;
+  }
   const ExecTB *Content_as_ExecTB() const {
     return Content_type() == Msg_ExecTB ? static_cast<const ExecTB *>(Content()) : nullptr;
   }
@@ -255,6 +307,10 @@ struct Message FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.EndTable();
   }
 };
+
+template<> inline const Metadata *Message::Content_as<Metadata>() const {
+  return Content_as_Metadata();
+}
 
 template<> inline const ExecTB *Message::Content_as<ExecTB>() const {
   return Content_as_ExecTB();
@@ -299,6 +355,10 @@ inline bool VerifyMsg(flatbuffers::Verifier &verifier, const void *obj, Msg type
   switch (type) {
     case Msg_NONE: {
       return true;
+    }
+    case Msg_Metadata: {
+      auto ptr = reinterpret_cast<const Metadata *>(obj);
+      return verifier.VerifyTable(ptr);
     }
     case Msg_ExecTB: {
       auto ptr = reinterpret_cast<const ExecTB *>(obj);

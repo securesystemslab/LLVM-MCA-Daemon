@@ -1,5 +1,12 @@
 namespace llvm.mcad.fbs;
 
+// Some metadata
+table Metadata {
+  // The address where the main executable is loaded
+  LoadAddr: uint64;
+}
+
+// Sent when a TB with index `Index` is executed
 table ExecTB {
   Index: uint;
   PC: uint64;
@@ -9,12 +16,14 @@ table Inst {
   Data: [ubyte];
 }
 
+// Sent when a TB is translated
 table TranslatedBlock {
   Index: uint;
   Instructions: [Inst];
 }
 
 union Msg {
+  Metadata,
   ExecTB,
   TranslatedBlock
 }

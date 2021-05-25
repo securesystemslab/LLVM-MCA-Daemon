@@ -2,10 +2,10 @@
 #define LLVM_MCAD_QEMU_BROKER_BINARYREGIONS_H
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Object/Binary.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
+#include <unordered_map>
 
 namespace llvm {
 // Forward declarations
@@ -18,7 +18,7 @@ class Array;
 namespace mcad {
 namespace qemu_broker {
 struct BinaryRegion {
-  StringRef Description;
+  std::string Description;
   uint64_t StartAddr, EndAddr;
 };
 
@@ -42,13 +42,8 @@ class BinaryRegions {
   Error parseRegions(json::Array &RawRegions,
                      const StringMap<BRSymbol> &Symbols);
 
-  // Owner of binary file
-  // We need to keep object::Binary instance "alive"
-  // because both BRSymbol and BinaryRegion contain StringRef
-  // from it.
-  std::unique_ptr<object::Binary> TheBinary;
-
-  SmallVector<BinaryRegion, 2> Regions;
+  // {start address -> BinaryRegion}
+  std::unordered_map<uint64_t, BinaryRegion> Regions;
 
   BinaryRegions() = default;
 
@@ -56,15 +51,14 @@ public:
   static
   Expected<std::unique_ptr<BinaryRegions>> Create(StringRef ManifestPath);
 
-  using iterator = typename decltype(Regions)::iterator;
-  using const_iterator = typename decltype(Regions)::const_iterator;
-
-  iterator begin() { return Regions.begin(); }
-  iterator end() { return Regions.end(); }
-  const_iterator begin() const { return Regions.begin(); }
-  const_iterator end() const { return Regions.end(); }
-
   size_t size() const { return Regions.size(); }
+
+  const BinaryRegion *lookup(uint64_t StartAddr) const {
+    if (!Regions.count(StartAddr))
+      return nullptr;
+    else
+      return &Regions.at(StartAddr);
+  }
 };
 } // end namespace qemu_broker
 } // end namespace mcad

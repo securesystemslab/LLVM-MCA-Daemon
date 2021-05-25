@@ -1,4 +1,5 @@
 #include "BinaryRegions.h"
+#include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/JSON.h"
@@ -57,12 +58,6 @@ BinaryRegions::Create(StringRef ManifestPath) {
   if (E)
     return std::move(E);
 
-  // sort by start address
-  llvm::sort(This->Regions,
-             [](const BinaryRegion &LHS, const BinaryRegion &RHS) {
-               return LHS.StartAddr < RHS.StartAddr;
-             });
-
   return std::move(This);
 }
 
@@ -73,7 +68,7 @@ Error BinaryRegions::readSymbols(const MemoryBuffer &RawObjFile,
   auto BinaryOrErr = llvm::object::createBinary(RawObjFile);
   if (!BinaryOrErr)
     return BinaryOrErr.takeError();
-  TheBinary = std::move(*BinaryOrErr);
+  auto &TheBinary = *BinaryOrErr;
 
   auto *ELFObj = dyn_cast<ELFObjectFileBase>(TheBinary.get());
   if (!ELFObj)
@@ -135,12 +130,17 @@ Error BinaryRegions::parseRegions(json::Array &RawRegions,
       }
 
       auto StartAddr = int64_t(BRS.StartAddr);
-      Regions.push_back({Description,
+      BinaryRegion NewBR{Description.str(),
                          // TODO: Check over/underflow
                          uint64_t(StartAddr + StartOffset),
-                         uint64_t(StartAddr + int64_t(BRS.Size) + EndOffset)});
+                         uint64_t(StartAddr + int64_t(BRS.Size) + EndOffset)};
+      if (!Regions.emplace(std::make_pair(NewBR.StartAddr, NewBR)).second) {
+        WithColor::error() << "Entry for symbol '" << *MaybeSymName
+                           << "' already exist\n";
+        continue;
+      }
       LLVM_DEBUG(dbgs() << "Found region for symbol '" << *MaybeSymName << "': "
-                         << Regions.back() << "\n");
+                         << NewBR << "\n");
     }
   }
   return llvm::ErrorSuccess();

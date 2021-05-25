@@ -2,6 +2,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/WithColor.h"
 #include <string>
@@ -105,12 +106,33 @@ static void tbExecCallback(unsigned int CPUId, void *Data) {
 // TODO: What about end address?
 static llvm::Optional<uint64_t> CodeStartAddr;
 
+static void sendCodeStartAddr() {
+  using namespace mcad;
+  assert(CodeStartAddr.hasValue());
+
+  flatbuffers::FlatBufferBuilder Builder(16);
+  auto FbMD = fbs::CreateMetadata(Builder, *CodeStartAddr);
+  auto FbMessage = fbs::CreateMessage(Builder, fbs::Msg_Metadata,
+                                      FbMD.Union());
+  fbs::FinishSizePrefixedMessageBuffer(Builder, FbMessage);
+
+  int NumBytesSent = write(RemoteSockt,
+                           Builder.GetBufferPointer(), Builder.GetSize());
+  if (NumBytesSent < 0) {
+    ::perror("Failed to send TB data");
+  }
+}
+
 static void tbTranslateCallback(qemu_plugin_id_t Id,
                                 struct qemu_plugin_tb *TB) {
   using namespace mcad;
 
-  if (!CodeStartAddr)
+  if (!CodeStartAddr) {
     CodeStartAddr = qemu_plugin_vcpu_code_start_vaddr();
+    LLVM_DEBUG(dbgs() << "Code start address: "
+                      << format_hex(*CodeStartAddr, 16) << "\n");
+    sendCodeStartAddr();
+  }
 
   size_t NumInsn = qemu_plugin_tb_n_insns(TB);
   std::vector<uint8_t> RawInst;
