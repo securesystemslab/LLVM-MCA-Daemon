@@ -1,6 +1,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCContext.h"
@@ -29,6 +30,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "BinaryRegions.h"
 #include "BrokerFacade.h"
 #include "Brokers/Broker.h"
 #include "Brokers/BrokerPlugin.h"
@@ -77,6 +79,8 @@ class QemuBroker : public Broker {
   // cease operation. Or 0 for no limit.
   // By default this value is one.
   unsigned MaxNumAcceptedConnection;
+
+  std::unique_ptr<qemu_broker::BinaryRegions> BinRegions;
 
   const Target &TheTarget;
   MCContext &Ctx;
@@ -134,6 +138,7 @@ class QemuBroker : public Broker {
   void disassemble(TranslationBlock &TB);
 
   void tbExec(const fbs::ExecTB &OrigTB) {
+    using namespace qemu_broker;
     uint32_t Idx = OrigTB.Index();
     uint64_t PC = OrigTB.PC();
 
@@ -154,10 +159,23 @@ class QemuBroker : public Broker {
     }
 
     auto &TB = *TBs[Idx];
-    if (!TB) {
+    TB.VAddr = PC;
+    if (!TB)
       // Disassemble
-      TB.VAddr = PC;
       disassemble(TB);
+
+    if (BinRegions && BinRegions->size()) {
+      // We're assuming the number of BinRegions is pretty small.
+      // Also, BinRegions are all sorted so it should be pretty
+      // efficient in most cases.
+      // FIXME: This doesn't consider the actual loaded address
+      auto It = llvm::find_if(*BinRegions,
+                              [PC](const BinaryRegion &BR) {
+                                return BR.StartAddr == PC;
+                              });
+      if (It != BinRegions->end())
+        errs() << "Starting address for " << It->Description
+               << " matched!\n";
     }
 
     // Put into the queue
@@ -171,6 +189,7 @@ class QemuBroker : public Broker {
 public:
   QemuBroker(StringRef Addr, StringRef Port,
              unsigned MaxNumConn,
+             StringRef BinRegionsManifest,
              const MCSubtargetInfo &STI,
              MCContext &Ctx, const Target &T);
 
@@ -192,6 +211,7 @@ public:
 
 QemuBroker::QemuBroker(StringRef Addr, StringRef Port,
                        unsigned MaxNumConn,
+                       StringRef BinRegionsManifest,
                        const MCSubtargetInfo &MSTI,
                        MCContext &C, const Target &T)
   : ListenAddr(Addr.str()), ListenPort(Port.str()),
@@ -200,6 +220,19 @@ QemuBroker::QemuBroker(StringRef Addr, StringRef Port,
     TheTarget(T), Ctx(C), STI(MSTI),
     CurDisAsm(nullptr),
     IsEndOfStream(false) {
+
+  if (BinRegionsManifest.size()) {
+    auto RegionsOrErr = qemu_broker::BinaryRegions::Create(BinRegionsManifest);
+    if (!RegionsOrErr)
+      handleAllErrors(RegionsOrErr.takeError(),
+                      [](const ErrorInfoBase &E) {
+                        E.log(WithColor::error());
+                        errs() << "\n";
+                      });
+    else
+      BinRegions = std::move(*RegionsOrErr);
+  }
+
   initializeDisassembler();
 
   initializeServer();
@@ -502,6 +535,7 @@ mcadGetBrokerPluginInfo() {
       StringRef Addr = "localhost",
                 Port = "9487";
       unsigned MaxNumConn = 1;
+      StringRef BRManifestPath;
 
       for (int i = 0; i < argc; ++i) {
         StringRef Arg(argv[i]);
@@ -523,9 +557,15 @@ mcadGetBrokerPluginInfo() {
             ::exit(1);
           }
         }
+
+        // Try to parse the binary regions manifest file
+        if (Arg.startswith("-binary-regions") &&
+            Arg.contains('='))
+          BRManifestPath = Arg.split('=').second;
       }
 
       BF.setBroker(std::make_unique<QemuBroker>(Addr, Port, MaxNumConn,
+                                                BRManifestPath,
                                                 BF.getSTI(), BF.getCtx(),
                                                 BF.getTarget()));
     }

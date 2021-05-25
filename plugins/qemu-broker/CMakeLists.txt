@@ -31,12 +31,14 @@ add_custom_target(generate-fbs
   DEPENDS ${_FBS_HEADER_PATH})
 
 add_llvm_library(MCADQemuBroker SHARED
+  BinaryRegions.cpp
   Broker.cpp
 
   # Components like Support, MC, TargetDesc or TargetInfo
   # should be already available in llvm-mcad
   LINK_COMPONENTS
   AllTargetsDisassemblers
+  Object
   )
 add_dependencies(MCADQemuBroker generate-fbs)
 
