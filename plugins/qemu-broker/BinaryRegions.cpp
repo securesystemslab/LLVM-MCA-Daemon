@@ -153,13 +153,29 @@ Error BinaryRegions::parseSymbolBasedRegions(const json::Object &RawManifest) {
   return llvm::ErrorSuccess();
 }
 
+static
+Optional<int64_t> parseInteger(const json::Value *Val) {
+  if (!Val)
+    return llvm::None;
+
+  if (auto MaybeInt = Val->getAsInteger())
+    return *MaybeInt;
+  if (auto MaybeStr = Val->getAsString()) {
+    int64_t Res;
+    if (!MaybeStr->getAsInteger(0, Res))
+      return Res;
+  }
+  return llvm::None;
+}
+
 Error BinaryRegions::parseAddressBasedRegions(const json::Array &RawRegions) {
   for (const json::Value &RawRegion : RawRegions) {
     const json::Object *Region = RawRegion.getAsObject();
     if (!Region)
       continue;
-    auto MaybeStartAddr = Region->getInteger("start"),
-         MaybeEndAddr = Region->getInteger("end");
+
+    auto MaybeStartAddr = parseInteger(Region->get("start")),
+         MaybeEndAddr = parseInteger(Region->get("end"));
     if ((!MaybeStartAddr || !MaybeEndAddr) ||
         (*MaybeStartAddr < 0 || *MaybeEndAddr < 0))
       continue;
