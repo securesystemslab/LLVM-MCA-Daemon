@@ -13,6 +13,7 @@ class MemoryBuffer;
 class raw_ostream;
 namespace json {
 class Array;
+class Object;
 }
 
 namespace mcad {
@@ -31,16 +32,9 @@ raw_ostream &operator<<(raw_ostream &OS, const BinaryRegion &BR) {
 }
 
 class BinaryRegions {
-  struct BRSymbol {
-    uint64_t StartAddr;
-    size_t Size;
-  };
+  Error parseAddressBasedRegions(const json::Array &RawRegions);
 
-  Error readSymbols(const MemoryBuffer &RawObjFile,
-                    StringMap<BRSymbol> &Symbols);
-
-  Error parseRegions(json::Array &RawRegions,
-                     const StringMap<BRSymbol> &Symbols);
+  Error parseSymbolBasedRegions(const json::Object &RawManifest);
 
   // {start address -> BinaryRegion}
   std::unordered_map<uint64_t, BinaryRegion> Regions;

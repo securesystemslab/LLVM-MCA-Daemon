@@ -24,45 +24,39 @@ BinaryRegions::Create(StringRef ManifestPath) {
   if (!JsonOrErr)
     return JsonOrErr.takeError();
 
-  // Parse the manifest
-  json::Object *TopLevel = JsonOrErr->getAsObject();
-  if (!TopLevel)
-    return llvm::make_error<json::ParseError>("Expecting a top level object",
-                                              0, 0, 0);
-  auto BinFilePath = TopLevel->getString("file");
-  if (!BinFilePath)
-    return llvm::make_error<json::ParseError>(
-      "Expecting a 'file' field", 0, 0, 0);
-  json::Array *RawRegions = TopLevel->getArray("regions");
-  if (!RawRegions)
-    return llvm::make_error<json::ParseError>(
-      "Expecting a 'regions' field", 0, 0, 0);
-
   // We cannot use std::make_unique here because the
   // default ctor, which is declared private, will be called
   // inside an external function
   std::unique_ptr<BinaryRegions> This(new BinaryRegions());
 
-  // Read the target object file
-  auto ErrOrObjectBuffer = MemoryBuffer::getFile(*BinFilePath);
-  if (!ErrOrObjectBuffer)
-    return llvm::errorCodeToError(ErrOrObjectBuffer.getError());
+  // Parse the manifest
+  const json::Value &TopLevel = *JsonOrErr;
+  // Pick the correct kind of manifest
+  if (const json::Object *Obj = TopLevel.getAsObject()) {
+    if (Obj->getString("file") && Obj->getArray("regions")) {
+      if (auto E = This->parseSymbolBasedRegions(*Obj))
+        return std::move(E);
 
-  StringMap<BRSymbol> AllSymbols;
-  auto E = This->readSymbols(*ErrOrObjectBuffer->get(), AllSymbols);
-  if (E)
-    return std::move(E);
+      return std::move(This);
+    }
+  } else if (const json::Array *RawRegions = TopLevel.getAsArray()) {
+    if (auto E = This->parseAddressBasedRegions(*RawRegions))
+      return std::move(E);
 
-  // Populate all the regions we're interested in
-  E = This->parseRegions(*RawRegions, AllSymbols);
-  if (E)
-    return std::move(E);
+    return std::move(This);
+  }
 
-  return std::move(This);
+  return llvm::make_error<json::ParseError>(
+    "Unrecognized manifest format", 0, 0, 0);
 }
 
-Error BinaryRegions::readSymbols(const MemoryBuffer &RawObjFile,
-                                 StringMap<BRSymbol> &Symbols) {
+struct BRSymbol {
+  uint64_t StartAddr;
+  size_t Size;
+};
+
+static Error readSymbols(const MemoryBuffer &RawObjFile,
+                         StringMap<BRSymbol> &Symbols) {
   using namespace object;
 
   auto BinaryOrErr = llvm::object::createBinary(RawObjFile);
@@ -90,9 +84,22 @@ Error BinaryRegions::readSymbols(const MemoryBuffer &RawObjFile,
   return llvm::ErrorSuccess();
 }
 
-Error BinaryRegions::parseRegions(json::Array &RawRegions,
-                                  const StringMap<BRSymbol> &Symbols) {
-  for (const json::Value &RawRegion : RawRegions) {
+Error BinaryRegions::parseSymbolBasedRegions(const json::Object &RawManifest) {
+  auto BinFilePath = RawManifest.getString("file");
+  assert(BinFilePath && "Expecting a 'file' field");
+  const json::Array *RawRegions = RawManifest.getArray("regions");
+  assert(RawRegions && "Expecting a 'regions' field");
+
+  auto ErrOrObjectBuffer = MemoryBuffer::getFile(*BinFilePath);
+  if (!ErrOrObjectBuffer)
+    return llvm::errorCodeToError(ErrOrObjectBuffer.getError());
+
+  StringMap<BRSymbol> Symbols;
+  auto E = readSymbols(*ErrOrObjectBuffer->get(), Symbols);
+  if (E)
+    return std::move(E);
+
+  for (const json::Value &RawRegion : *RawRegions) {
     if (const auto *Region = RawRegion.getAsObject()) {
       auto MaybeSymName = Region->getString("symbol");
       if (!MaybeSymName)
@@ -146,3 +153,28 @@ Error BinaryRegions::parseRegions(json::Array &RawRegions,
   return llvm::ErrorSuccess();
 }
 
+Error BinaryRegions::parseAddressBasedRegions(const json::Array &RawRegions) {
+  for (const json::Value &RawRegion : RawRegions) {
+    const json::Object *Region = RawRegion.getAsObject();
+    if (!Region)
+      continue;
+    auto MaybeStartAddr = Region->getInteger("start"),
+         MaybeEndAddr = Region->getInteger("end");
+    if ((!MaybeStartAddr || !MaybeEndAddr) ||
+        (*MaybeStartAddr < 0 || *MaybeEndAddr < 0))
+      continue;
+
+    StringRef Description;
+    if (auto MaybeDescription = Region->getString("description"))
+      Description = *MaybeDescription;
+
+    BinaryRegion NewBR{Description.str(),
+                       uint64_t(*MaybeStartAddr),
+                       uint64_t(*MaybeEndAddr)};
+    if (!Regions.emplace(std::make_pair(NewBR.StartAddr, NewBR)).second)
+      WithColor::error() << "Entry for starting address "
+                         << format_hex(NewBR.StartAddr, 16)
+                         << " already exist\n";
+  }
+  return llvm::ErrorSuccess();
+}
