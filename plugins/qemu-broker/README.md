@@ -62,7 +62,7 @@ Here is an example of launching the server side:
 # Server
 cd .build
 ./llvm-mcad -mtriple="armv7-linux-gnueabihf" -mcpu="cortex-a57" \
-            -load-broker-plugin=$PWD/plugins/qemu-broker/libMCADQemuBroker.so \
+            -load-broker-plugin=/path/to/libMCADQemuBroker.so \
             -broker-plugin-arg-host="localhost:9487"
 ```
 As you can see in the above snippet, we're using `-load-broker-plugin=<plugin path>` to load and use the qemu-broker plugin. The `-broker-plugin-arg-host` is an additional plugin argument which we will talk about it shortly.
@@ -71,7 +71,7 @@ On the client side:
 ```bash
 # Client
 /path/to/qemu/build/qemu-arm -L /usr/arm-linux-gnueabihf \
-      -plugin /path/to/llvm-mcad/.build/plugins/qemu-broker/Qemu/libQemuRelay.so,\
+      -plugin /path/to/libQemuRelay.so,\
       arg="-addr=127.0.0.1",arg="-port=9487" \
       -d plugin ./hello_world
 ```
@@ -103,4 +103,61 @@ qemu-arm ... -plugin <plugin path>,arg="-help" ...
 ```
 
 ## Binary regions
-_TBA_
+By using the binary regions feature, you are able to analyze only part of the execution trace. Users can specify their chosen regions using a manifest JSON file and supply it via the `-binary-regions` Broker argument. For example:
+```bash
+./llvm-mcad ... -load-broker-plugin=/path/to/libQemuBroker.so \
+                -broker-plugin-arg-binary-regions=my_manifest.json ...
+```
+We currently support two different manifest formats: Symbol-based and address-based.
+
+### Symbol-based format
+This format allows you to analyze traces from a specific function and its subsequent callee functions (All callees dominated by this function in the call graph). Here is the JSON format:
+```json
+{
+      "file": "/path/to/target_executable",
+      "regions": [
+            {
+                  "symbol": "Name of the symbol to instrument",
+                  "description": "Custom textual description for this region (optional)",
+                  "offsets": [0, 0] /*Offsets to be applied at the beginning / end of the region (optional)*/
+            }
+      ]
+}
+```
+For example:
+```json
+{
+      "file": "/path/to/hello_world",
+      "regions": [
+            {
+                  "symbol": "main"
+            },
+            {
+                  "symbol": "foo",
+                  "description": "The fooooo function",
+                  "offsets": [4, -8]
+            }
+      ]
+}
+```
+The manifest above instruments two regions. The first region starts the instrumentation after the first instruction in `main` is executed, and ends it when the last one is executed. The second region starts the instrumentation after the instruction at `foo` + 4 bytes is executed and ends after hitting instruction at `foo` + \<size of `foo`\> - 8 bytes.
+
+Note that this manifest formats has the following drawbacks:
+ 1. Does not support MachO since it doesn't provide the size of a function symbol.
+ 2. It's nearly impossible to specify the starting address of the _last_ instruction in a function without the help of end offset compensation (In other words, the first region in the example above is actually pretty inaccurate).
+
+### Address-based format
+This format is basically doing the same thing as symbol-based format, except that it gives you direct control on the addresses to trigger / terminate the instrumentation. Here is the format:
+```json
+[
+      {
+            "start": 0, /*Can be number of non-decimal number wrapped in a string*/
+            "end": 0,
+            "description": "Optional textual description"
+      }
+]
+```
+The `start` and `end` field is the offset to the instruction that starts and ends the instrumentation, respectively.
+
+
+Currently neither of these formats support overlapped regions (including recursive function calls). Which is a limitation imposed by MCA.
