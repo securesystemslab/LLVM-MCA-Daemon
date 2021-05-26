@@ -177,14 +177,14 @@ class QemuBroker : public Broker {
     }
 
     auto &TB = *TBs[Idx];
-    TB.VAddr = PC;
-    if (!TB)
+    if (!TB) {
+      TB.VAddr = PC;
       // Disassemble
       disassemble(TB);
-
-    const auto &TheTriple = STI.getTargetTriple();
-    if (TheTriple.isARM() || TheTriple.isThumb())
-      TB.VAddr &= (~0b1);
+      const auto &TheTriple = STI.getTargetTriple();
+      if (TheTriple.isARM() || TheTriple.isThumb())
+        TB.VAddr &= (~0b1);
+    }
 
     uint16_t BeginIdx = 0u, EndIdx = ~uint16_t(0u);
     const BinaryRegion *Region = nullptr;
