@@ -37,7 +37,7 @@ Note that plugins under the `plugins` folder are not built by default. Please ad
  - `LLVM_MCAD_FORCE_ENABLE_STATS`. Enable LLVM statistics even in non-debug builds.
 
 ## Usages
-Here is an example of using `llvm-mcad` -- the main command line tool -- with the qemu-broker Broker plugin.
+Here is an example of using `llvm-mcad` -- the main command line tool -- with the qemu-broker Broker plugin (Please refer to the `plugins/qemu-broker` folder for more details about how to build this plugin).
 
 First, on the server side:
 ```bash
