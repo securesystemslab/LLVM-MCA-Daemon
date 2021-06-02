@@ -236,3 +236,4 @@ index 0dd623e590..822aaf548f 100644
      cc->gdb_read_register = arm_cpu_gdb_read_register;
      cc->gdb_write_register = arm_cpu_gdb_write_register;
  #ifndef CONFIG_USER_ONLY
+
