@@ -497,7 +497,7 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
     while (Index < Len) {
       LLVM_DEBUG(dbgs() << "Try to disassemble instruction " << RawInst
                         << " with Index = " << Index
-                        << ", VAddr = " << format_hex(VAddr + Index, 8) << "\n");
+                        << ", VAddr = " << format_hex(VAddr + Index, 16) << "\n");
       auto MCI = std::make_unique<MCInst>();
       Disassembled = CurDisAsm->getInstruction(*MCI, DisAsmSize,
                                                InstBytes.slice(Index),
@@ -507,7 +507,7 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
         WithColor::error() << "Failed to disassemble instruction: "
                            << RawInst << "\n";
         WithColor::note() << "Index = " << Index
-                          << ", VAddr = " << format_hex(VAddr + Index, 8) << "\n";
+                          << ", VAddr = " << format_hex(VAddr + Index, 16) << "\n";
         break;
       }
 

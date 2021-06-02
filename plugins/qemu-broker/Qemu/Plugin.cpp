@@ -79,14 +79,24 @@ static void tbExecCallback(unsigned int CPUId, void *Data) {
     uint32_t CPSR, PC;
     const auto &PCRegInfo = RegInfoRegistry["pc"],
                &CPSRRegInfo = RegInfoRegistry["cpsr"];
-    qemu_plugin_vcpu_read_register(PCRegInfo.RegId, &PC, PCRegInfo.Size);
-    qemu_plugin_vcpu_read_register(CPSRRegInfo.RegId, &CPSR, CPSRRegInfo.Size);
+    if (qemu_plugin_vcpu_read_register(PCRegInfo.RegId, &PC,
+                                       PCRegInfo.Size) > 0 &&
+        qemu_plugin_vcpu_read_register(CPSRRegInfo.RegId, &CPSR,
+                                       CPSRRegInfo.Size) > 0) {
+      if (CPSR & 0b100000)
+        // Thumb mode
+        PC |= 0b1;
 
-    if (CPSR & 0b100000)
-      // Thumb mode
-      PC |= 0b1;
-
-    VAddr = PC;
+      VAddr = PC;
+    } else
+      WithColor::error() << "Failed to read ARM PC or CPSR register\n";
+  }
+  if (CurrentQemuTarget.startswith_lower("x86_64") &&
+      RegInfoRegistry.count("rip")) {
+    const auto &RIPRegInfo = RegInfoRegistry["rip"];
+    if (qemu_plugin_vcpu_read_register(RIPRegInfo.RegId, &VAddr,
+                                       RIPRegInfo.Size) <= 0)
+      WithColor::error() << "Failed to read X86_64 RIP register\n";
   }
 
   flatbuffers::FlatBufferBuilder Builder(128);
@@ -210,6 +220,19 @@ static void tbTranslateCallback(qemu_plugin_id_t Id,
         errs() << "Failed to get register id of ARM pc from QEMU\n";
       } else {
         RegInfoRegistry.insert({"pc", {RegId, RegSize}});
+      }
+    }
+  }
+
+  if (CurrentQemuTarget.startswith_lower("x86_64")) {
+    if (!RegInfoRegistry.count("rip")) {
+      uint8_t RegSize;
+      int RegId = qemu_plugin_vcpu_get_register_info("rip",
+                                                     &RegSize);
+      if (RegId < 0) {
+        errs() << "Failed to get register id of X86_64 RIP from QEMU\n";
+      } else {
+        RegInfoRegistry.insert({"rip", {RegId, RegSize}});
       }
     }
   }

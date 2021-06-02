@@ -236,4 +236,67 @@ index 0dd623e590..822aaf548f 100644
      cc->gdb_read_register = arm_cpu_gdb_read_register;
      cc->gdb_write_register = arm_cpu_gdb_write_register;
  #ifndef CONFIG_USER_ONLY
+diff --git a/target/i386/cpu.c b/target/i386/cpu.c
+index ad99cad0e7..15d0b53918 100644
+--- a/target/i386/cpu.c
++++ b/target/i386/cpu.c
+@@ -7283,6 +7283,49 @@ void x86_update_hflags(CPUX86State *env)
+     env->hflags = hflags;
+ }
+ 
++static int x86_cpu_get_register_info(CPUState *cs, const char *reg_name,
++                                     uint8_t *size)
++{
++      // Currently we only implement eip/rip
++      // The LSB 2 bits are reserved to indicate whether the register
++      // is 16/32/64 bits
++      int reg_id = -1;
++      if (!strcmp(reg_name, "eip") ||
++          !strcmp(reg_name, "rip")) {
++          reg_id = 0;
++          if (reg_name[0] == 'e') {
++              reg_id = ((reg_id << 2) | 0b001);
++              *size = 4;
++          } else {
++              reg_id = ((reg_id << 2) | 0b010);
++              *size = 8;
++          }
++      }
++
++      return reg_id;
++}
++static int x86_cpu_read_register(CPUState *cs, RegisterValue *dest, int reg_n)
++{
++      X86CPU *cpu = X86_CPU(cs);
++      CPUX86State *env = &cpu->env;
++
++      uint8_t size_mask = (uint8_t)(reg_n & (int)0b11);
++      reg_n >>= 2;
++      // Currently we only implement eip/rip
++      if (reg_n == 0) {
++          if (size_mask == 0b01) {
++              dest->u32 = (uint32_t)env->eip;
++          } else if (size_mask == 0b10) {
++              dest->u64 = env->eip;
++          } else {
++              return -1;
++          }
++          return 0;
++      }
++
++      return -1;
++}
++
+ static Property x86_cpu_properties[] = {
+ #ifdef CONFIG_USER_ONLY
+     /* apic_id = 0 by default for *-user, see commit 9886e834 */
+@@ -7421,6 +7464,8 @@ static void x86_cpu_common_class_init(ObjectClass *oc, void *data)
+     cc->gdb_write_register = x86_cpu_gdb_write_register;
+     cc->get_arch_id = x86_cpu_get_arch_id;
+     cc->get_paging_enabled = x86_cpu_get_paging_enabled;
++    cc->get_register_info = x86_cpu_get_register_info;
++    cc->read_register = x86_cpu_read_register;
+ 
+ #ifndef CONFIG_USER_ONLY
+     cc->asidx_from_attrs = x86_asidx_from_attrs;
 
