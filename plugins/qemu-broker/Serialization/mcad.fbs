@@ -6,10 +6,21 @@ table Metadata {
   LoadAddr: uint64;
 }
 
+struct MemoryAccess {
+  // Instruction index in its enclosing TB
+  Index: uint;
+  // The memory address it accessed
+  VAddr: uint64;
+  // Size in bytes
+  Size: uint8;
+  IsStore: bool;
+}
+
 // Sent when a TB with index `Index` is executed
 table ExecTB {
   Index: uint;
   PC: uint64;
+  MemAccesses: [MemoryAccess];
 }
 
 table Inst {
