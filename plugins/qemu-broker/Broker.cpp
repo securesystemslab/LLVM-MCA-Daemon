@@ -362,16 +362,19 @@ public:
              const MCSubtargetInfo &STI,
              MCContext &Ctx, const Target &T);
 
-  bool hasRegionFeature() const override {
-    return BinRegions && BinRegions->size();
+  unsigned getFeatures() const override {
+    unsigned Features = Broker::Feature_Metadata;
+    if (BinRegions && BinRegions->size())
+      Features |= Broker::Feature_Region;
+    return Features;
   }
 
   int fetch(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
-            MDExchanger *MDE = nullptr) override;
+            Optional<MDExchanger> MDE = llvm::None) override;
 
   std::pair<int, RegionDescriptor>
   fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
-              MDExchanger *MDE = nullptr) override;
+              Optional<MDExchanger> MDE = llvm::None) override;
 
   ~QemuBroker() {
     if(ReceiverThread) {
@@ -650,7 +653,7 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
 
 std::pair<int, Broker::RegionDescriptor>
 QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
-                        MDExchanger *MDE) {
+                        Optional<MDExchanger> MDE) {
   using namespace qemu_broker;
 
   if (!Size)
@@ -749,7 +752,7 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
 }
 
 int QemuBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size,
-                      MDExchanger *MDE) {
+                      Optional<MDExchanger> MDE) {
   return fetchRegion(MCIS, Size, MDE).first;
 }
 
