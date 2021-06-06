@@ -33,10 +33,12 @@ public:
 
   bool hasRegionFeature() const override { return true; }
 
-  int fetch(MutableArrayRef<const MCInst*> MCIS, int Size = -1) override;
+  int fetch(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
+            MDExchanger *MDE = nullptr) override;
 
   std::pair<int, RegionDescriptor>
-  fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size = -1) override;
+  fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
+              MDExchanger *MDE = nullptr) override;
 };
 } // end namespace mcad
 } // end namespace llvm

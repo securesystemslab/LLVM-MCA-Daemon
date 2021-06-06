@@ -1,12 +1,26 @@
 #ifndef LLVM_MCAD_BROKERS_BROKER_H
 #define LLVM_MCAD_BROKERS_BROKER_H
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInst.h"
 #include <utility>
 
 namespace llvm {
+namespace mca {
+class MetadataRegistry;
+}
+
 namespace mcad {
+struct MDExchanger {
+  mca::MetadataRegistry &MDRegistry;
+  // Mapping MCInst to index in MetadataRegistry
+  DenseMap<const MCInst*, unsigned> IndexMap;
+
+  explicit MDExchanger(mca::MetadataRegistry &MDR)
+    : MDRegistry(MDR) {}
+};
+
 // A simple interface for MCAWorker to fetch next MCInst
 //
 // Currently it's totally up to the Brokers to control their
@@ -22,7 +36,8 @@ struct Broker {
   // should supply a fixed size array. And the Broker will always write from
   // index 0.
   // Return the number of MCInst put into the buffer, or -1 if no MCInst left
-  virtual int fetch(MutableArrayRef<const MCInst*> MCIS, int Size = -1) {
+  virtual int fetch(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
+                    MDExchanger *MDE = nullptr) {
     return -1;
   }
 
@@ -48,7 +63,8 @@ struct Broker {
   // Note that MCIS always aligned with the boundary of Region (i.e. the last
   // instruction of a Region will not be in the middle of MCIS)
   virtual std::pair<int, RegionDescriptor>
-  fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size = -1) {
+  fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
+              MDExchanger *MDE = nullptr) {
     return std::make_pair(-1, RegionDescriptor(true));
   }
 
