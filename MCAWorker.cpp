@@ -175,7 +175,7 @@ Error MCAWorker::run() {
   bool SupportMetadata = TheBroker->hasFeature<Broker::Feature_Metadata>();
   assert((!SupportMetadata || MDRegistry) &&
          "MetadataRegistry not created?");
-  DenseMap<const MCInst*, unsigned> MDIndexMap;
+  DenseMap<unsigned, unsigned> MDIndexMap;
 
   // The end of instruction streams in all regions
   bool EndOfStream = false;
@@ -218,7 +218,9 @@ Error MCAWorker::run() {
         TimeRegion TR(TheTimer);
 
         // Convert MCInst to mca::Instruction
-        for (const MCInst *OrigMCI : TraceBufferSlice) {
+        for (unsigned i = 0U, S = TraceBufferSlice.size();
+             i < S; ++i) {
+          const MCInst *OrigMCI = TraceBufferSlice[i];
           TraceMIs.push_back(OrigMCI);
           const MCInst &MCI = *TraceMIs.back();
           const auto &MCID = MCII.get(MCI.getOpcode());
@@ -247,21 +249,19 @@ Error MCAWorker::run() {
             }
           }
           if (RecycledInst) {
-            if (SupportMetadata && MDIndexMap.count(&MCI)) {
-              auto MDTok = MDIndexMap.lookup(&MCI);
-              LLVM_DEBUG(MIP.printInst(&MCI, 0, "", STI,
-                                       dbgs() << "[Metadata] MCI:"));
-              LLVM_DEBUG(dbgs() << "\thas Token " << MDTok << "\n");
+            if (SupportMetadata && MDIndexMap.count(i)) {
+              auto MDTok = MDIndexMap.lookup(i);
+              LLVM_DEBUG(dbgs() << "MCI " << TraceMIs.size()
+                                << " has Token " << MDTok << "\n");
               RecycledInst->setMetadataToken(MDTok);
             }
             SrcMgr.addRecycledInst(RecycledInst);
           } else {
             auto &NewInst = InstOrErr.get();
-            if (SupportMetadata && MDIndexMap.count(&MCI)) {
-              auto MDTok = MDIndexMap.lookup(&MCI);
-              LLVM_DEBUG(MIP.printInst(&MCI, 0, "", STI,
-                                       dbgs() << "[Metadata] MCI:"));
-              LLVM_DEBUG(dbgs() << "\thas Token " << MDTok << "\n");
+            if (SupportMetadata && MDIndexMap.count(i)) {
+              auto MDTok = MDIndexMap.lookup(i);
+              LLVM_DEBUG(dbgs() << "MCI " << TraceMIs.size()
+                                << " has Token " << MDTok << "\n");
               NewInst->setMetadataToken(MDTok);
             }
             SrcMgr.addInst(std::move(NewInst));

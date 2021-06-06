@@ -168,11 +168,9 @@ class QemuBroker : public Broker {
         };
         auto MASplit = llvm::lower_bound(*MemoryAccesses,
                                          SplitPoint, Compare);
-        if (MASplit != MemoryAccesses->end()) {
-          NewSlice.MemoryAccesses = new MemoryAccessChain(
-            MemoryAccesses->begin(), MASplit);
-          MemoryAccesses->erase(MemoryAccesses->begin(), MASplit);
-        }
+        NewSlice.MemoryAccesses = new MemoryAccessChain(
+          MemoryAccesses->begin(), MASplit);
+        MemoryAccesses->erase(MemoryAccesses->begin(), MASplit);
       }
 
       // Update the current slice
@@ -195,7 +193,7 @@ class QemuBroker : public Broker {
   std::mutex QueueMutex;
   std::condition_variable QueueCV;
 
-  uint32_t TotalNumTraces = 0U;
+  uint32_t TotalNumTraces;
 
   void initializeServer();
 
@@ -402,7 +400,8 @@ QemuBroker::QemuBroker(StringRef Addr, StringRef Port,
     CodeStartAddress(0U),
     TheTarget(T), Ctx(C), STI(MSTI),
     CurDisAsm(nullptr),
-    IsEndOfStream(false) {
+    IsEndOfStream(false),
+    TotalNumTraces(0U) {
 
   if (BinRegionsManifest.size()) {
     auto RegionsOrErr = qemu_broker::BinaryRegions::Create(BinRegionsManifest);
@@ -708,14 +707,14 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
 
   {
     auto setMemoryAccessMD
-      = [&,this](const MCInst *MCI, mca::MDMemoryAccess &&MDA) {
+      = [&,this](unsigned Idx, mca::MDMemoryAccess &&MDA) {
         if (MDE) {
           auto &Registry = MDE->MDRegistry;
           auto &IndexMap = MDE->IndexMap;
           auto &MemAccessCat = Registry[mca::MD_LSUnit_MemAccess];
           // Simply uses trace MCInst's sequence number
           // as index
-          IndexMap[MCI] = TotalNumTraces;
+          IndexMap[Idx] = TotalNumTraces;
           MemAccessCat[TotalNumTraces] = std::move(MDA);
         }
       };
@@ -729,14 +728,15 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
       for (i = Slice.BeginIdx; i != End && Size > 0; ++i, --Size) {
         const auto *MCI = MCInsts[i].get();
         MCIS[TotalSize - Size] = MCI;
-        ++TotalNumTraces;
 
         if (MAs && MAs->size()) {
           if (MAs->front().first == i) {
-            setMemoryAccessMD(MCI, std::move(MAs->front().second));
+            setMemoryAccessMD(TotalSize - Size, std::move(MAs->front().second));
             MAs->erase(MAs->begin());
           }
         }
+
+        ++TotalNumTraces;
       }
       Slice.release();
     }

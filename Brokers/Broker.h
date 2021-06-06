@@ -15,8 +15,9 @@ class MetadataRegistry;
 namespace mcad {
 struct MDExchanger {
   mca::MetadataRegistry &MDRegistry;
-  // Mapping MCInst to index in MetadataRegistry
-  DenseMap<const MCInst*, unsigned> &IndexMap;
+  // Mapping MCInst index in the current batch
+  // to index in MetadataRegistry
+  DenseMap<unsigned, unsigned> &IndexMap;
 };
 
 // A simple interface for MCAWorker to fetch next MCInst
