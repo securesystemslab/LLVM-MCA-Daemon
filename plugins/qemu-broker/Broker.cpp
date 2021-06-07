@@ -193,6 +193,8 @@ class QemuBroker : public Broker {
   std::mutex QueueMutex;
   std::condition_variable QueueCV;
 
+  bool EnableMemAccessMD;
+
   uint32_t TotalNumTraces;
 
   void initializeServer();
@@ -312,7 +314,7 @@ class QemuBroker : public Broker {
     // Handle memory accesses
     MemoryAccessChain *MemAccesses = nullptr;
     const auto *FbMAs = OrigTB.MemAccesses();
-    if (FbMAs && FbMAs->size()) {
+    if (EnableMemAccessMD && FbMAs && FbMAs->size()) {
       MemAccesses = new MemoryAccessChain();
       for (const auto *FbMA : *FbMAs) {
         unsigned InstIdx = FbMA->Index();
@@ -323,14 +325,18 @@ class QemuBroker : public Broker {
         if (TB.SkewIndicies.count(InstIdx))
           InstIdx = TB.SkewIndicies.lookup(InstIdx);
 
+        // Honoring the index range
+        if (InstIdx < BeginIdx || InstIdx >= EndIdx)
+          continue;
+
         if (MemAccesses->size()) {
           auto &LastEntry = MemAccesses->back();
           if (LastEntry.first == InstIdx) {
             // Merge the entry
-            // FIXME: This might be wrong in many cases
             auto &MA = LastEntry.second;
             MA.IsStore |= IsStore;
             uint64_t NewAddr = std::min(MA.Addr, Addr);
+            // FIXME: This might be wrong in many cases
             uint64_t NewEndAddr = std::max(uint64_t(MA.Addr + MA.Size),
                                            uint64_t(Addr + Size));
             unsigned NewSize = NewEndAddr - NewAddr;
@@ -357,6 +363,7 @@ public:
   QemuBroker(StringRef Addr, StringRef Port,
              unsigned MaxNumConn,
              StringRef BinRegionsManifest,
+             bool EnableMemAccessMD,
              const MCSubtargetInfo &STI,
              MCContext &Ctx, const Target &T);
 
@@ -391,6 +398,7 @@ public:
 QemuBroker::QemuBroker(StringRef Addr, StringRef Port,
                        unsigned MaxNumConn,
                        StringRef BinRegionsManifest,
+                       bool EnableMemAccessMD,
                        const MCSubtargetInfo &MSTI,
                        MCContext &C, const Target &T)
   : ListenAddr(Addr.str()), ListenPort(Port.str()),
@@ -401,6 +409,7 @@ QemuBroker::QemuBroker(StringRef Addr, StringRef Port,
     TheTarget(T), Ctx(C), STI(MSTI),
     CurDisAsm(nullptr),
     IsEndOfStream(false),
+    EnableMemAccessMD(EnableMemAccessMD),
     TotalNumTraces(0U) {
 
   if (BinRegionsManifest.size()) {
@@ -765,6 +774,7 @@ mcadGetBrokerPluginInfo() {
                 Port = "9487";
       unsigned MaxNumConn = 1;
       StringRef BRManifestPath;
+      bool EnableMemAccessMD = true;
 
       for (int i = 0; i < argc; ++i) {
         StringRef Arg(argv[i]);
@@ -791,10 +801,15 @@ mcadGetBrokerPluginInfo() {
         if (Arg.startswith("-binary-regions") &&
             Arg.contains('='))
           BRManifestPath = Arg.split('=').second;
+
+        // Try to parse the memory access metadata feature flag
+        if (Arg.startswith("-disable-memory-access-md"))
+          EnableMemAccessMD = false;
       }
 
       BF.setBroker(std::make_unique<QemuBroker>(Addr, Port, MaxNumConn,
                                                 BRManifestPath,
+                                                EnableMemAccessMD,
                                                 BF.getSTI(), BF.getCtx(),
                                                 BF.getTarget()));
     }
