@@ -16,6 +16,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/Timer.h"
 #include "llvm/Support/WithColor.h"
 #include <condition_variable>
 #include <memory>
@@ -197,12 +198,17 @@ class QemuBroker : public Broker {
 
   uint32_t TotalNumTraces;
 
+  llvm::TimerGroup Timers;
+
   void initializeServer();
 
   std::unique_ptr<std::thread> ReceiverThread;
   void recvWorker(addrinfo *);
 
   void addTB(const fbs::TranslatedBlock &TB) {
+    static Timer TheTimer("addTB", "Adding new TB", Timers);
+    TimeRegion TR(TheTimer);
+
     if (TB.Index() >= TBs.size()) {
       std::lock_guard<std::mutex> LK(TBsMutex);
       TBs.resize(TB.Index() + 1);
@@ -231,6 +237,10 @@ class QemuBroker : public Broker {
   }
 
   void tbExec(const fbs::ExecTB &OrigTB) {
+    static Timer TheTimer("tbExec", "Decoding executed TB",
+                          Timers);
+    TimeRegion TR(TheTimer);
+
     using namespace qemu_broker;
     uint32_t Idx = OrigTB.Index();
     uint64_t PC = OrigTB.PC();
@@ -336,7 +346,7 @@ class QemuBroker : public Broker {
             auto &MA = LastEntry.second;
             MA.IsStore |= IsStore;
             uint64_t NewAddr = std::min(MA.Addr, Addr);
-            // FIXME: This might be wrong in many cases
+            // FIXME: This might be wrong in some cases
             uint64_t NewEndAddr = std::max(uint64_t(MA.Addr + MA.Size),
                                            uint64_t(Addr + Size));
             unsigned NewSize = NewEndAddr - NewAddr;
@@ -360,10 +370,23 @@ class QemuBroker : public Broker {
   }
 
 public:
-  QemuBroker(StringRef Addr, StringRef Port,
-             unsigned MaxNumConn,
-             StringRef BinRegionsManifest,
-             bool EnableMemAccessMD,
+  struct Options {
+    StringRef ListenAddress, ListenPort;
+
+    unsigned MaxNumConnections;
+
+    StringRef BinaryRegionsManifestFile;
+
+    bool EnableMemoryAccessMD;
+
+    // Initialize the default values
+    Options();
+
+    // Constructed from command line options
+    Options(int argc, const char *const *argv);
+  };
+
+  QemuBroker(const Options &Opts,
              const MCSubtargetInfo &STI,
              MCContext &Ctx, const Target &T);
 
@@ -395,23 +418,22 @@ public:
 };
 } // end anonymous namespace
 
-QemuBroker::QemuBroker(StringRef Addr, StringRef Port,
-                       unsigned MaxNumConn,
-                       StringRef BinRegionsManifest,
-                       bool EnableMemAccessMD,
+QemuBroker::QemuBroker(const QemuBroker::Options &Opts,
                        const MCSubtargetInfo &MSTI,
                        MCContext &C, const Target &T)
-  : ListenAddr(Addr.str()), ListenPort(Port.str()),
+  : ListenAddr(Opts.ListenAddress.str()), ListenPort(Opts.ListenPort.str()),
     ServSocktFD(-1), AI(nullptr),
-    MaxNumAcceptedConnection(MaxNumConn),
+    MaxNumAcceptedConnection(Opts.MaxNumConnections),
     CurBinRegion(nullptr),
     CodeStartAddress(0U),
     TheTarget(T), Ctx(C), STI(MSTI),
     CurDisAsm(nullptr),
     IsEndOfStream(false),
-    EnableMemAccessMD(EnableMemAccessMD),
-    TotalNumTraces(0U) {
+    EnableMemAccessMD(Opts.EnableMemoryAccessMD),
+    TotalNumTraces(0U),
+    Timers("QemuBroker", "Time spending on qemu-broker") {
 
+  const auto &BinRegionsManifest = Opts.BinaryRegionsManifestFile;
   if (BinRegionsManifest.size()) {
     auto RegionsOrErr = qemu_broker::BinaryRegions::Create(BinRegionsManifest);
     if (!RegionsOrErr)
@@ -662,6 +684,8 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
 std::pair<int, Broker::RegionDescriptor>
 QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
                         Optional<MDExchanger> MDE) {
+  static Timer TheTimer("fetchRegion", "Fetching a region", Timers);
+  TimeRegion TR(TheTimer);
   using namespace qemu_broker;
 
   if (!Size)
@@ -765,51 +789,53 @@ int QemuBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size,
   return fetchRegion(MCIS, Size, MDE).first;
 }
 
+QemuBroker::Options::Options()
+  : ListenAddress("localhost"), ListenPort("9487"),
+    MaxNumConnections(1),
+    BinaryRegionsManifestFile(),
+    EnableMemoryAccessMD(true) {}
+
+QemuBroker::Options::Options(int argc, const char *const *argv)
+  : QemuBroker::Options() {
+  for (int i = 0; i < argc; ++i) {
+    StringRef Arg(argv[i]);
+    // Try to parse the listening address and port
+    if (Arg.startswith("-host") && Arg.contains('=')) {
+      auto RawHost = Arg.split('=').second;
+      if (RawHost.contains(':')) {
+        StringRef RawPort;
+        std::tie(ListenAddress, ListenPort) = RawHost.split(':');
+      }
+    }
+
+    // Try to parse the max number of accepted connection
+    if (Arg.startswith("-max-accepted-connection") &&
+        Arg.contains('=')) {
+      auto RawVal = Arg.split('=').second;
+      if (RawVal.trim().getAsInteger(0, MaxNumConnections)) {
+        WithColor::error() << "Invalid number: " << RawVal << "\n";
+        ::exit(1);
+      }
+    }
+
+    // Try to parse the binary regions manifest file
+    if (Arg.startswith("-binary-regions") &&
+        Arg.contains('='))
+      BinaryRegionsManifestFile = Arg.split('=').second;
+
+    // Try to parse the memory access metadata feature flag
+    if (Arg.startswith("-disable-memory-access-md"))
+      EnableMemoryAccessMD = false;
+  }
+}
+
 extern "C" ::llvm::mcad::BrokerPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
 mcadGetBrokerPluginInfo() {
   return {
     LLVM_MCAD_BROKER_PLUGIN_API_VERSION, "QemuBroker", "v0.1",
     [](int argc, const char *const *argv, BrokerFacade &BF) {
-      StringRef Addr = "localhost",
-                Port = "9487";
-      unsigned MaxNumConn = 1;
-      StringRef BRManifestPath;
-      bool EnableMemAccessMD = true;
-
-      for (int i = 0; i < argc; ++i) {
-        StringRef Arg(argv[i]);
-        // Try to parse the listening address and port
-        if (Arg.startswith("-host") && Arg.contains('=')) {
-          auto RawHost = Arg.split('=').second;
-          if (RawHost.contains(':')) {
-            StringRef RawPort;
-            std::tie(Addr, Port) = RawHost.split(':');
-          }
-        }
-
-        // Try to parse the max number of accepted connection
-        if (Arg.startswith("-max-accepted-connection") &&
-            Arg.contains('=')) {
-          auto RawVal = Arg.split('=').second;
-          if (RawVal.trim().getAsInteger(0, MaxNumConn)) {
-            WithColor::error() << "Invalid number: " << RawVal << "\n";
-            ::exit(1);
-          }
-        }
-
-        // Try to parse the binary regions manifest file
-        if (Arg.startswith("-binary-regions") &&
-            Arg.contains('='))
-          BRManifestPath = Arg.split('=').second;
-
-        // Try to parse the memory access metadata feature flag
-        if (Arg.startswith("-disable-memory-access-md"))
-          EnableMemAccessMD = false;
-      }
-
-      BF.setBroker(std::make_unique<QemuBroker>(Addr, Port, MaxNumConn,
-                                                BRManifestPath,
-                                                EnableMemAccessMD,
+      QemuBroker::Options BrokerOpts(argc, argv);
+      BF.setBroker(std::make_unique<QemuBroker>(BrokerOpts,
                                                 BF.getSTI(), BF.getCtx(),
                                                 BF.getTarget()));
     }
