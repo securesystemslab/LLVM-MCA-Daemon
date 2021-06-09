@@ -68,6 +68,11 @@ static cl::opt<unsigned>
                    cl::desc("Number of MCA simulation iteration"),
                    cl::init(1U));
 
+static cl::opt<std::string>
+  CacheConfigFile("cache-sim-config",
+                  cl::desc("Path to config file for cache simulation"),
+                  cl::Hidden);
+
 void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
 }
@@ -134,7 +139,9 @@ void MCAWorker::resetPipeline() {
   MCAIB.clear();
   SrcMgr.clear();
 
-  MCAPipeline = std::move(TheMCA.createDefaultPipeline(MCAPO, SrcMgr));
+  MCAPipeline
+    = std::move(TheMCA.createDefaultPipeline(MCAPO, SrcMgr,
+                                             StringRef(CacheConfigFile)));
   assert(MCAPipeline);
 
   MCAPipelinePrinter
