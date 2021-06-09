@@ -72,6 +72,11 @@ static cl::opt<std::string>
   CacheConfigFile("cache-sim-config",
                   cl::desc("Path to config file for cache simulation"),
                   cl::Hidden);
+static cl::opt<bool>
+  UseLoadLatency("mca-use-load-latency",
+                 cl::desc("Use `MCSchedModel::LoadLatency` to "
+                          "model load instructions"),
+                 cl::init(true));
 
 void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
@@ -129,6 +134,9 @@ MCAWorker::MCAWorker(const Target &T,
     Timers("MCAWorker", "Time consumption in each MCA stages") {
   MCAIB.setInstRecycleCallback(GetRecycledInst);
   SrcMgr.setOnInstFreedCallback(AddRecycledInst);
+
+  MCAIB.useLoadLatency(UseLoadLatency);
+
   resetPipeline();
 }
 
