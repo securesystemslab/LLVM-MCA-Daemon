@@ -19,6 +19,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/WithColor.h"
 #include <condition_variable>
+#include <list>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -189,7 +190,7 @@ class QemuBroker : public Broker {
   };
 
   // List of to-be-executed TB index
-  SmallVector<TBSlice, 16> TBQueue;
+  std::list<TBSlice> TBQueue;
   bool IsEndOfStream;
   std::mutex QueueMutex;
   std::condition_variable QueueCV;
@@ -344,14 +345,7 @@ class QemuBroker : public Broker {
           if (LastEntry.first == InstIdx) {
             // Merge the entry
             auto &MA = LastEntry.second;
-            MA.IsStore |= IsStore;
-            uint64_t NewAddr = std::min(MA.Addr, Addr);
-            // FIXME: This might be wrong in some cases
-            uint64_t NewEndAddr = std::max(uint64_t(MA.Addr + MA.Size),
-                                           uint64_t(Addr + Size));
-            unsigned NewSize = NewEndAddr - NewAddr;
-            MA.Addr = NewAddr;
-            MA.Size = NewSize;
+            MA.append(IsStore, Addr, Size);
             continue;
           }
         }
@@ -756,17 +750,20 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
       size_t TBIdx = Slice.Index;
       const auto &MCInsts = TBs[TBIdx]->MCInsts;
       auto *MAs = Slice.MemoryAccesses;
+      size_t MAIdx = 0U, NumMAs = 0U;
+      if (MAs)
+        NumMAs = MAs->size();
+
       size_t i, End = std::min(MCInsts.size(), size_t(Slice.EndIdx));
       assert(TotalSize >= Size);
       for (i = Slice.BeginIdx; i != End && Size > 0; ++i, --Size) {
         const auto *MCI = MCInsts[i].get();
         MCIS[TotalSize - Size] = MCI;
 
-        if (MAs && MAs->size()) {
-          if (MAs->front().first == i) {
-            setMemoryAccessMD(TotalSize - Size, std::move(MAs->front().second));
-            MAs->erase(MAs->begin());
-          }
+        if (MAs && MAIdx != NumMAs) {
+          if ((*MAs)[MAIdx].first == i)
+            setMemoryAccessMD(TotalSize - Size,
+                              std::move((*MAs)[MAIdx++].second));
         }
 
         ++TotalNumTraces;
