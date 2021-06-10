@@ -31,12 +31,14 @@ public:
 
   static void Register(BrokerFacade BF);
 
-  bool hasRegionFeature() const override { return true; }
+  unsigned getFeatures() const override { return Broker::Feature_Region; }
 
-  int fetch(MutableArrayRef<const MCInst*> MCIS, int Size = -1) override;
+  int fetch(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
+            Optional<MDExchanger> MDE = llvm::None) override;
 
   std::pair<int, RegionDescriptor>
-  fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size = -1) override;
+  fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
+              Optional<MDExchanger> MDE = llvm::None) override;
 };
 } // end namespace mcad
 } // end namespace llvm

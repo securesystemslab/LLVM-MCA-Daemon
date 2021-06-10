@@ -12,6 +12,8 @@ namespace fbs {
 
 struct Metadata;
 
+struct MemoryAccess;
+
 struct ExecTB;
 
 struct Inst;
@@ -75,6 +77,45 @@ template<> struct MsgTraits<TranslatedBlock> {
 bool VerifyMsg(flatbuffers::Verifier &verifier, const void *obj, Msg type);
 bool VerifyMsgVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types);
 
+FLATBUFFERS_MANUALLY_ALIGNED_STRUCT(8) MemoryAccess FLATBUFFERS_FINAL_CLASS {
+ private:
+  uint32_t Index_;
+  int32_t padding0__;
+  uint64_t VAddr_;
+  uint8_t Size_;
+  uint8_t IsStore_;
+  int16_t padding1__;  int32_t padding2__;
+
+ public:
+  MemoryAccess() {
+    memset(static_cast<void *>(this), 0, sizeof(MemoryAccess));
+  }
+  MemoryAccess(uint32_t _Index, uint64_t _VAddr, uint8_t _Size, bool _IsStore)
+      : Index_(flatbuffers::EndianScalar(_Index)),
+        padding0__(0),
+        VAddr_(flatbuffers::EndianScalar(_VAddr)),
+        Size_(flatbuffers::EndianScalar(_Size)),
+        IsStore_(flatbuffers::EndianScalar(static_cast<uint8_t>(_IsStore))),
+        padding1__(0),
+        padding2__(0) {
+    (void)padding0__;
+    (void)padding1__;    (void)padding2__;
+  }
+  uint32_t Index() const {
+    return flatbuffers::EndianScalar(Index_);
+  }
+  uint64_t VAddr() const {
+    return flatbuffers::EndianScalar(VAddr_);
+  }
+  uint8_t Size() const {
+    return flatbuffers::EndianScalar(Size_);
+  }
+  bool IsStore() const {
+    return flatbuffers::EndianScalar(IsStore_) != 0;
+  }
+};
+FLATBUFFERS_STRUCT_END(MemoryAccess, 24);
+
 struct Metadata FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_LOADADDR = 4
@@ -118,7 +159,8 @@ inline flatbuffers::Offset<Metadata> CreateMetadata(
 struct ExecTB FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_INDEX = 4,
-    VT_PC = 6
+    VT_PC = 6,
+    VT_MEMACCESSES = 8
   };
   uint32_t Index() const {
     return GetField<uint32_t>(VT_INDEX, 0);
@@ -126,10 +168,15 @@ struct ExecTB FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   uint64_t PC() const {
     return GetField<uint64_t>(VT_PC, 0);
   }
+  const flatbuffers::Vector<const MemoryAccess *> *MemAccesses() const {
+    return GetPointer<const flatbuffers::Vector<const MemoryAccess *> *>(VT_MEMACCESSES);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint32_t>(verifier, VT_INDEX) &&
            VerifyField<uint64_t>(verifier, VT_PC) &&
+           VerifyOffset(verifier, VT_MEMACCESSES) &&
+           verifier.VerifyVector(MemAccesses()) &&
            verifier.EndTable();
   }
 };
@@ -142,6 +189,9 @@ struct ExecTBBuilder {
   }
   void add_PC(uint64_t PC) {
     fbb_.AddElement<uint64_t>(ExecTB::VT_PC, PC, 0);
+  }
+  void add_MemAccesses(flatbuffers::Offset<flatbuffers::Vector<const MemoryAccess *>> MemAccesses) {
+    fbb_.AddOffset(ExecTB::VT_MEMACCESSES, MemAccesses);
   }
   explicit ExecTBBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -158,11 +208,26 @@ struct ExecTBBuilder {
 inline flatbuffers::Offset<ExecTB> CreateExecTB(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t Index = 0,
-    uint64_t PC = 0) {
+    uint64_t PC = 0,
+    flatbuffers::Offset<flatbuffers::Vector<const MemoryAccess *>> MemAccesses = 0) {
   ExecTBBuilder builder_(_fbb);
   builder_.add_PC(PC);
+  builder_.add_MemAccesses(MemAccesses);
   builder_.add_Index(Index);
   return builder_.Finish();
+}
+
+inline flatbuffers::Offset<ExecTB> CreateExecTBDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t Index = 0,
+    uint64_t PC = 0,
+    const std::vector<MemoryAccess> *MemAccesses = nullptr) {
+  auto MemAccesses__ = MemAccesses ? _fbb.CreateVectorOfStructs<MemoryAccess>(*MemAccesses) : 0;
+  return llvm::mcad::fbs::CreateExecTB(
+      _fbb,
+      Index,
+      PC,
+      MemAccesses__);
 }
 
 struct Inst FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {

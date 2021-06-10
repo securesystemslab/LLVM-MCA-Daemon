@@ -32,6 +32,8 @@
 using namespace llvm;
 using namespace mcad;
 
+#define DEBUG_TYPE "llvm-mcad"
+
 static cl::opt<bool>
   PrintJson("print-json", cl::desc("Export MCA analysis in JSON format"),
             cl::init(false));
@@ -65,6 +67,16 @@ static cl::opt<unsigned>
   NumMCAIterations("mca-iteration",
                    cl::desc("Number of MCA simulation iteration"),
                    cl::init(1U));
+
+static cl::opt<std::string>
+  CacheConfigFile("cache-sim-config",
+                  cl::desc("Path to config file for cache simulation"),
+                  cl::Hidden);
+static cl::opt<bool>
+  UseLoadLatency("mca-use-load-latency",
+                 cl::desc("Use `MCSchedModel::LoadLatency` to "
+                          "model load instructions"),
+                 cl::init(true));
 
 void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
@@ -122,6 +134,9 @@ MCAWorker::MCAWorker(const Target &T,
     Timers("MCAWorker", "Time consumption in each MCA stages") {
   MCAIB.setInstRecycleCallback(GetRecycledInst);
   SrcMgr.setOnInstFreedCallback(AddRecycledInst);
+
+  MCAIB.useLoadLatency(UseLoadLatency);
+
   resetPipeline();
 }
 
@@ -132,7 +147,9 @@ void MCAWorker::resetPipeline() {
   MCAIB.clear();
   SrcMgr.clear();
 
-  MCAPipeline = std::move(TheMCA.createDefaultPipeline(MCAPO, SrcMgr));
+  MCAPipeline
+    = std::move(TheMCA.createDefaultPipeline(MCAPO, SrcMgr,
+                                             StringRef(CacheConfigFile)));
   assert(MCAPipeline);
 
   MCAPipelinePrinter
@@ -166,8 +183,15 @@ Error MCAWorker::run() {
   SmallVector<const MCInst*, DEFAULT_MAX_NUM_PROCESSED>
     TraceBuffer(MaxNumProcessedInst);
 
-  bool UseRegion = TheBroker->hasRegionFeature();
+  bool UseRegion = TheBroker->hasFeature<Broker::Feature_Region>();
   size_t RegionIdx = 0U;
+
+  mca::MetadataRegistry *MDRegistry = TheMCA.getMetadataRegistry();
+  bool SupportMetadata = TheBroker->hasFeature<Broker::Feature_Metadata>();
+  assert((!SupportMetadata || MDRegistry) &&
+         "MetadataRegistry not created?");
+  DenseMap<unsigned, unsigned> MDIndexMap;
+
   // The end of instruction streams in all regions
   bool EndOfStream = false;
   while (true) {
@@ -175,10 +199,22 @@ Error MCAWorker::run() {
     Broker::RegionDescriptor RD(/*IsEnd=*/false);
     while (Continue) {
       int Len = 0;
-      if (UseRegion)
-        std::tie(Len, RD) = TheBroker->fetchRegion(TraceBuffer);
-      else
-        Len = TheBroker->fetch(TraceBuffer);
+      if (UseRegion) {
+        if (SupportMetadata) {
+          MDIndexMap.clear();
+          std::tie(Len, RD)
+            = TheBroker->fetchRegion(TraceBuffer, -1,
+                                     MDExchanger{*MDRegistry, MDIndexMap});
+        } else
+          std::tie(Len, RD) = TheBroker->fetchRegion(TraceBuffer);
+      } else {
+        if (SupportMetadata) {
+          MDIndexMap.clear();
+          Len = TheBroker->fetch(TraceBuffer, -1,
+                                 MDExchanger{*MDRegistry, MDIndexMap});
+        } else
+          Len = TheBroker->fetch(TraceBuffer);
+      }
 
       if (Len < 0 || RD) {
         SrcMgr.endOfStream();
@@ -197,7 +233,9 @@ Error MCAWorker::run() {
         TimeRegion TR(TheTimer);
 
         // Convert MCInst to mca::Instruction
-        for (const MCInst *OrigMCI : TraceBufferSlice) {
+        for (unsigned i = 0U, S = TraceBufferSlice.size();
+             i < S; ++i) {
+          const MCInst *OrigMCI = TraceBufferSlice[i];
           TraceMIs.push_back(OrigMCI);
           const MCInst &MCI = *TraceMIs.back();
           const auto &MCID = MCII.get(MCI.getOpcode());
@@ -225,10 +263,24 @@ Error MCAWorker::run() {
               return std::move(NewE);
             }
           }
-          if (RecycledInst)
+          if (RecycledInst) {
+            if (SupportMetadata && MDIndexMap.count(i)) {
+              auto MDTok = MDIndexMap.lookup(i);
+              LLVM_DEBUG(dbgs() << "MCI " << TraceMIs.size()
+                                << " has Token " << MDTok << "\n");
+              RecycledInst->setMetadataToken(MDTok);
+            }
             SrcMgr.addRecycledInst(RecycledInst);
-          else
-            SrcMgr.addInst(std::move(InstOrErr.get()));
+          } else {
+            auto &NewInst = InstOrErr.get();
+            if (SupportMetadata && MDIndexMap.count(i)) {
+              auto MDTok = MDIndexMap.lookup(i);
+              LLVM_DEBUG(dbgs() << "MCI " << TraceMIs.size()
+                                << " has Token " << MDTok << "\n");
+              NewInst->setMetadataToken(MDTok);
+            }
+            SrcMgr.addInst(std::move(NewInst));
+          }
         }
       }
 

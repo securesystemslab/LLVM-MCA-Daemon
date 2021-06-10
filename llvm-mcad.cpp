@@ -256,6 +256,7 @@ int main(int argc, char **argv) {
   mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get());
 
   mca::Context MCA(*MRI, *STI);
+  MCA.createMetadataRegistry();
 
   mca::PipelineOptions PO(/*MicroOpQueue=*/0, /*DecoderThroughput=*/0,
                           /*DispatchWidth=*/0,

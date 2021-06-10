@@ -64,8 +64,70 @@ static size_t NumExecInsts = 0U;
 
 /// === QEMU Callbacks ===
 
+namespace {
+struct ExecTransBlock {
+  struct MemAccess {
+    uint32_t InstIdx = 0U;
+    uint64_t VAddr = 0U;
+    uint8_t  Size = 0U;
+    bool IsStore = false;
+  };
+
+  uint32_t TBIdx = 0U;
+  uint64_t PC = 0U;
+  SmallVector<MemAccess, 2> MemAccesses;
+
+  void reset() {
+    MemAccesses.clear();
+    TBIdx = 0U;
+    PC = 0U;
+  }
+};
+} // end anonymous namespace
+
+static llvm::Optional<ExecTransBlock> CurrentExecTB;
+
+static inline void flushPreviousTBExec() {
+  using namespace mcad;
+  if (!CurrentExecTB)
+    return;
+
+  flatbuffers::FlatBufferBuilder Builder(128);
+  flatbuffers::Offset<flatbuffers::Vector<const fbs::MemoryAccess*>> MAV;
+  if (CurrentExecTB->MemAccesses.size()) {
+    std::vector<fbs::MemoryAccess> FbMemAccesses;
+    for (const auto &MA : CurrentExecTB->MemAccesses)
+      FbMemAccesses.emplace_back(MA.InstIdx, MA.VAddr, MA.Size, MA.IsStore);
+
+    MAV = Builder.CreateVectorOfStructs(FbMemAccesses);
+  }
+
+  fbs::ExecTBBuilder ETB(Builder);
+  ETB.add_Index(CurrentExecTB->TBIdx);
+  ETB.add_PC(CurrentExecTB->PC);
+  if (CurrentExecTB->MemAccesses.size())
+    ETB.add_MemAccesses(MAV);
+  auto FbExecTB = ETB.Finish();
+  auto FbMessage = fbs::CreateMessage(Builder, fbs::Msg_ExecTB,
+                                      FbExecTB.Union());
+  fbs::FinishSizePrefixedMessageBuffer(Builder, FbMessage);
+
+  int NumBytesSent = write(RemoteSockt,
+                           Builder.GetBufferPointer(), Builder.GetSize());
+  if (NumBytesSent < 0) {
+    ::perror("Failed to send TB exec");
+  }
+
+  // Reset the current ExecTB
+  CurrentExecTB->reset();
+}
+
 static void tbExecCallback(unsigned int CPUId, void *Data) {
   using namespace mcad;
+
+  flushPreviousTBExec();
+  if (!CurrentExecTB)
+    CurrentExecTB = ExecTransBlock();
 
   auto TBIdx = (size_t)Data;
 #ifndef NDEBUG
@@ -99,17 +161,21 @@ static void tbExecCallback(unsigned int CPUId, void *Data) {
       WithColor::error() << "Failed to read X86_64 RIP register\n";
   }
 
-  flatbuffers::FlatBufferBuilder Builder(128);
-  auto FbExecTB = fbs::CreateExecTB(Builder, TBIdx, VAddr);
-  auto FbMessage = fbs::CreateMessage(Builder, fbs::Msg_ExecTB,
-                                      FbExecTB.Union());
-  fbs::FinishSizePrefixedMessageBuffer(Builder, FbMessage);
+  CurrentExecTB->TBIdx = TBIdx;
+  CurrentExecTB->PC = VAddr;
+}
 
-  int NumBytesSent = write(RemoteSockt,
-                           Builder.GetBufferPointer(), Builder.GetSize());
-  if (NumBytesSent < 0) {
-    ::perror("Failed to send TB exec");
-  }
+static void onMemoryOps(unsigned int CPUIdx, qemu_plugin_meminfo_t MemInfo,
+                        uint64_t VAddr, void *UData) {
+  assert(CurrentExecTB);
+  auto InstIdx = (uintptr_t)UData;
+  auto &MemAccesses = CurrentExecTB->MemAccesses;
+
+  unsigned int ShiftedSize = qemu_plugin_mem_size_shift(MemInfo);
+  bool IsStore = qemu_plugin_mem_is_store(MemInfo);
+  MemAccesses.push_back({static_cast<uint32_t>(InstIdx),
+                         VAddr,
+                         static_cast<uint8_t>(2 << ShiftedSize), IsStore});
 }
 
 // The starting address of the currently loaded binary
@@ -162,6 +228,11 @@ static void tbTranslateCallback(qemu_plugin_id_t Id,
     RawInst.clear();
     for (auto j = 0U; j < InsnSize; ++j)
       RawInst.push_back(*(I++));
+
+    // instrumenting memory ops
+    qemu_plugin_register_vcpu_mem_cb((struct qemu_plugin_insn*)QI, onMemoryOps,
+                                     QEMU_PLUGIN_CB_NO_REGS, QEMU_PLUGIN_MEM_RW,
+                                     (void*)static_cast<uintptr_t>(i));
 
     RawInsts.emplace_back(std::move(RawInst));
   }
@@ -246,6 +317,8 @@ static void onPluginExit(qemu_plugin_id_t Id, void *Data) {
 
   if (RemoteSockt < 0)
     return;
+
+  flushPreviousTBExec();
 
   // Use TBIdx == 0xffffffff as end signal
   flatbuffers::FlatBufferBuilder Builder(128);

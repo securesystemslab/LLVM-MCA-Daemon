@@ -76,7 +76,8 @@ const MCInst *AsmFileBroker::fetch() {
   return &Insts[CurInstIdx++];
 }
 
-int AsmFileBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size) {
+int AsmFileBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size,
+                         Optional<MDExchanger> MDE) {
   assert(Size <= int(MCIS.size()));
   size_t MaxLen = Size < 0? MCIS.size() : Size;
 
@@ -97,7 +98,8 @@ int AsmFileBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size) {
 }
 
 std::pair<int, Broker::RegionDescriptor>
-AsmFileBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size) {
+AsmFileBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
+                           Optional<MDExchanger> MDE) {
   assert(Size <= int(MCIS.size()));
   size_t MaxLen = Size < 0? MCIS.size() : Size;
   StringRef LastRegionDescription;
