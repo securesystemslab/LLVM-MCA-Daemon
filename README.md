@@ -64,6 +64,7 @@ Here are some other important command line arguments:
    - **plugin**. Uses Broker plugin loaded by the `-load-broker-plugin` flag.
  - `-load-broker-plugin=<plugin library file>`. Load a Broker plugin. This option implicitly selects the **plugin** Broker kind.
  - `-broker-plugin-arg.*`. Supply addition arguments to the Broker plugin. For example, if `-broker-plugin-arg-foo=bar` is given, the plugin will receive `-foo=bar` argument when it's registering with the core component.
+ - `-cache-sim-config=<config file>`. Please refer to [this document](doc/cache-simulation.md) for more details.
 
 ## Design
 ### Overview
