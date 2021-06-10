@@ -20,6 +20,7 @@ namespace mcad {
 namespace qemu_broker {
 struct BinaryRegion {
   std::string Description;
+  // range: [StartAddr, EndAddr]
   uint64_t StartAddr, EndAddr;
 };
 

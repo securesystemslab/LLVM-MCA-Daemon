@@ -38,6 +38,7 @@ add_llvm_library(MCADQemuBroker SHARED
   # should be already available in llvm-mcad
   LINK_COMPONENTS
   AllTargetsDisassemblers
+  DebugInfoDWARF
   Object
   )
 add_dependencies(MCADQemuBroker generate-fbs)

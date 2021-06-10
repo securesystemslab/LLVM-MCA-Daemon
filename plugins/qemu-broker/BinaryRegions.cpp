@@ -1,4 +1,6 @@
 #include "BinaryRegions.h"
+#include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -55,30 +57,44 @@ struct BRSymbol {
   size_t Size;
 };
 
-static Error readSymbols(const MemoryBuffer &RawObjFile,
-                         StringMap<BRSymbol> &Symbols) {
+static Error readDWARF(const object::ELFObjectFileBase &ELFObj,
+                       StringMap<BRSymbol> &Symbols) {
+  std::unique_ptr<DWARFContext> DICtx = DWARFContext::create(ELFObj);
+  for (const std::unique_ptr<DWARFUnit> &CU : DICtx->compile_units()) {
+    if (!CU)
+      continue;
+    DWARFDie CUDie = CU->getUnitDIE(false);
+    for (const DWARFDie &ChildDie : CUDie.children()) {
+      if (!ChildDie.isSubprogramDIE())
+        continue;
+      const char *SymName = ChildDie.getLinkageName();
+      if (!SymName)
+        continue;
+
+      uint64_t LowPC, HighPC, SectionIdx;
+      if (!ChildDie.getLowAndHighPC(LowPC, HighPC, SectionIdx))
+        continue;
+      assert(HighPC >= LowPC);
+      Symbols[StringRef(SymName)] = {LowPC, HighPC - LowPC};
+    }
+  }
+  return llvm::ErrorSuccess();
+}
+
+static Error readSymTable(const object::ELFObjectFileBase &ELFObj,
+                          StringMap<BRSymbol> &Symbols) {
   using namespace object;
-
-  auto BinaryOrErr = llvm::object::createBinary(RawObjFile);
-  if (!BinaryOrErr)
-    return BinaryOrErr.takeError();
-  auto &TheBinary = *BinaryOrErr;
-
-  auto *ELFObj = dyn_cast<ELFObjectFileBase>(TheBinary.get());
-  if (!ELFObj)
-    return llvm::createStringError(std::errc::invalid_argument,
-                                   "Unsupported binary format. "
-                                   "Only ELF is supported right now");
-
-  for (const ELFSymbolRef &Sym : ELFObj->symbols()) {
+  for (const ELFSymbolRef &Sym : ELFObj.symbols()) {
     auto Size = Sym.getSize();
     // We really don't care the error message if any of the
     // following fail, so just convert it to Optional to drop
     // the attached Error.
     auto MaybeName = llvm::expectedToOptional(Sym.getName());
     auto MaybeAddr = llvm::expectedToOptional(Sym.getAddress());
-    if (MaybeName && MaybeAddr)
-      Symbols[*MaybeName] = {*MaybeAddr, Size};
+    if (MaybeName && MaybeAddr) {
+      if (!Symbols.count(*MaybeName))
+        Symbols[*MaybeName] = {*MaybeAddr, Size};
+    }
   }
 
   return llvm::ErrorSuccess();
@@ -94,8 +110,23 @@ Error BinaryRegions::parseSymbolBasedRegions(const json::Object &RawManifest) {
   if (!ErrOrObjectBuffer)
     return llvm::errorCodeToError(ErrOrObjectBuffer.getError());
 
+  auto BinaryOrErr = llvm::object::createBinary(*ErrOrObjectBuffer->get());
+  if (!BinaryOrErr)
+    return BinaryOrErr.takeError();
+  const object::Binary *TheBinary = (*BinaryOrErr).get();
+  const auto *ELFObj = dyn_cast<object::ELFObjectFileBase>(TheBinary);
+  if (!ELFObj)
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "Unsupported binary format. "
+                                   "Only ELF is supported right now");
+
   StringMap<BRSymbol> Symbols;
-  auto E = readSymbols(*ErrOrObjectBuffer->get(), Symbols);
+  // Try to read DWARF first
+  auto E = readDWARF(*ELFObj, Symbols);
+  if (E)
+    return std::move(E);
+  // Then pick up symbols that are not available in DWARF
+  E = readSymTable(*ELFObj, Symbols);
   if (E)
     return std::move(E);
 
