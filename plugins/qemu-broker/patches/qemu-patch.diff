@@ -140,7 +140,7 @@ index b22998cd7c..b6e4a8ca0b 100644
 +  CPUState *cpu = current_cpu;
 +  TaskState *ts = (TaskState*)cpu->opaque;
 +  const struct image_info *info = ts->info;
-+  return info->start_code;
++  return info->code_offset;
 +#else
 +  return 0;
 +#endif
