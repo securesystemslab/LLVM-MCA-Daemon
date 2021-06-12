@@ -154,6 +154,10 @@ static const llvm::Target *getLLVMTarget(const char *ProgName) {
     return nullptr;
   }
 
+  // TargetRegistry::lookupTarget might adjust the triple
+  // according to ArchName
+  TripleName = TheTriple.getTriple();
+
   // Return the found target.
   return TheTarget;
 }
@@ -201,6 +205,15 @@ int main(int argc, char **argv) {
   // Initialize targets
   InitializeAllTargetInfos();
   InitializeAllTargetMCs();
+  // Although `llvm-mcad` doesn't use the disassembler, some broker
+  // plugin might use it. However, if we call InitializeAllDisassemblers
+  // in the broker plugin, it will fail to retrieve the correct `Target`
+  // (singletone) instance in the case of linking LLVM libraries statically.
+  // Therefore, we have little choises but initializing them here.
+  // FIXME: Put "require disassembler" as a Broker feature
+  // and initialize them only when that feature is given.
+  // FIXME: What about AsmParser?
+  InitializeAllDisassemblers();
 
   // Print all available targets in `--verison`
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
@@ -312,6 +325,11 @@ int main(int argc, char **argv) {
                                      decltype(strToCstr)>;
     std::vector<const char*> Args(iterator(BrokerPluginArg.begin(), strToCstr),
                                   iterator(BrokerPluginArg.end(), strToCstr));
+
+    // Relay this option to Broker
+    if (EnableTimer)
+      Args.push_back("-enable-timer");
+
     BP.registerBroker(Args, BF);
     break;
   }

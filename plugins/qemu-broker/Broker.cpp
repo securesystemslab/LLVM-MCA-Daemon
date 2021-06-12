@@ -199,6 +199,7 @@ class QemuBroker : public Broker {
 
   uint32_t TotalNumTraces;
 
+  bool EnableTimer;
   llvm::TimerGroup Timers;
 
   void initializeServer();
@@ -373,6 +374,8 @@ public:
 
     bool EnableMemoryAccessMD;
 
+    bool EnableTimer;
+
     // Initialize the default values
     Options();
 
@@ -408,6 +411,9 @@ public:
       if (AI)
         freeaddrinfo(AI);
     }
+
+    if (!EnableTimer)
+      Timers.clear();
   }
 };
 } // end anonymous namespace
@@ -425,6 +431,7 @@ QemuBroker::QemuBroker(const QemuBroker::Options &Opts,
     IsEndOfStream(false),
     EnableMemAccessMD(Opts.EnableMemoryAccessMD),
     TotalNumTraces(0U),
+    EnableTimer(Opts.EnableTimer),
     Timers("QemuBroker", "Time spending on qemu-broker") {
 
   const auto &BinRegionsManifest = Opts.BinaryRegionsManifestFile;
@@ -584,8 +591,6 @@ void QemuBroker::recvWorker(addrinfo *AI) {
 }
 
 void QemuBroker::initializeDisassembler() {
-  llvm::InitializeAllDisassemblers();
-
   DisAsm.reset(TheTarget.createMCDisassembler(STI, Ctx));
   CurDisAsm = DisAsm.get();
 
@@ -790,7 +795,8 @@ QemuBroker::Options::Options()
   : ListenAddress("localhost"), ListenPort("9487"),
     MaxNumConnections(1),
     BinaryRegionsManifestFile(),
-    EnableMemoryAccessMD(true) {}
+    EnableMemoryAccessMD(true),
+    EnableTimer(false) {}
 
 QemuBroker::Options::Options(int argc, const char *const *argv)
   : QemuBroker::Options() {
@@ -823,6 +829,12 @@ QemuBroker::Options::Options(int argc, const char *const *argv)
     // Try to parse the memory access metadata feature flag
     if (Arg.startswith("-disable-memory-access-md"))
       EnableMemoryAccessMD = false;
+
+    // Try to parse the option that enables timer
+    // Note that this flag is automatically appended
+    // if `-enable-timer` is supplied on the `llvm-mcad` side
+    if (Arg.startswith("-enable-timer"))
+      EnableTimer = true;
   }
 }
 

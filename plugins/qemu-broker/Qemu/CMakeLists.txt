@@ -5,4 +5,7 @@ include_directories(${QEMU_INCLUDE_DIR})
 
 add_llvm_library(QemuRelay SHARED
   Plugin.cpp
+
+  LINK_COMPONENTS
+  Support
   )

@@ -78,6 +78,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 set(LLVM_LINK_COMPONENTS
     AllTargetsAsmParsers
     AllTargetsDescs
+    AllTargetsDisassemblers
     AllTargetsInfos
     MC
     MCA
@@ -116,6 +117,8 @@ export_executable_symbols(llvm-mcad)
 target_link_libraries(llvm-mcad
   PRIVATE ${_EXTRA_LIBS}
   )
+
+unset(LLVM_LINK_COMPONENTS)
 
 if (LLVM_MCAD_BUILD_PLUGINS)
   add_subdirectory(plugins)

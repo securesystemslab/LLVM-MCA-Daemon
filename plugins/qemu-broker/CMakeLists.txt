@@ -2,6 +2,10 @@ if (WIN32)
   message(FATAL_ERROR "This plugin does not support Windows")
 endif()
 
+set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
+find_package (Python3 REQUIRED
+  COMPONENTS Interpreter Development)
+
 # Search for the Flatbuffers header
 find_path(_FLATBUFFERS_HEADER flatbuffers.h
   PATH_SUFFIXES flatbuffers
@@ -30,6 +34,8 @@ endif()
 add_custom_target(generate-fbs
   DEPENDS ${_FBS_HEADER_PATH})
 
+set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Broker.exports)
+
 add_llvm_library(MCADQemuBroker SHARED
   BinaryRegions.cpp
   Broker.cpp
@@ -37,11 +43,12 @@ add_llvm_library(MCADQemuBroker SHARED
   # Components like Support, MC, TargetDesc or TargetInfo
   # should be already available in llvm-mcad
   LINK_COMPONENTS
-  AllTargetsDisassemblers
   DebugInfoDWARF
   Object
   )
 add_dependencies(MCADQemuBroker generate-fbs)
+
+unset(LLVM_EXPORTED_SYMBOL_FILE)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
