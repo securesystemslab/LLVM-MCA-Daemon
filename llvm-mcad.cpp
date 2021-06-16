@@ -245,11 +245,11 @@ int main(int argc, char **argv) {
             TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   assert(MAI);
 
-  auto MOFI = std::make_unique<MCObjectFileInfo>();
-  auto Ctx = std::make_unique<MCContext>(MAI.get(), MRI.get(),
-                                         MOFI.get());
-
-  MOFI->InitMCObjectFileInfo(TheTriple, /* PIC= */ false, *Ctx);
+  auto Ctx = std::make_unique<MCContext>(TheTriple,
+                                         MAI.get(), MRI.get(), STI.get());
+  std::unique_ptr<MCObjectFileInfo> MOFI(
+    TheTarget->createMCObjectFileInfo(*Ctx, /*PIC=*/false));
+  Ctx->setObjectFileInfo(MOFI.get());
 
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
   assert(MCII && "Unable to create instruction info!");

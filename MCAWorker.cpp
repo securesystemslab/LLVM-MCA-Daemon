@@ -147,8 +147,12 @@ void MCAWorker::resetPipeline() {
   MCAIB.clear();
   SrcMgr.clear();
 
+  // FIXME: Can we make CustomBehaviour optional?
+  SmallVector<std::unique_ptr<mca::Instruction>, 1> DummyArray;
+  mca::SourceMgr DummyCSM(DummyArray, 1);
+  mca::CustomBehaviour DummyCB(STI, DummyCSM, MCII);
   MCAPipeline
-    = std::move(TheMCA.createDefaultPipeline(MCAPO, SrcMgr,
+    = std::move(TheMCA.createDefaultPipeline(MCAPO, SrcMgr, DummyCB,
                                              StringRef(CacheConfigFile)));
   assert(MCAPipeline);
 
