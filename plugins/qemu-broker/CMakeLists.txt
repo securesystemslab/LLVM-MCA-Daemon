@@ -34,6 +34,11 @@ endif()
 add_custom_target(generate-fbs
   DEPENDS ${_FBS_HEADER_PATH})
 
+# FIXME: We need to export llvm::Any::TypeId<T>::Id as (weak) global symbol
+# or the id for each type will not be unique and break the whole llvm::Any
+# system. However, since llvm's symbol exporting script processor doesn't
+# do symbol name mangling for us, the current Broker.exports script probably
+# only works on Linux (and maybe MacOSX?).
 set(LLVM_EXPORTED_SYMBOL_FILE ${CMAKE_CURRENT_SOURCE_DIR}/Broker.exports)
 
 add_llvm_library(MCADQemuBroker SHARED
