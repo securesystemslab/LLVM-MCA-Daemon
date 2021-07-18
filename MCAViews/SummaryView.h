@@ -35,7 +35,10 @@
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
+class raw_ostream;
+
 namespace mca {
+class MetadataRegistry;
 
 /// A view that collects and prints a few performance numbers.
 class SummaryView : public View {
@@ -46,6 +49,10 @@ class SummaryView : public View {
   unsigned TotalCycles;
   // The total number of micro opcodes contributed by a block of instructions.
   unsigned NumMicroOps;
+
+  // Used for printing region markers (optional)
+  mca::MetadataRegistry *MDRegistry;
+  llvm::raw_ostream *OutStream;
 
   struct DisplayValues {
     unsigned Instructions;
@@ -84,7 +91,9 @@ class SummaryView : public View {
 public:
   SummaryView(const llvm::MCSchedModel &Model,
               llvm::function_ref<size_t(void)> GetSrcSize,
-              unsigned Width);
+              unsigned Width,
+              mca::MetadataRegistry *MDRegistry = nullptr,
+              llvm::raw_ostream *OutStream = nullptr);
 
   void onCycleEnd() override { ++TotalCycles; }
   void onEvent(const HWInstructionEvent &Event) override;

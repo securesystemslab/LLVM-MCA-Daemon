@@ -162,7 +162,9 @@ void MCAWorker::resetPipeline() {
                                                        : mca::View::OK_READABLE);
   const MCSchedModel &SM = STI.getSchedModel();
   MCAPipelinePrinter->addView(
-    std::make_unique<mca::SummaryView>(SM, GetTraceMISize, 0U));
+    std::make_unique<mca::SummaryView>(SM, GetTraceMISize, 0U,
+                                       TheMCA.getMetadataRegistry(),
+                                       &MCAOF.os()));
 }
 
 Error MCAWorker::run() {

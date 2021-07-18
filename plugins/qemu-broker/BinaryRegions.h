@@ -32,7 +32,13 @@ raw_ostream &operator<<(raw_ostream &OS, const BinaryRegion &BR) {
   return OS;
 }
 
-class BinaryRegions {
+struct BinaryRegions {
+  enum Mode {
+    M_Trim,
+    M_Mark
+  };
+
+private:
   Error parseAddressBasedRegions(const json::Array &RawRegions);
 
   Error parseSymbolBasedRegions(const json::Object &RawManifest);
@@ -40,13 +46,18 @@ class BinaryRegions {
   // {start address -> BinaryRegion}
   std::unordered_map<uint64_t, BinaryRegion> Regions;
 
-  BinaryRegions() = default;
+  Mode OperationMode;
+
+  BinaryRegions() : OperationMode(M_Trim) {}
 
 public:
   static
   Expected<std::unique_ptr<BinaryRegions>> Create(StringRef ManifestPath);
 
   size_t size() const { return Regions.size(); }
+
+  void setOperationMode(Mode OpMode) { OperationMode = OpMode; }
+  Mode getOperationMode() const { return OperationMode; }
 
   const BinaryRegion *lookup(uint64_t StartAddr) const {
     if (!Regions.count(StartAddr))

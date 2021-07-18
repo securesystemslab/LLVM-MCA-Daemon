@@ -1,6 +1,8 @@
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
@@ -39,6 +41,8 @@
 #include "BrokerFacade.h"
 #include "Brokers/Broker.h"
 #include "Brokers/BrokerPlugin.h"
+#include "MDCategories.h"
+#include "RegionMarker.h"
 
 #include "Serialization/mcad_generated.h"
 
@@ -73,6 +77,10 @@ struct TranslationBlock {
   uint64_t VAddr;
   // Address offsets to each MCInst in this TB
   SmallVector<uint8_t, 8> VAddrOffsets;
+
+  // Whether a MCInst has a begin mark
+  BitVector BeginMarks;
+  BitVector EndMarks;
 
   explicit TranslationBlock(size_t Size)
     : RawInsts(Size), VAddr(0U) {}
@@ -264,22 +272,17 @@ class QemuBroker : public Broker {
     }
 
     auto &TB = *TBs[Idx];
-    if (!TB) {
-      TB.VAddr = PC;
-      // Disassemble
-      disassemble(TB);
-      const auto &TheTriple = STI.getTargetTriple();
-      if (TheTriple.isARM() || TheTriple.isThumb())
-        TB.VAddr &= (~0b1);
-    }
 
-    // Handle regions
+    // Binary regions handler
     uint16_t BeginIdx = 0u, EndIdx = ~uint16_t(0u);
     const BinaryRegion *Region = nullptr;
-    if (BinRegions && BinRegions->size()) {
+    auto handleBinaryRegions
+      = [&,this](llvm::function_ref<void(size_t,bool)> Handler) {
       size_t i = 0U, S = TB.VAddrOffsets.size();
       if (!CurBinRegion) {
-        BeginIdx = EndIdx;
+        // Only reset Begin / End index if we're in trimming mode
+        if (BinRegions->getOperationMode() == BinaryRegions::M_Trim)
+          BeginIdx = EndIdx;
         if (TB.VAddr >= CodeStartAddress) {
           // Watch if there is any match on starting address
           uint64_t VA = TB.VAddr - CodeStartAddress;
@@ -290,7 +293,7 @@ class QemuBroker : public Broker {
               break;
           }
           if (i != S) {
-            BeginIdx = i;
+            Handler(i, true);
             LLVM_DEBUG(dbgs() << "Start to analyze region "
                               << CurBinRegion->Description
                               << " @ addr = " << format_hex(VA, 16)
@@ -308,16 +311,46 @@ class QemuBroker : public Broker {
             break;
         }
         if (i != S) {
-          // End of region
-          EndIdx = i + 1;
-          Region = CurBinRegion;
-          CurBinRegion = nullptr;
+          Handler(i, false);
           LLVM_DEBUG(dbgs() << "Terminating region "
-                            << Region->Description
+                            << CurBinRegion->Description
                             << "\n");
+          CurBinRegion = nullptr;
         }
       }
+    };
+
+    if (!TB) {
+      TB.VAddr = PC;
+      // Disassemble
+      disassemble(TB);
+      const auto &TheTriple = STI.getTargetTriple();
+      if (TheTriple.isARM() || TheTriple.isThumb())
+        TB.VAddr &= (~0b1);
+
+      if (BinRegions && BinRegions->size() &&
+          BinRegions->getOperationMode() == BinaryRegions::M_Mark)
+        handleBinaryRegions(
+          [&,this](size_t MCInstIdx, bool IsBegin) {
+            if (IsBegin)
+              TB.BeginMarks.set(MCInstIdx);
+            else
+              TB.EndMarks.set(MCInstIdx);
+          });
     }
+
+    if (BinRegions && BinRegions->size() &&
+        BinRegions->getOperationMode() == BinaryRegions::M_Trim)
+      handleBinaryRegions(
+        [&,this](size_t MCInstIdx, bool IsBegin) {
+          if (IsBegin) {
+            BeginIdx = MCInstIdx;
+          } else {
+            // End of region
+            EndIdx = MCInstIdx + 1;
+            Region = CurBinRegion;
+          }
+        });
 
     // Empty slice
     if (BeginIdx == EndIdx)
@@ -371,6 +404,7 @@ public:
     unsigned MaxNumConnections;
 
     StringRef BinaryRegionsManifestFile;
+    qemu_broker::BinaryRegions::Mode BinaryRegionsOpMode;
 
     bool EnableMemoryAccessMD;
 
@@ -443,8 +477,10 @@ QemuBroker::QemuBroker(const QemuBroker::Options &Opts,
                         E.log(WithColor::error());
                         errs() << "\n";
                       });
-    else
+    else {
       BinRegions = std::move(*RegionsOrErr);
+      BinRegions->setOperationMode(Opts.BinaryRegionsOpMode);
+    }
   }
 
   initializeDisassembler();
@@ -678,6 +714,9 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
     VAddr += RawInst.size();
     ++RawInstIdx;
   }
+
+  TB.BeginMarks.resize(TB.MCInsts.size());
+  TB.EndMarks.resize(TB.MCInsts.size());
 }
 
 std::pair<int, Broker::RegionDescriptor>
@@ -750,10 +789,27 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
           MemAccessCat[TotalNumTraces] = std::move(MDA);
         }
       };
+    auto setRegionMarkerMD = [&,this](unsigned Idx, bool IsBegin) {
+      if (MDE) {
+        auto &Registry = MDE->MDRegistry;
+        auto &IndexMap = MDE->IndexMap;
+        auto &MarkerCat = Registry[mcad::MD_BinaryRegionMarkers];
+
+        IndexMap[Idx] = TotalNumTraces;
+        RegionMarker Val
+          = IsBegin? RegionMarker::getBegin() : RegionMarker::getEnd();
+        if (auto MaybeVal = MarkerCat.get<mcad::RegionMarker>(TotalNumTraces))
+          MarkerCat[TotalNumTraces] = std::move(Val | *MaybeVal);
+        else
+          MarkerCat[TotalNumTraces] = std::move(Val);
+      }
+    };
+
     std::lock_guard<std::mutex> LK(TBsMutex);
     for (auto &Slice : SelectedSlices) {
       size_t TBIdx = Slice.Index;
-      const auto &MCInsts = TBs[TBIdx]->MCInsts;
+      const auto &CurTB = TBs[TBIdx];
+      const auto &MCInsts = CurTB->MCInsts;
       auto *MAs = Slice.MemoryAccesses;
       size_t MAIdx = 0U, NumMAs = 0U;
       if (MAs)
@@ -765,11 +821,18 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
         const auto *MCI = MCInsts[i].get();
         MCIS[TotalSize - Size] = MCI;
 
+        // Memory access metadata
         if (MAs && MAIdx != NumMAs) {
           if ((*MAs)[MAIdx].first == i)
             setMemoryAccessMD(TotalSize - Size,
                               std::move((*MAs)[MAIdx++].second));
         }
+
+        // Region markers
+        if (CurTB->BeginMarks.test(i))
+          setRegionMarkerMD(TotalSize - Size, /*IsBegin=*/true);
+        if (CurTB->EndMarks.test(i))
+          setRegionMarkerMD(TotalSize - Size, /*IsBegin=*/false);
 
         ++TotalNumTraces;
       }
@@ -795,6 +858,7 @@ QemuBroker::Options::Options()
   : ListenAddress("localhost"), ListenPort("9487"),
     MaxNumConnections(1),
     BinaryRegionsManifestFile(),
+    BinaryRegionsOpMode(qemu_broker::BinaryRegions::M_Trim),
     EnableMemoryAccessMD(true),
     EnableTimer(false) {}
 
@@ -822,9 +886,20 @@ QemuBroker::Options::Options(int argc, const char *const *argv)
     }
 
     // Try to parse the binary regions manifest file
-    if (Arg.startswith("-binary-regions") &&
-        Arg.contains('='))
+    // and operation mode
+    size_t Pos = Arg.find("-binary-regions");
+    if (Pos != StringRef::npos && Arg.contains('=')) {
       BinaryRegionsManifestFile = Arg.split('=').second;
+      if (Pos > 1) {
+        using namespace qemu_broker;
+        // Starts from 1 because we want to drop the leading '-'
+        StringRef Mode = Arg.slice(1, Pos);
+        BinaryRegionsOpMode = StringSwitch<BinaryRegions::Mode>(Mode)
+                                .Case("trim", BinaryRegions::M_Trim)
+                                .Case("mark", BinaryRegions::M_Mark)
+                                .Default(BinaryRegions::M_Trim);
+      }
+    }
 
     // Try to parse the memory access metadata feature flag
     if (Arg.startswith("-disable-memory-access-md"))
