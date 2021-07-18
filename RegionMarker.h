@@ -21,9 +21,9 @@ public:
     return RegionMarker(EndMark);
   }
 
-  inline bool isBegin() const { return Storage | BeginMark; }
+  inline bool isBegin() const { return Storage & BeginMark; }
 
-  inline bool isEnd() const { return Storage | EndMark; }
+  inline bool isEnd() const { return Storage & EndMark; }
 
   RegionMarker operator|(const RegionMarker &RHS) const {
     return RegionMarker(Storage | RHS.Storage);

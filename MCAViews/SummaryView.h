@@ -53,6 +53,12 @@ class SummaryView : public View {
   // Used for printing region markers (optional)
   mca::MetadataRegistry *MDRegistry;
   llvm::raw_ostream *OutStream;
+  // List of begin summary strings to be paired by end-marked
+  // instruciton later
+  llvm::SmallVector<std::string, 2> PairingStack;
+  // Source index of a end-marked instruction to its begin
+  // summary counterpart
+  llvm::DenseMap<unsigned, std::string> EndMark2BeginSummary;
 
   struct DisplayValues {
     unsigned Instructions;
