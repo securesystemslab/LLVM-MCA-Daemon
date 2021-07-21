@@ -27,6 +27,7 @@
 
 #include "MCAWorker.h"
 #include "MCAViews/SummaryView.h"
+#include "MCAViews/TimelineView.h"
 #include "PipelinePrinter.h"
 
 using namespace llvm;
@@ -77,6 +78,11 @@ static cl::opt<bool>
                  cl::desc("Use `MCSchedModel::LoadLatency` to "
                           "model load instructions"),
                  cl::init(true));
+
+// TODO: Put this into a separate CL option group
+static cl::opt<bool>
+  ShowTimelineView("mca-show-timeline-view",
+                   cl::init(false));
 
 void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
@@ -165,6 +171,11 @@ void MCAWorker::resetPipeline() {
     std::make_unique<mca::SummaryView>(SM, GetTraceMISize, 0U,
                                        TheMCA.getMetadataRegistry(),
                                        &MCAOF.os()));
+  if (ShowTimelineView)
+    MCAPipelinePrinter->addView(
+      std::make_unique<mca::TimelineView>(STI, MIP,
+                                          *TheMCA.getMetadataRegistry(),
+                                          MCAOF.os()));
 }
 
 Error MCAWorker::run() {
