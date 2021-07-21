@@ -58,27 +58,24 @@ void SummaryView::onEvent(const HWInstructionEvent &Event) {
     auto &MarkerCat = MDR[mcad::MD_BinaryRegionMarkers];
     if (auto Marker = MarkerCat.get<mcad::RegionMarker>(MDTok)) {
       unsigned InstIdx = Event.IR.getSourceIndex();
-      // Begin marker
-      if (Marker->isBegin() && Event.Type == HWInstructionEvent::Dispatched) {
-        std::string BeginSummary;
-        llvm::raw_string_ostream SS(BeginSummary);
-        SS << "====Marker Begins==== [" << InstIdx << "]\n";
-        printView(SS);
-        PairingStack.push_back(std::move(BeginSummary));
-      }
-      // End marker
-      if (Marker->isEnd()) {
-        if (Event.Type == HWInstructionEvent::Dispatched) {
-          std::string BeginSummary;
-          if (PairingStack.size())
-            BeginSummary = PairingStack.pop_back_val();
+      bool IsBegin = Marker->isBegin(),
+           IsEnd = Marker->isEnd();
 
-          EndMark2BeginSummary.insert(std::make_pair(InstIdx, BeginSummary));
-        } else if (Event.Type == HWInstructionEvent::Executed) {
-          if (EndMark2BeginSummary.count(InstIdx)) {
-            (*OutStream) << "\n" << EndMark2BeginSummary[InstIdx];
-            EndMark2BeginSummary.erase(InstIdx);
-          }
+      if (Event.Type == HWInstructionEvent::Retired) {
+        if (IsBegin && IsEnd) {
+          (*OutStream) << "====Marker==== [" << InstIdx << "]\n";
+          printView(*OutStream);
+        } else if (IsBegin) {
+          // Normal Begin marker
+          std::string BeginSummary;
+          llvm::raw_string_ostream SS(BeginSummary);
+          SS << "====Marker Begins==== [" << InstIdx << "]\n";
+          printView(SS);
+          PairingStack.push_back(std::move(BeginSummary));
+        } else if (IsEnd) {
+          // Normal End marker
+          if (PairingStack.size())
+            (*OutStream) << "\n" << PairingStack.pop_back_val();
           (*OutStream) << "====Marker Ends==== [" << InstIdx << "]\n";
           printView(*OutStream);
         }
