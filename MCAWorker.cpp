@@ -195,6 +195,11 @@ Error MCAWorker::run() {
     } else {
       TraceOS = &TraceTOF->os();
     }
+
+    // Call ToolOutputFile::keep as early as possible s.t. if anything goes
+    // wrong later we still have the trace file.
+    if (TraceTOF)
+      TraceTOF->keep();
   }
 
   SmallVector<const MCInst*, DEFAULT_MAX_NUM_PROCESSED>
@@ -272,12 +277,27 @@ Error MCAWorker::run() {
           Expected<std::unique_ptr<mca::Instruction>> InstOrErr
             = MCAIB.createInstruction(MCI);
           if (!InstOrErr) {
-            if (auto NewE = handleErrors(
+            if (auto RemainingE = handleErrors(
                      InstOrErr.takeError(),
                      [&](const mca::RecycledInstErr &RC) {
                        RecycledInst = RC.getInst();
                      })) {
-              return std::move(NewE);
+#if 0
+              llvm::logAllUnhandledErrors(std::move(RemainingE),
+                                          WithColor::error());
+              MIP.printInst(&MCI, 0, "", STI,
+                            WithColor::note() << "Current MCInst: ");
+              errs() << "\n";
+#endif
+              // FIXME: Ideally we should print out the error in this
+              // stage before carrying on, just like the commented code above.
+              // But we are seeing tremendous number of errors caused by the
+              // lack of MCSched info for 'hint X' instructions in AArch64.
+              // And these error messages will actually overflow our python
+              // harness used in the experiments :-P Thus we're temporarily
+              // disabling the error message here.
+              llvm::consumeError(std::move(RemainingE));
+              continue;
             }
           }
           if (RecycledInst) {
@@ -326,9 +346,6 @@ Error MCAWorker::run() {
       }
     }
   }
-
-  if (TraceMCI && TraceTOF)
-    TraceTOF->keep();
 
   return ErrorSuccess();
 }
