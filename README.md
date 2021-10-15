@@ -15,7 +15,7 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
                -DLLVM_TARGETS_TO_BUILD="X86;ARM" \
                -DLLVM_USE_LINKER=gold \
                ../llvm
-ninja llvm-mca llvm-mc
+ninja llvm-mca llvm-mc LLVMDebugInfoDWARF
 ```
 Note that LLVM-MCAD uses a modular design, so components related to QEMU are no longer built by default. Please checkout their prerequisites inside their folders under the `plugins` directory.
 
