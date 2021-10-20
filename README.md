@@ -43,17 +43,28 @@ First, on the server side:
 ```bash
 # Server
 cd .build
+# ARM
 ./llvm-mcad -mtriple="armv7-linux-gnueabihf" -mcpu="cortex-a57" \
+            --load-broker-plugin=$PWD/plugins/qemu-broker/libMCADQemuBroker.so \
+            -broker-plugin-arg-host="localhost:9487"
+# X86
+./llvm-mcad -mtriple="x86_64-unknown-linux-gnu" -mcpu="skylake" \
             --load-broker-plugin=$PWD/plugins/qemu-broker/libMCADQemuBroker.so \
             -broker-plugin-arg-host="localhost:9487"
 ```
 Then, on the client side:
 ```bash
 # Client
+# ARM
 /path/to/qemu/build/qemu-arm -L /usr/arm-linux-gnueabihf \
       -plugin /path/to/llvm-mcad/.build/plugins/qemu-broker/Qemu/libQemuRelay.so,\
       arg="-addr=127.0.0.1",arg="-port=9487" \
-      -d plugin ./hello_world
+      -d plugin ./hello_world.arm
+# X86
+/path/to/qemu/build/qemu-x86_64 \
+      -plugin /path/to/llvm-mcad/.build/plugins/qemu-broker/Qemu/libQemuRelay.so,\
+      arg="-addr=127.0.0.1",arg="-port=9487" \
+      -d plugin ./hello_world.x86_64
 ```
 
 Here are some other important command line arguments:

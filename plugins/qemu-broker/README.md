@@ -12,11 +12,11 @@ git apply /path/to/patches/qemu-patch.diff
 After applying the patch, please build QEMU in the following way:
 ```bash
 mkdir -p build && cd build
-../configure --target-list="arm-linux-user" \
+../configure --target-list="aarch64-linux-user,arm-linux-user,x86_64-linux-user" \
              --enable-capstone \
              --enable-debug \
              --enable-plugins
-ninja qemu-arm
+ninja qemu-arm qemu-x86_64 qemu-aarch64
 ```
 In addition to QEMU. This Broker also uses [Flatbuffers](https://google.github.io/flatbuffers) for serialization. You can install it on Ubuntu via the following command:
 ```bash
@@ -61,8 +61,13 @@ Here is an example of launching the server side:
 ```bash
 # Server
 cd .build
+# ARM
 ./llvm-mcad -mtriple="armv7-linux-gnueabihf" -mcpu="cortex-a57" \
             -load-broker-plugin=/path/to/libMCADQemuBroker.so \
+            -broker-plugin-arg-host="localhost:9487"
+# X86
+./llvm-mcad -mtriple="x86_64-unknown-linux-gnu" -mcpu="skylake" \
+            --load-broker-plugin=$PWD/plugins/qemu-broker/libMCADQemuBroker.so \
             -broker-plugin-arg-host="localhost:9487"
 ```
 As you can see in the above snippet, we're using `-load-broker-plugin=<plugin path>` to load and use the qemu-broker plugin. The `-broker-plugin-arg-host` is an additional plugin argument which we will talk about it shortly.
@@ -70,10 +75,16 @@ As you can see in the above snippet, we're using `-load-broker-plugin=<plugin pa
 On the client side:
 ```bash
 # Client
+# ARM
 /path/to/qemu/build/qemu-arm -L /usr/arm-linux-gnueabihf \
       -plugin /path/to/libQemuRelay.so,\
       arg="-addr=127.0.0.1",arg="-port=9487" \
-      -d plugin ./hello_world
+      -d plugin ./hello_world.arm
+# X86
+/path/to/qemu/build/qemu-x86_64 \
+      -plugin /path/to/llvm-mcad/.build/plugins/qemu-broker/Qemu/libQemuRelay.so,\
+      arg="-addr=127.0.0.1",arg="-port=9487" \
+      -d plugin ./hello_world.x86_64
 ```
 Here, we're using `-plugin <path to plugin>` to load our qemu relay plugin. Additional arguments for this plugin, which we will also introduce shortly, are passed via `arg=...` concatenated right after the plugin path.
 
