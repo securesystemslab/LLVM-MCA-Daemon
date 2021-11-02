@@ -31,6 +31,7 @@
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
+#include <cstdlib>
 #include <string>
 
 #include "Brokers/AsmFileBroker.h"
@@ -43,6 +44,7 @@
 #endif
 #ifdef LLVM_MCAD_ENABLE_PROFILER
 #include "gperftools/profiler.h"
+#include <signal.h>
 #endif
 
 using namespace llvm;
@@ -162,6 +164,21 @@ static const llvm::Target *getLLVMTarget(const char *ProgName) {
   return TheTarget;
 }
 
+#ifdef LLVM_MCAD_ENABLE_PROFILER
+static void cpuProfilerSwitch(int SignalNumber) {
+  static bool Started = false;
+  if (Started)
+    ProfilerStop();
+  else {
+    if (!ProfilerStart(CpuProfileOutputPath.c_str()))
+      WithColor::error() << "Failed to turn on CPU profiler\n";
+    else
+      WithColor::note() << "CPU profiler is running...\n";
+  }
+  Started = !Started;
+}
+#endif
+
 static inline int initializeProfilers() {
 #ifdef LLVM_MCAD_ENABLE_TCMALLOC
   if (EnableHeapProfile) {
@@ -193,7 +210,23 @@ static inline int initializeProfilers() {
       }
       CpuProfileOutputPath = (std::string)TmpPath;
     }
-    ProfilerStart(CpuProfileOutputPath.c_str());
+    auto *ProfilerSignal = ::getenv("CPUPROFILESIGNAL");
+    if (ProfilerSignal) {
+      auto SignalNum = ::atol(ProfilerSignal);
+      if (SignalNum >= 1 && SignalNum <= 64) {
+        if (::signal(SignalNum, cpuProfilerSwitch) == SIG_ERR)
+          WithColor::error() << "Fail to setup handler for signal "
+                             << SignalNum << "\n";
+        else
+          WithColor::note() << "Using signal " << SignalNum
+                            << " as CPU profiler switch\n";
+      } else {
+        WithColor::error() << "Invalid CPU profiler signal "
+                           << SignalNum << "\n";
+      }
+    } else {
+      cpuProfilerSwitch(/*Don't care*/0);
+    }
   }
 #endif
   return 0;
@@ -352,7 +385,7 @@ int main(int argc, char **argv) {
 
 #ifdef LLVM_MCAD_ENABLE_PROFILER
   if (EnableCpuProfile)
-    ProfilerStop();
+    cpuProfilerSwitch(/*Don't care*/0);
 #endif
 
 #ifdef LLVM_MCAD_ENABLE_TCMALLOC
