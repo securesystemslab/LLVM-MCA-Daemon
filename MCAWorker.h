@@ -65,6 +65,7 @@ class MCAWorker {
 
   std::unique_ptr<Broker> TheBroker;
 
+  std::unique_ptr<mca::Pipeline> createPipeline();
   void resetPipeline();
 
   Error runPipeline();

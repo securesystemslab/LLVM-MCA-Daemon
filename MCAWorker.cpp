@@ -7,11 +7,19 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/Context.h"
+#include "llvm/MCA/HardwareUnits/CacheManager.h"
+#include "llvm/MCA/HardwareUnits/RegisterFile.h"
+#include "llvm/MCA/HardwareUnits/RetireControlUnit.h"
+#include "llvm/MCA/HardwareUnits/Scheduler.h"
 #include "llvm/MCA/InstrBuilder.h"
 #include "llvm/MCA/Instruction.h"
 #include "llvm/MCA/Pipeline.h"
+#include "llvm/MCA/Stages/DispatchStage.h"
 #include "llvm/MCA/Stages/EntryStage.h"
+#include "llvm/MCA/Stages/ExecuteStage.h"
 #include "llvm/MCA/Stages/InstructionTables.h"
+#include "llvm/MCA/Stages/MicroOpQueueStage.h"
+#include "llvm/MCA/Stages/RetireStage.h"
 #include "llvm/MCA/Support.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -146,6 +154,51 @@ MCAWorker::MCAWorker(const Target &T,
   resetPipeline();
 }
 
+std::unique_ptr<mca::Pipeline> MCAWorker::createPipeline() {
+  using namespace mca;
+  const MCSchedModel &SM = STI.getSchedModel();
+  const MCRegisterInfo &MRI = TheMCA.getMCRegisterInfo();
+
+  // Create the hardware units defining the backend.
+  auto RCU = std::make_unique<RetireControlUnit>(SM);
+  auto PRF = std::make_unique<RegisterFile>(SM, MRI, MCAPO.RegisterFileSize);
+  auto LSU = std::make_unique<LSUnit>(SM, MCAPO.LoadQueueSize,
+                                       MCAPO.StoreQueueSize, MCAPO.AssumeNoAlias,
+                                       TheMCA.getMetadataRegistry());
+  std::unique_ptr<CacheManager> HWC;
+  if (CacheConfigFile.size() && TheMCA.getMetadataRegistry())
+    HWC = std::make_unique<CacheManager>(CacheConfigFile,
+                                         *TheMCA.getMetadataRegistry());
+  auto HWS = std::make_unique<Scheduler>(SM, *LSU, HWC.get());
+
+  // Create the pipeline stages.
+  auto Fetch = std::make_unique<EntryStage>(SrcMgr, TheMCA.getMetadataRegistry());
+  auto Dispatch = std::make_unique<DispatchStage>(STI, MRI, MCAPO.DispatchWidth,
+                                                   *RCU, *PRF);
+  auto Execute =
+      std::make_unique<ExecuteStage>(*HWS, MCAPO.EnableBottleneckAnalysis);
+  auto Retire = std::make_unique<RetireStage>(*RCU, *PRF, *LSU);
+
+  // Pass the ownership of all the hardware units to this Context.
+  TheMCA.addHardwareUnit(std::move(RCU));
+  TheMCA.addHardwareUnit(std::move(PRF));
+  TheMCA.addHardwareUnit(std::move(LSU));
+  if (HWC)
+    TheMCA.addHardwareUnit(std::move(HWC));
+  TheMCA.addHardwareUnit(std::move(HWS));
+
+  // Build the pipeline.
+  auto StagePipeline = std::make_unique<Pipeline>();
+  StagePipeline->appendStage(std::move(Fetch));
+  if (MCAPO.MicroOpQueueSize)
+    StagePipeline->appendStage(std::make_unique<MicroOpQueueStage>(
+        MCAPO.MicroOpQueueSize, MCAPO.DecodersThroughput));
+  StagePipeline->appendStage(std::move(Dispatch));
+  StagePipeline->appendStage(std::move(Execute));
+  StagePipeline->appendStage(std::move(Retire));
+  return StagePipeline;
+}
+
 void MCAWorker::resetPipeline() {
   RecycledInsts.clear();
   TraceMIs.clear();
@@ -153,13 +206,7 @@ void MCAWorker::resetPipeline() {
   MCAIB.clear();
   SrcMgr.clear();
 
-  // FIXME: Can we make CustomBehaviour optional?
-  SmallVector<std::unique_ptr<mca::Instruction>, 1> DummyArray;
-  mca::SourceMgr DummyCSM(DummyArray, 1);
-  mca::CustomBehaviour DummyCB(STI, DummyCSM, MCII);
-  MCAPipeline
-    = std::move(TheMCA.createDefaultPipeline(MCAPO, SrcMgr, DummyCB,
-                                             StringRef(CacheConfigFile)));
+  MCAPipeline = createPipeline();
   assert(MCAPipeline);
 
   MCAPipelinePrinter
