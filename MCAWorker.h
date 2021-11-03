@@ -48,7 +48,7 @@ class MCAWorker {
   std::unique_ptr<mca::Pipeline> MCAPipeline;
   std::unique_ptr<mca::PipelinePrinter> MCAPipelinePrinter;
 
-  std::list<const MCInst*> TraceMIs;
+  size_t NumTraceMIs;
   // MCAWorker is the owner of this callback. Note that
   // SummaryView will only take reference of it.
   std::function<size_t(void)> GetTraceMISize;

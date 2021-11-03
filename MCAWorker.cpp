@@ -129,7 +129,7 @@ MCAWorker::MCAWorker(const Target &T,
   : TheTarget(T), STI(TheSTI),
     MCAIB(IB), Ctx(C), MAI(AI), MCII(II), MIP(IP),
     TheMCA(MCA), MCAPO(PO), MCAOF(OF),
-    TraceMIs(), GetTraceMISize([this]{ return TraceMIs.size(); }),
+    NumTraceMIs(0U), GetTraceMISize([this]{ return NumTraceMIs; }),
     GetRecycledInst([this](const mca::InstrDesc &Desc) -> mca::Instruction* {
                       if (RecycledInsts.count(&Desc)) {
                         auto &Insts = RecycledInsts[&Desc];
@@ -201,7 +201,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createPipeline() {
 
 void MCAWorker::resetPipeline() {
   RecycledInsts.clear();
-  TraceMIs.clear();
+  NumTraceMIs = 0U;
 
   MCAIB.clear();
   SrcMgr.clear();
@@ -304,9 +304,8 @@ Error MCAWorker::run() {
         // Convert MCInst to mca::Instruction
         for (unsigned i = 0U, S = TraceBufferSlice.size();
              i < S; ++i) {
-          const MCInst *OrigMCI = TraceBufferSlice[i];
-          TraceMIs.push_back(OrigMCI);
-          const MCInst &MCI = *TraceMIs.back();
+          const MCInst &MCI = *TraceBufferSlice[i];
+          ++NumTraceMIs;
           const auto &MCID = MCII.get(MCI.getOpcode());
           // Always ignore return instruction since it's
           // not really meaningful
@@ -350,7 +349,7 @@ Error MCAWorker::run() {
           if (RecycledInst) {
             if (SupportMetadata && MDIndexMap.count(i)) {
               auto MDTok = MDIndexMap.lookup(i);
-              LLVM_DEBUG(dbgs() << "MCI " << TraceMIs.size()
+              LLVM_DEBUG(dbgs() << "MCI " << NumTraceMIs
                                 << " has Token " << MDTok << "\n");
               RecycledInst->setMetadataToken(MDTok);
             }
@@ -359,7 +358,7 @@ Error MCAWorker::run() {
             auto &NewInst = InstOrErr.get();
             if (SupportMetadata && MDIndexMap.count(i)) {
               auto MDTok = MDIndexMap.lookup(i);
-              LLVM_DEBUG(dbgs() << "MCI " << TraceMIs.size()
+              LLVM_DEBUG(dbgs() << "MCI " << NumTraceMIs
                                 << " has Token " << MDTok << "\n");
               NewInst->setMetadataToken(MDTok);
             }
@@ -368,7 +367,7 @@ Error MCAWorker::run() {
         }
       }
 
-      if (TraceMIs.size()) {
+      if (NumTraceMIs) {
         if (auto E = runPipeline())
           return E;
       }
@@ -417,7 +416,7 @@ Error MCAWorker::runPipeline() {
 }
 
 void MCAWorker::printMCA(StringRef RegionDescription) {
-  if (TraceMIs.empty()) return;
+  if (!NumTraceMIs) return;
 
   raw_ostream &OS = MCAOF.os();
   // Print region description text if feasible
