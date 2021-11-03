@@ -164,18 +164,49 @@ static const llvm::Target *getLLVMTarget(const char *ProgName) {
   return TheTarget;
 }
 
+#if defined(LLVM_MCAD_ENABLE_PROFILER) || defined(LLVM_MCAD_ENABLE_TCMALLOC)
+namespace {
+static struct {
+  int CpuProfilerSignal;
+  int HeapProfilerSignal;
+
+  unsigned CpuProfilerStarted : 1;
+  unsigned HeapProfilerStarted : 1;
+
+  void toggleCpuProfiler() {
 #ifdef LLVM_MCAD_ENABLE_PROFILER
-static void cpuProfilerSwitch(int SignalNumber) {
-  static bool Started = false;
-  if (Started)
-    ProfilerStop();
-  else {
-    if (!ProfilerStart(CpuProfileOutputPath.c_str()))
-      WithColor::error() << "Failed to turn on CPU profiler\n";
-    else
-      WithColor::note() << "CPU profiler is running...\n";
+    if (CpuProfilerStarted)
+      ProfilerStop();
+    else {
+      if (!ProfilerStart(CpuProfileOutputPath.c_str()))
+        WithColor::error() << "Failed to turn on CPU profiler\n";
+      else
+        WithColor::note() << "CPU profiler is running...\n";
+    }
+    CpuProfilerStarted = !CpuProfilerStarted;
+#endif
   }
-  Started = !Started;
+
+  void toggleHeapProfiler() {
+#ifdef LLVM_MCAD_ENABLE_TCMALLOC
+    if (HeapProfilerStarted)
+      HeapProfilerStop();
+    else
+      HeapProfilerStart(HeapProfileOutputPath.c_str());
+
+    HeapProfilerStarted = !HeapProfilerStarted;
+#endif
+  }
+} ProfilersManager{-1, -1, false, false};
+} // end anonymous namespace
+#endif
+
+#if defined(LLVM_MCAD_ENABLE_PROFILER) || defined(LLVM_MCAD_ENABLE_TCMALLOC)
+static void profilersSwitch(int SignalNumber) {
+  if (SignalNumber == ProfilersManager.CpuProfilerSignal)
+    ProfilersManager.toggleCpuProfiler();
+  if (SignalNumber == ProfilersManager.HeapProfilerSignal)
+    ProfilersManager.toggleHeapProfiler();
 }
 #endif
 
@@ -193,7 +224,24 @@ static inline int initializeProfilers() {
       }
       HeapProfileOutputPath = (std::string)TmpPath;
     }
-    HeapProfilerStart(HeapProfileOutputPath.c_str());
+    auto *ProfilerSignal = ::getenv("HEAPPROFILESIGNAL");
+    if (ProfilerSignal) {
+      auto SignalNum = ::atol(ProfilerSignal);
+      if (SignalNum >= 1 && SignalNum <= 64) {
+        ProfilersManager.HeapProfilerSignal = SignalNum;
+        if (::signal(SignalNum, profilersSwitch) == SIG_ERR)
+          WithColor::error() << "Fail to setup handler for signal "
+                             << SignalNum << "\n";
+        else
+          WithColor::note() << "Using signal " << SignalNum
+                            << " as heap profiler switch\n";
+      } else {
+        WithColor::error() << "Invalid heap profiler signal "
+                           << SignalNum << "\n";
+      }
+    } else {
+      ProfilersManager.toggleHeapProfiler();
+    }
   }
 #endif
 
@@ -214,7 +262,8 @@ static inline int initializeProfilers() {
     if (ProfilerSignal) {
       auto SignalNum = ::atol(ProfilerSignal);
       if (SignalNum >= 1 && SignalNum <= 64) {
-        if (::signal(SignalNum, cpuProfilerSwitch) == SIG_ERR)
+        ProfilersManager.CpuProfilerSignal = SignalNum;
+        if (::signal(SignalNum, profilersSwitch) == SIG_ERR)
           WithColor::error() << "Fail to setup handler for signal "
                              << SignalNum << "\n";
         else
@@ -225,7 +274,7 @@ static inline int initializeProfilers() {
                            << SignalNum << "\n";
       }
     } else {
-      cpuProfilerSwitch(/*Don't care*/0);
+      ProfilersManager.toggleCpuProfiler();
     }
   }
 #endif
@@ -384,12 +433,12 @@ int main(int argc, char **argv) {
     llvm::TimerGroup::clearAll();
 
 #ifdef LLVM_MCAD_ENABLE_PROFILER
-  if (EnableCpuProfile)
-    cpuProfilerSwitch(/*Don't care*/0);
+  if (EnableCpuProfile && ProfilersManager.CpuProfilerStarted)
+    ProfilerStop();
 #endif
 
 #ifdef LLVM_MCAD_ENABLE_TCMALLOC
-  if (EnableHeapProfile)
+  if (EnableHeapProfile && ProfilersManager.HeapProfilerStarted)
     HeapProfilerStop();
 #endif
 
