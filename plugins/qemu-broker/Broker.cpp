@@ -35,6 +35,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 #include "BinaryRegions.h"
@@ -211,9 +212,10 @@ class QemuBroker : public Broker {
   llvm::TimerGroup Timers;
 
   void initializeServer();
+  void initializeUnixServer();
 
   std::unique_ptr<std::thread> ReceiverThread;
-  void recvWorker(addrinfo *);
+  void recvWorker();
 
   void addTB(const fbs::TranslatedBlock &TB) {
     static Timer TheTimer("addTB", "Adding new TB", Timers);
@@ -247,9 +249,14 @@ class QemuBroker : public Broker {
   }
 
   void tbExec(const fbs::ExecTB &OrigTB) {
+#ifndef NDEBUG
+    // Note that tbExec is on an extremely hot path of this Broker,
+    // so even starting and stoping a timer will cause
+    // signiticant performance overhead.
     static Timer TheTimer("tbExec", "Decoding executed TB",
                           Timers);
     TimeRegion TR(TheTimer);
+#endif
 
     using namespace qemu_broker;
     uint32_t Idx = OrigTB.Index();
@@ -399,6 +406,7 @@ class QemuBroker : public Broker {
 
 public:
   struct Options {
+    // If ListenPort is empty, use Unix socket.
     StringRef ListenAddress, ListenPort;
 
     unsigned MaxNumConnections;
@@ -487,11 +495,15 @@ QemuBroker::QemuBroker(const QemuBroker::Options &Opts,
 
   initializeServer();
   // Kick off the worker thread
-  ReceiverThread = std::make_unique<std::thread>(&QemuBroker::recvWorker,
-                                                 this, AI);
+  ReceiverThread = std::make_unique<std::thread>(&QemuBroker::recvWorker, this);
 }
 
 void QemuBroker::initializeServer() {
+  if (ListenPort.empty()) {
+    initializeUnixServer();
+    return;
+  }
+
   // Open the socket
   addrinfo Hints{};
   Hints.ai_family = AF_INET;
@@ -524,21 +536,44 @@ void QemuBroker::initializeServer() {
   }
 }
 
-void QemuBroker::recvWorker(addrinfo *AI) {
+void QemuBroker::initializeUnixServer() {
+  if ((ServSocktFD = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+    errs() << "Error creating socket: " << std::strerror(errno) << "\n";
+    exit(1);
+  }
+
+  unlink(ListenAddr.c_str());
+
+  sockaddr_un Addr;
+  Addr.sun_family = AF_UNIX;
+  strcpy(Addr.sun_path, ListenAddr.c_str());
+
+  // Bind the socket to the desired port.
+  if (bind(ServSocktFD, (sockaddr *)&Addr, sizeof(Addr)) < 0) {
+    errs() << "Error on binding: " << std::strerror(errno) << "\n";
+    exit(1);
+  }
+}
+
+static constexpr unsigned RECV_BUFFER_SIZE = 1024;
+
+void QemuBroker::recvWorker() {
   assert(ServSocktFD >= 0);
 
   // Listen for incomming connections.
   static constexpr int ConnectionQueueLen = 1;
   listen(ServSocktFD, ConnectionQueueLen);
-  outs() << "Listening on " << ListenAddr << ":" << ListenPort << "...\n";
+  outs() << "Listening on " << ListenAddr;
+  if (ListenPort.size())
+    outs() << ":" << ListenPort;
+  outs() << "...\n";
 
   int ClientSocktFD;
-  uint8_t RecvBuffer[128];
+  uint8_t RecvBuffer[RECV_BUFFER_SIZE];
   static_assert(sizeof(RecvBuffer) > sizeof(flatbuffers::uoffset_t),
                 "RecvBuffer is not larger than uoffset_t");
-  SmallVector<uint8_t, 128> MsgBuffer;
-  while ((ClientSocktFD = accept(ServSocktFD,
-                                 AI->ai_addr, &AI->ai_addrlen))) {
+  SmallVector<uint8_t, RECV_BUFFER_SIZE> MsgBuffer;
+  while ((ClientSocktFD = accept(ServSocktFD, nullptr, nullptr))) {
     if (ClientSocktFD < 0) {
       ::perror("Failed to accept client");
       continue;
@@ -855,7 +890,7 @@ int QemuBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size,
 }
 
 QemuBroker::Options::Options()
-  : ListenAddress("localhost"), ListenPort("9487"),
+  : ListenAddress("localhost"), ListenPort(),
     MaxNumConnections(1),
     BinaryRegionsManifestFile(),
     BinaryRegionsOpMode(qemu_broker::BinaryRegions::M_Trim),
@@ -869,10 +904,12 @@ QemuBroker::Options::Options(int argc, const char *const *argv)
     // Try to parse the listening address and port
     if (Arg.startswith("-host") && Arg.contains('=')) {
       auto RawHost = Arg.split('=').second;
-      if (RawHost.contains(':')) {
-        StringRef RawPort;
+      if (RawHost.contains(':'))
+        // Using TCP socket.
         std::tie(ListenAddress, ListenPort) = RawHost.split(':');
-      }
+      else
+        // Using Unix socket.
+        ListenAddress = RawHost;
     }
 
     // Try to parse the max number of accepted connection

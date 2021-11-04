@@ -21,6 +21,7 @@ extern "C" {
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 using namespace llvm;
@@ -28,12 +29,12 @@ using namespace llvm;
 #define DEBUG_TYPE "mcad-qemu-relay"
 
 static cl::opt<std::string>
-  ConnectAddr("addr", cl::desc("Remote address to connect"),
+  ConnectAddr("addr", cl::desc("Remote address or Unix socket path to connect"),
               cl::Required);
 
 static cl::opt<unsigned>
-  ConnectPort("port", cl::desc("Remote port to connect"),
-              cl::Required);
+  ConnectPort("port", cl::desc("Remote port to connect or 0 to use Unix socket"),
+              cl::init(0U));
 
 static cl::opt<bool>
   OnlyMainCode("only-main-code", cl::desc("Only send instructions that "
@@ -337,21 +338,7 @@ static void onPluginExit(qemu_plugin_id_t Id, void *Data) {
   ::close(RemoteSockt);
 }
 
-extern "C" QEMU_PLUGIN_EXPORT
-int qemu_plugin_install(qemu_plugin_id_t Id, const qemu_info_t *Info,
-                        int argc, char **argv) {
-  // Insert a fake argv0 at the beginning
-  SmallVector<const char*, 4> Argv;
-  Argv.push_back("MCADRelay");
-  Argv.append(argv, argv + argc);
-  Argv.push_back(nullptr);
-
-  cl::ParseCommandLineOptions(argc + 1, Argv.data());
-
-  CurrentQemuTarget = Info->target_name;
-  LLVM_DEBUG(dbgs() << "Using QEMU target " << CurrentQemuTarget << "\n");
-
-  // Connect to remote MCAD
+static int connectInetSocket() {
   RemoteSockt = socket(AF_INET , SOCK_STREAM , 0);
   if (RemoteSockt < 0) {
     WithColor::error() << "Failed to create socket\n";
@@ -369,6 +356,49 @@ int qemu_plugin_install(qemu_plugin_id_t Id, const qemu_info_t *Info,
   }
   WithColor::note() << "Connected to "
                     << ConnectAddr << ":" << ConnectPort << "\n";
+  return 0;
+}
+
+static int connectUnixSocket() {
+  RemoteSockt = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (RemoteSockt < 0) {
+    WithColor::error() << "Failed to create socket\n";
+    return 1;
+  }
+
+  sockaddr_un ServAddr;
+  ServAddr.sun_family = AF_UNIX;
+  strcpy(ServAddr.sun_path, ConnectAddr.c_str());
+  if (connect(RemoteSockt, (sockaddr *)&ServAddr, sizeof(ServAddr)) < 0) {
+    WithColor::error() << "Failed to connect to " << ConnectAddr << "\n";
+    return 1;
+  }
+  WithColor::note() << "Connected to " << ConnectAddr << "\n";
+  return 0;
+}
+
+extern "C" QEMU_PLUGIN_EXPORT
+int qemu_plugin_install(qemu_plugin_id_t Id, const qemu_info_t *Info,
+                        int argc, char **argv) {
+  // Insert a fake argv0 at the beginning
+  SmallVector<const char*, 4> Argv;
+  Argv.push_back("MCADRelay");
+  Argv.append(argv, argv + argc);
+  Argv.push_back(nullptr);
+
+  cl::ParseCommandLineOptions(argc + 1, Argv.data());
+
+  CurrentQemuTarget = Info->target_name;
+  LLVM_DEBUG(dbgs() << "Using QEMU target " << CurrentQemuTarget << "\n");
+
+  // Connect to MCAD
+  if (ConnectPort) {
+    if (int Ret = connectInetSocket())
+      return Ret;
+  } else {
+    if (int Ret = connectUnixSocket())
+      return Ret;
+  }
 
   NumTranslationBlock = 0U;
 
