@@ -44,6 +44,8 @@
 #endif
 #ifdef LLVM_MCAD_ENABLE_PROFILER
 #include "gperftools/profiler.h"
+#endif
+# if defined(LLVM_MCAD_ENABLE_PROFILER) || defined(LLVM_MCAD_ENABLE_TCMALLOC)
 #include <signal.h>
 #endif
 
