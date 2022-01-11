@@ -4,11 +4,11 @@
 ## Preparations
 This project uses a special version of LLVM. Please use the following way to clone it:
 ```bash
-git clone -b dev-incremental-mca git@github.com:securesystemslab/multiarch-llvm-project.git
+git clone -b dev-incremental-mca https://github.com/securesystemslab/llvm-project.git
 ```
 To build it, here are some suggested CMake configurations:
 ```bash
-cd multiarch-llvm-project
+cd llvm-project
 mkdir .build && cd .build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
                -DBUILD_SHARED_LIBS=ON \
@@ -28,7 +28,7 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
                ../
 ninja all
 ```
-For instance, if you build `multiarch-llvm-project` using the previous steps, _"/path/to/installed-llvm/lib/cmake/llvm"_ will be _"/path/to/multiarch-llvm-project/.build/lib/cmake/llvm"_.
+For instance, if you build `llvm-project` using the previous steps, _"/path/to/installed-llvm/lib/cmake/llvm"_ will be _"/path/to/llvm-project/.build/lib/cmake/llvm"_.
 
 Note that plugins under the `plugins` folder are not built by default. Please add `-DLLVM_MCAD_BUILD_PLUGINS=ON` if you want to build them. Here are some other CMake arguments you can tweak:
  - `LLVM_MCAD_ENABLE_ASAN`. Enable the address sanitizer.
