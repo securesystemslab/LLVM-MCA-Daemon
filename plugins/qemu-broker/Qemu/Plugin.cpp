@@ -179,9 +179,9 @@ static void onMemoryOps(unsigned int CPUIdx, qemu_plugin_meminfo_t MemInfo,
                          static_cast<uint8_t>(2 << ShiftedSize), IsStore});
 }
 
-// The starting address of the currently loaded binary
-// TODO: What about end address?
+// The starting and ending address of the currently loaded binary
 static llvm::Optional<uint64_t> CodeStartAddr;
+static llvm::Optional<uint64_t> CodeEndAddr;
 
 static void sendCodeStartAddr() {
   using namespace mcad;
@@ -211,6 +211,12 @@ static void tbTranslateCallback(qemu_plugin_id_t Id,
     sendCodeStartAddr();
   }
 
+  if (!CodeEndAddr) {
+    CodeEndAddr = qemu_plugin_vcpu_code_end_vaddr();
+    LLVM_DEBUG(dbgs() << "Code end address: "
+                      << format_hex(*CodeEndAddr, 16) << "\n");
+  }
+
   size_t NumInsn = qemu_plugin_tb_n_insns(TB);
   std::vector<uint8_t> RawInst;
   SmallVector<decltype(RawInst), 4> RawInsts;
@@ -221,7 +227,8 @@ static void tbTranslateCallback(qemu_plugin_id_t Id,
     uint64_t VAddr = qemu_plugin_insn_vaddr(QI);
 
     // Filter by address
-    if (OnlyMainCode && VAddr < *CodeStartAddr)
+    if (OnlyMainCode &&
+        (VAddr < *CodeStartAddr || VAddr > *CodeEndAddr))
       // Ignore code that is not part of the main binary
       // (e.g. interpreter)
       continue;

@@ -44,11 +44,12 @@ index 97cdfd7761..173c05eeb3 100644
  /**
   * qemu_plugin_vcpu_for_each() - iterate over the existing vCPU
   * @id: plugin ID
-@@ -555,4 +561,6 @@ int qemu_plugin_n_max_vcpus(void);
+@@ -555,4 +561,7 @@ int qemu_plugin_n_max_vcpus(void);
   */
  void qemu_plugin_outs(const char *string);
  
 +uint64_t qemu_plugin_vcpu_code_start_vaddr(void);
++uint64_t qemu_plugin_vcpu_code_end_vaddr(void);
 +
  #endif /* QEMU_PLUGIN_API_H */
 diff --git a/plugins/api.c b/plugins/api.c
@@ -129,7 +130,7 @@ index b22998cd7c..b6e4a8ca0b 100644
  /*
   * The memory queries allow the plugin to query information about a
   * memory access.
-@@ -379,3 +439,15 @@ void qemu_plugin_outs(const char *string)
+@@ -379,3 +439,27 @@ void qemu_plugin_outs(const char *string)
  {
      qemu_log_mask(CPU_LOG_PLUGIN, "%s", string);
  }
@@ -140,7 +141,19 @@ index b22998cd7c..b6e4a8ca0b 100644
 +  CPUState *cpu = current_cpu;
 +  TaskState *ts = (TaskState*)cpu->opaque;
 +  const struct image_info *info = ts->info;
-+  return info->code_offset;
++  return info->start_code;
++#else
++  return 0;
++#endif
++}
++
++uint64_t qemu_plugin_vcpu_code_end_vaddr(void)
++{
++#ifdef CONFIG_USER_ONLY
++  CPUState *cpu = current_cpu;
++  TaskState *ts = (TaskState*)cpu->opaque;
++  const struct image_info *info = ts->info;
++  return info->end_code;
 +#else
 +  return 0;
 +#endif
@@ -149,7 +162,7 @@ diff --git a/plugins/qemu-plugins.symbols b/plugins/qemu-plugins.symbols
 index 4bdb381f48..1b12729de7 100644
 --- a/plugins/qemu-plugins.symbols
 +++ b/plugins/qemu-plugins.symbols
-@@ -36,5 +36,8 @@
+@@ -36,5 +36,9 @@
    qemu_plugin_vcpu_for_each;
    qemu_plugin_n_vcpus;
    qemu_plugin_n_max_vcpus;
@@ -157,6 +170,7 @@ index 4bdb381f48..1b12729de7 100644
 +  qemu_plugin_vcpu_read_register;
    qemu_plugin_outs;
 +  qemu_plugin_vcpu_code_start_vaddr;
++  qemu_plugin_vcpu_code_end_vaddr;
  };
 diff --git a/target/arm/cpu.c b/target/arm/cpu.c
 index 0dd623e590..822aaf548f 100644
