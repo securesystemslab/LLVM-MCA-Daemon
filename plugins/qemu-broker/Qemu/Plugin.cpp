@@ -162,6 +162,14 @@ static void tbExecCallback(unsigned int CPUId, void *Data) {
       WithColor::error() << "Failed to read X86_64 RIP register\n";
   }
 
+  if (CurrentQemuTarget.startswith_insensitive("riscv") &&
+      RegInfoRegistry.count("pc")) {
+    const auto &PCRegInfo = RegInfoRegistry["pc"];
+    if (qemu_plugin_vcpu_read_register(PCRegInfo.RegId, &VAddr,
+                                       PCRegInfo.Size) <= 0)
+      WithColor::error() << "Failed to read RISCV PC register\n";
+  }
+
   CurrentExecTB->TBIdx = TBIdx;
   CurrentExecTB->PC = VAddr;
 }
@@ -313,6 +321,16 @@ static void tbTranslateCallback(qemu_plugin_id_t Id,
       } else {
         RegInfoRegistry.insert({"rip", {RegId, RegSize}});
       }
+    }
+  }
+
+  if (CurrentQemuTarget.startswith_insensitive("riscv")) {
+    uint8_t RegSize;
+    int RegId = qemu_plugin_vcpu_get_register_info("pc", &RegSize);
+    if (RegId < 0) {
+      errs() << "Failed to get register id of RISCV pc from QEMU\n";
+    } else {
+      RegInfoRegistry.insert({"pc", {RegId, RegSize}});
     }
   }
 }
