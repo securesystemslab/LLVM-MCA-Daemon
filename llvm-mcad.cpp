@@ -26,7 +26,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -38,6 +38,7 @@
 #include "Brokers/BrokerPlugin.h"
 #include "MCAWorker.h"
 #include "PipelinePrinter.h"
+#include "MetadataRegistry.h"
 
 #ifdef LLVM_MCAD_ENABLE_TCMALLOC
 #include "gperftools/heap-profiler.h"
@@ -353,7 +354,6 @@ int main(int argc, char **argv) {
   mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get());
 
   mca::Context MCA(*MRI, *STI);
-  MCA.createMetadataRegistry();
 
   mca::PipelineOptions PO(/*MicroOpQueue=*/0, /*DecoderThroughput=*/0,
                           /*DispatchWidth=*/0,
@@ -369,9 +369,11 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  std::unique_ptr<mca::MetadataRegistry> MDR = std::make_unique<mca::MetadataRegistry>();
   mcad::MCAWorker Worker(*TheTarget, *STI,
                          MCA, PO, IB, OF,
-                         *Ctx, *MAI, *MCII, *IP);
+                         *Ctx, *MAI, *MCII, *IP, 
+                         *MDR);
 
   if(int Ret = initializeProfilers())
     return Ret;

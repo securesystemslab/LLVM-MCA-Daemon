@@ -22,7 +22,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include <memory>
 
 namespace llvm {

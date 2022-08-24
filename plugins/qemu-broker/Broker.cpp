@@ -11,12 +11,10 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
-#include "llvm/MCA/MetadataCategories.h"
-#include "llvm/MCA/MetadataRegistry.h"
 #include "llvm/MCA/HardwareUnits/LSUnit.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/WithColor.h"
@@ -42,8 +40,9 @@
 #include "BrokerFacade.h"
 #include "Brokers/Broker.h"
 #include "Brokers/BrokerPlugin.h"
-#include "MDCategories.h"
 #include "RegionMarker.h"
+#include "MetadataCategories.h"
+#include "MetadataRegistry.h"
 
 #include "Serialization/mcad_generated.h"
 
@@ -69,11 +68,6 @@ struct TranslationBlock {
   // Note that we caonnt use SmallVector<MCInst,...> here because
   // when SmallVector resize all MCInst* retrieved previously will be invalid
   SmallVector<std::unique_ptr<MCInst>, 8> MCInsts;
-  // If the size of RawInsts and MCInsts don't match (e.g. A single raw
-  // instruction is disassembled into multiple MCInst), this maps from the
-  // RawInsts index to MCInsts index.
-  DenseMap<unsigned, unsigned> SkewIndicies;
-
   // The start address of this TB
   uint64_t VAddr;
   // Address offsets to each MCInst in this TB
@@ -89,11 +83,6 @@ struct TranslationBlock {
   // Is translated
   operator bool() const { return !MCInsts.empty(); }
 };
-
-// instruction index (in the TB) -> Memory access descriptor
-// The indicies are always sorted
-using MemoryAccessEntry = std::pair<unsigned, mca::MDMemoryAccess>;
-using MemoryAccessChain = SmallVector<MemoryAccessEntry, 4>;
 
 class QemuBroker : public Broker {
   const std::string ListenAddr, ListenPort;
@@ -136,66 +125,7 @@ class QemuBroker : public Broker {
     // If it's non-null it's end of region
     const qemu_broker::BinaryRegion *Region;
 
-    // Puting the memory access array as an class member
-    // would induce lots of overhead since there are tons
-    // of moving/copying actions on TBSlice. Therefore we decided
-    // to only put its pointer here.
-    // Normally we would use std::unique_ptr here but again, extensive
-    // amount of moving/copying on TBSlice will make the performance
-    // worse since std::unique_ptr does even more checks underlying.
-    // Thus, though it sounds awkward, manually releasing the
-    // memory at the right time point is actually the best solution
-    MemoryAccessChain *MemoryAccesses;
-
     size_t size() const { return EndIdx - BeginIdx; }
-
-    TBSlice()
-      : Index(0U),
-        BeginIdx(0u), EndIdx(0u),
-        Region(nullptr), MemoryAccesses(nullptr) {}
-
-    TBSlice(size_t Index,
-            uint16_t BeginIdx, uint16_t EndIdx,
-            const qemu_broker::BinaryRegion *Region,
-            MemoryAccessChain *MemAccesses)
-      : Index(Index),
-        BeginIdx(BeginIdx), EndIdx(EndIdx),
-        Region(Region), MemoryAccesses(MemAccesses) {}
-
-    // Return another slice whose EndIdx is SplitPoint
-    TBSlice split(uint16_t SplitPoint) {
-      assert(SplitPoint > BeginIdx && SplitPoint < EndIdx);
-      // The default copy ctor can't be generated here
-      // so we're manually copying stuff
-      TBSlice NewSlice;
-      NewSlice.Index = Index;
-      NewSlice.BeginIdx = BeginIdx;
-      NewSlice.EndIdx = SplitPoint;
-      NewSlice.Region = Region;
-      // spliting the memory access chain
-      if (MemoryAccesses) {
-        auto Compare = [](const MemoryAccessEntry &MAE, unsigned Idx) {
-          return MAE.first < Idx;
-        };
-        auto MASplit = llvm::lower_bound(*MemoryAccesses,
-                                         SplitPoint, Compare);
-        NewSlice.MemoryAccesses = new MemoryAccessChain(
-          MemoryAccesses->begin(), MASplit);
-        MemoryAccesses->erase(MemoryAccesses->begin(), MASplit);
-      }
-
-      // Update the current slice
-      BeginIdx = SplitPoint;
-
-      return std::move(NewSlice);
-    }
-
-    void release() {
-      if (MemoryAccesses) {
-        delete MemoryAccesses;
-        MemoryAccesses = nullptr;
-      }
-    }
   };
 
   // List of to-be-executed TB index
@@ -203,8 +133,6 @@ class QemuBroker : public Broker {
   bool IsEndOfStream;
   std::mutex QueueMutex;
   std::condition_variable QueueCV;
-
-  bool EnableMemAccessMD;
 
   uint32_t TotalNumTraces;
 
@@ -363,43 +291,10 @@ class QemuBroker : public Broker {
     if (BeginIdx == EndIdx)
       return;
 
-    // Handle memory accesses
-    MemoryAccessChain *MemAccesses = nullptr;
-    const auto *FbMAs = OrigTB.MemAccesses();
-    if (EnableMemAccessMD && FbMAs && FbMAs->size()) {
-      MemAccesses = new MemoryAccessChain();
-      for (const auto *FbMA : *FbMAs) {
-        unsigned InstIdx = FbMA->Index();
-        bool IsStore = FbMA->IsStore();
-        uint64_t Addr = FbMA->VAddr();
-        unsigned Size = FbMA->Size();
-
-        if (TB.SkewIndicies.count(InstIdx))
-          InstIdx = TB.SkewIndicies.lookup(InstIdx);
-
-        // Honoring the index range
-        if (InstIdx < BeginIdx || InstIdx >= EndIdx)
-          continue;
-
-        if (MemAccesses->size()) {
-          auto &LastEntry = MemAccesses->back();
-          if (LastEntry.first == InstIdx) {
-            // Merge the entry
-            auto &MA = LastEntry.second;
-            MA.append(IsStore, Addr, Size);
-            continue;
-          }
-        }
-
-        MemAccesses->emplace_back(
-          std::make_pair(InstIdx, mca::MDMemoryAccess{IsStore, Addr, Size}));
-      }
-    }
-
     // Put into the queue
     {
       std::lock_guard<std::mutex> Lock(QueueMutex);
-      TBQueue.emplace_back(Idx, BeginIdx, EndIdx, Region, MemAccesses);
+      TBQueue.push_back({Idx, BeginIdx, EndIdx, Region});
     }
     QueueCV.notify_one();
   }
@@ -413,8 +308,6 @@ public:
 
     StringRef BinaryRegionsManifestFile;
     qemu_broker::BinaryRegions::Mode BinaryRegionsOpMode;
-
-    bool EnableMemoryAccessMD;
 
     bool EnableTimer;
 
@@ -471,7 +364,6 @@ QemuBroker::QemuBroker(const QemuBroker::Options &Opts,
     TheTarget(T), Ctx(C), STI(MSTI),
     CurDisAsm(nullptr),
     IsEndOfStream(false),
-    EnableMemAccessMD(Opts.EnableMemoryAccessMD),
     TotalNumTraces(0U),
     EnableTimer(Opts.EnableTimer),
     Timers("QemuBroker", "Time spending on qemu-broker") {
@@ -707,16 +599,10 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
 
   LLVM_DEBUG(dbgs() << "Disassembling " << TB.RawInsts.size()
                     << " instructions\n");
-  unsigned RawInstIdx = 0U;
-  unsigned SkewIdxOffset = 0U;
   for (const auto &RawInst : TB.RawInsts) {
-    if (SkewIdxOffset > 0)
-      TB.SkewIndicies[RawInstIdx] = RawInstIdx + SkewIdxOffset;
-
     ArrayRef<uint8_t> InstBytes(RawInst);
     uint64_t Index = 0U;
     Len = InstBytes.size();
-    unsigned NumMCInsts = 0;
     while (Index < Len) {
       LLVM_DEBUG(dbgs() << "Try to disassemble instruction " << RawInst
                         << " with Index = " << Index
@@ -738,16 +624,10 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
         DisAsmSize = 1;
 
       TB.MCInsts.emplace_back(std::move(MCI));
-      ++NumMCInsts;
       TB.VAddrOffsets.emplace_back(VAddr + Index - StartVAddr);
       Index += DisAsmSize;
-
-      if (NumMCInsts > 1)
-        // Index skew
-        ++SkewIdxOffset;
     }
     VAddr += RawInst.size();
-    ++RawInstIdx;
   }
 
   TB.BeginMarks.resize(TB.MCInsts.size());
@@ -790,40 +670,38 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
     int S = Size;
     bool EndOfRegion = false;
     while (S > 0 && !TBQueue.empty() && !EndOfRegion) {
-      auto &CurSlice = TBQueue.front();
+      const auto &CurSlice = TBQueue.front();
       size_t TBIdx = CurSlice.Index;
       if (TBIdx < TBs.size() && TBs[TBIdx]) {
         size_t SliceLen = std::min(TBs[TBIdx]->MCInsts.size(), CurSlice.size());
         if (SliceLen > S) {
           // We need to split the current TB slice
-          TBSlice TakenSlice = CurSlice.split(uint16_t(CurSlice.BeginIdx + S));
-          TakenSlice.Region = nullptr;
-          SelectedSlices.emplace_back(std::move(TakenSlice));
+					TBSlice TakenSlice{TBIdx,
+                             CurSlice.BeginIdx,
+                             uint16_t(CurSlice.BeginIdx + S),
+                             nullptr};
+          TBSlice ResidualSlice{TBIdx,
+                                uint16_t(CurSlice.BeginIdx + S),
+                                CurSlice.EndIdx,
+                                CurSlice.Region};
+          SelectedSlices.push_back(TakenSlice);
+          // We will remove the first element later, so
+          // insert the residual one as its next element
+          TBQueue.push_front(ResidualSlice);
           S = 0;
         } else {
-          SelectedSlices.emplace_back(std::move(CurSlice));
-          TBQueue.erase(TBQueue.begin());
+          SelectedSlices.push_back(CurSlice);
           S -= SliceLen;
         }
       }
+
+      TBQueue.erase(TBQueue.begin());
       EndOfRegion = SelectedSlices.empty()? false :
                                             bool(SelectedSlices.back().Region);
     }
   }
 
   {
-    auto setMemoryAccessMD
-      = [&,this](unsigned Idx, mca::MDMemoryAccess &&MDA) {
-        if (MDE) {
-          auto &Registry = MDE->MDRegistry;
-          auto &IndexMap = MDE->IndexMap;
-          auto &MemAccessCat = Registry[mca::MD_LSUnit_MemAccess];
-          // Simply uses trace MCInst's sequence number
-          // as index
-          IndexMap[Idx] = TotalNumTraces;
-          MemAccessCat[TotalNumTraces] = std::move(MDA);
-        }
-      };
     auto setRegionMarkerMD = [&,this](unsigned Idx, bool IsBegin) {
       if (MDE) {
         auto &Registry = MDE->MDRegistry;
@@ -845,23 +723,12 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
       size_t TBIdx = Slice.Index;
       const auto &CurTB = TBs[TBIdx];
       const auto &MCInsts = CurTB->MCInsts;
-      auto *MAs = Slice.MemoryAccesses;
       size_t MAIdx = 0U, NumMAs = 0U;
-      if (MAs)
-        NumMAs = MAs->size();
-
       size_t i, End = std::min(MCInsts.size(), size_t(Slice.EndIdx));
       assert(TotalSize >= Size);
       for (i = Slice.BeginIdx; i != End && Size > 0; ++i, --Size) {
         const auto *MCI = MCInsts[i].get();
         MCIS[TotalSize - Size] = MCI;
-
-        // Memory access metadata
-        if (MAs && MAIdx != NumMAs) {
-          if ((*MAs)[MAIdx].first == i)
-            setMemoryAccessMD(TotalSize - Size,
-                              std::move((*MAs)[MAIdx++].second));
-        }
 
         // Region markers
         if (CurTB->BeginMarks.test(i))
@@ -871,7 +738,6 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
 
         ++TotalNumTraces;
       }
-      Slice.release();
     }
   }
 
@@ -894,7 +760,6 @@ QemuBroker::Options::Options()
     MaxNumConnections(1),
     BinaryRegionsManifestFile(),
     BinaryRegionsOpMode(qemu_broker::BinaryRegions::M_Trim),
-    EnableMemoryAccessMD(true),
     EnableTimer(false) {}
 
 QemuBroker::Options::Options(int argc, const char *const *argv)
@@ -937,10 +802,6 @@ QemuBroker::Options::Options(int argc, const char *const *argv)
                                 .Default(BinaryRegions::M_Trim);
       }
     }
-
-    // Try to parse the memory access metadata feature flag
-    if (Arg.startswith("-disable-memory-access-md"))
-      EnableMemoryAccessMD = false;
 
     // Try to parse the option that enables timer
     // Note that this flag is automatically appended

@@ -7,7 +7,9 @@ find_package (Python3 REQUIRED
   COMPONENTS Interpreter Development)
 
 # Search for the Flatbuffers header
+include_directories(${PROJECT_SOURCE_DIR}/../flatbuffers/install/include)
 find_path(_FLATBUFFERS_HEADER flatbuffers.h
+  PATHS ${PROJECT_SOURCE_DIR}/../flatbuffers/install/include/
   PATH_SUFFIXES flatbuffers
   REQUIRED)
 if (_FLATBUFFERS_HEADER STREQUAL "_FLATBUFFERS_HEADER-NOTFOUND")
@@ -17,7 +19,7 @@ endif()
 message(STATUS "Using Flatbuffers at ${_FLATBUFFERS_HEADER}")
 
 # If there is Flatbuffers compiler, re-generate the header
-find_program(_FLATBUFFERS_COMPILER flatc)
+find_program(_FLATBUFFERS_COMPILER ${PROJECT_SOURCE_DIR}/../flatbuffers/install/bin/flatc)
 
 set(_FBS_OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Serialization)
 set(_FBS_HEADER_PATH ${_FBS_OUTPUT_DIR}/mcad_generated.h)

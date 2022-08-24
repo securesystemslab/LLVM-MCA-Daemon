@@ -7,19 +7,11 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/Context.h"
-#include "llvm/MCA/HardwareUnits/CacheManager.h"
-#include "llvm/MCA/HardwareUnits/RegisterFile.h"
-#include "llvm/MCA/HardwareUnits/RetireControlUnit.h"
-#include "llvm/MCA/HardwareUnits/Scheduler.h"
 #include "llvm/MCA/InstrBuilder.h"
 #include "llvm/MCA/Instruction.h"
 #include "llvm/MCA/Pipeline.h"
-#include "llvm/MCA/Stages/DispatchStage.h"
 #include "llvm/MCA/Stages/EntryStage.h"
-#include "llvm/MCA/Stages/ExecuteStage.h"
 #include "llvm/MCA/Stages/InstructionTables.h"
-#include "llvm/MCA/Stages/MicroOpQueueStage.h"
-#include "llvm/MCA/Stages/RetireStage.h"
 #include "llvm/MCA/Support.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -35,7 +27,6 @@
 
 #include "MCAWorker.h"
 #include "MCAViews/SummaryView.h"
-#include "MCAViews/TimelineView.h"
 #include "PipelinePrinter.h"
 
 using namespace llvm;
@@ -81,16 +72,6 @@ static cl::opt<std::string>
   CacheConfigFile("cache-sim-config",
                   cl::desc("Path to config file for cache simulation"),
                   cl::Hidden);
-static cl::opt<bool>
-  UseLoadLatency("mca-use-load-latency",
-                 cl::desc("Use `MCSchedModel::LoadLatency` to "
-                          "model load instructions"),
-                 cl::init(true));
-
-// TODO: Put this into a separate CL option group
-static cl::opt<bool>
-  ShowTimelineView("mca-show-timeline-view",
-                   cl::init(false));
 
 void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
@@ -125,9 +106,10 @@ MCAWorker::MCAWorker(const Target &T,
                      MCContext &C,
                      const MCAsmInfo &AI,
                      const MCInstrInfo &II,
-                     MCInstPrinter &IP)
+                     MCInstPrinter &IP,
+                     mca::MetadataRegistry &MDR)
   : TheTarget(T), STI(TheSTI),
-    MCAIB(IB), Ctx(C), MAI(AI), MCII(II), MIP(IP),
+    MCAIB(IB), Ctx(C), MAI(AI), MCII(II), MIP(IP), MDR(MDR),
     TheMCA(MCA), MCAPO(PO), MCAOF(OF),
     NumTraceMIs(0U), GetTraceMISize([this]{ return NumTraceMIs; }),
     GetRecycledInst([this](const mca::InstrDesc &Desc) -> mca::Instruction* {
@@ -149,55 +131,9 @@ MCAWorker::MCAWorker(const Target &T,
   MCAIB.setInstRecycleCallback(GetRecycledInst);
   SrcMgr.setOnInstFreedCallback(AddRecycledInst);
 
-  MCAIB.useLoadLatency(UseLoadLatency);
-
   resetPipeline();
 }
 
-std::unique_ptr<mca::Pipeline> MCAWorker::createPipeline() {
-  using namespace mca;
-  const MCSchedModel &SM = STI.getSchedModel();
-  const MCRegisterInfo &MRI = TheMCA.getMCRegisterInfo();
-
-  // Create the hardware units defining the backend.
-  auto RCU = std::make_unique<RetireControlUnit>(SM);
-  auto PRF = std::make_unique<RegisterFile>(SM, MRI, MCAPO.RegisterFileSize);
-  auto LSU = std::make_unique<LSUnit>(SM, MCAPO.LoadQueueSize,
-                                       MCAPO.StoreQueueSize, MCAPO.AssumeNoAlias,
-                                       TheMCA.getMetadataRegistry());
-  std::unique_ptr<CacheManager> HWC;
-  if (CacheConfigFile.size() && TheMCA.getMetadataRegistry())
-    HWC = std::make_unique<CacheManager>(CacheConfigFile,
-                                         *TheMCA.getMetadataRegistry());
-  auto HWS = std::make_unique<Scheduler>(SM, *LSU, HWC.get());
-
-  // Create the pipeline stages.
-  auto Fetch = std::make_unique<EntryStage>(SrcMgr, TheMCA.getMetadataRegistry());
-  auto Dispatch = std::make_unique<DispatchStage>(STI, MRI, MCAPO.DispatchWidth,
-                                                   *RCU, *PRF);
-  auto Execute =
-      std::make_unique<ExecuteStage>(*HWS, MCAPO.EnableBottleneckAnalysis);
-  auto Retire = std::make_unique<RetireStage>(*RCU, *PRF, *LSU);
-
-  // Pass the ownership of all the hardware units to this Context.
-  TheMCA.addHardwareUnit(std::move(RCU));
-  TheMCA.addHardwareUnit(std::move(PRF));
-  TheMCA.addHardwareUnit(std::move(LSU));
-  if (HWC)
-    TheMCA.addHardwareUnit(std::move(HWC));
-  TheMCA.addHardwareUnit(std::move(HWS));
-
-  // Build the pipeline.
-  auto StagePipeline = std::make_unique<Pipeline>();
-  StagePipeline->appendStage(std::move(Fetch));
-  if (MCAPO.MicroOpQueueSize)
-    StagePipeline->appendStage(std::make_unique<MicroOpQueueStage>(
-        MCAPO.MicroOpQueueSize, MCAPO.DecodersThroughput));
-  StagePipeline->appendStage(std::move(Dispatch));
-  StagePipeline->appendStage(std::move(Execute));
-  StagePipeline->appendStage(std::move(Retire));
-  return StagePipeline;
-}
 
 void MCAWorker::resetPipeline() {
   RecycledInsts.clear();
@@ -206,23 +142,19 @@ void MCAWorker::resetPipeline() {
   MCAIB.clear();
   SrcMgr.clear();
 
-  MCAPipeline = createPipeline();
+  // FIXME: Can we make CustomBehaviour optional?
+  mca::IncrementalSourceMgr DummyCSM;
+  mca::CustomBehaviour DummyCB(STI, DummyCSM, MCII);
+  MCAPipeline = std::move(TheMCA.createDefaultPipeline(MCAPO, SrcMgr, DummyCB));
   assert(MCAPipeline);
 
   MCAPipelinePrinter
-    = std::make_unique<mca::PipelinePrinter>(*MCAPipeline,
-                                             PrintJson ? mca::View::OK_JSON
-                                                       : mca::View::OK_READABLE);
+    = std::make_unique<mca::PipelinePrinter>(*MCAPipeline);
   const MCSchedModel &SM = STI.getSchedModel();
   MCAPipelinePrinter->addView(
     std::make_unique<mca::SummaryView>(SM, GetTraceMISize, 0U,
-                                       TheMCA.getMetadataRegistry(),
+                                       &MDR,
                                        &MCAOF.os()));
-  if (ShowTimelineView)
-    MCAPipelinePrinter->addView(
-      std::make_unique<mca::TimelineView>(STI, MIP,
-                                          *TheMCA.getMetadataRegistry(),
-                                          MCAOF.os()));
 }
 
 Error MCAWorker::run() {
@@ -255,10 +187,6 @@ Error MCAWorker::run() {
   bool UseRegion = TheBroker->hasFeature<Broker::Feature_Region>();
   size_t RegionIdx = 0U;
 
-  mca::MetadataRegistry *MDRegistry = TheMCA.getMetadataRegistry();
-  bool SupportMetadata = TheBroker->hasFeature<Broker::Feature_Metadata>();
-  assert((!SupportMetadata || MDRegistry) &&
-         "MetadataRegistry not created?");
   DenseMap<unsigned, unsigned> MDIndexMap;
 
   // The end of instruction streams in all regions
@@ -269,21 +197,9 @@ Error MCAWorker::run() {
     while (Continue) {
       int Len = 0;
       if (UseRegion) {
-        if (SupportMetadata) {
-          MDIndexMap.clear();
-          std::tie(Len, RD)
-            = TheBroker->fetchRegion(TraceBuffer, -1,
-                                     MDExchanger{*MDRegistry, MDIndexMap});
-        } else
-          std::tie(Len, RD) = TheBroker->fetchRegion(TraceBuffer);
-      } else {
-        if (SupportMetadata) {
-          MDIndexMap.clear();
-          Len = TheBroker->fetch(TraceBuffer, -1,
-                                 MDExchanger{*MDRegistry, MDIndexMap});
-        } else
-          Len = TheBroker->fetch(TraceBuffer);
-      }
+         std::tie(Len, RD) = TheBroker->fetchRegion(TraceBuffer);
+      } else
+         Len = TheBroker->fetch(TraceBuffer);
 
       if (Len < 0 || RD) {
         SrcMgr.endOfStream();
@@ -347,21 +263,9 @@ Error MCAWorker::run() {
             }
           }
           if (RecycledInst) {
-            if (SupportMetadata && MDIndexMap.count(i)) {
-              auto MDTok = MDIndexMap.lookup(i);
-              LLVM_DEBUG(dbgs() << "MCI " << NumTraceMIs
-                                << " has Token " << MDTok << "\n");
-              RecycledInst->setMetadataToken(MDTok);
-            }
             SrcMgr.addRecycledInst(RecycledInst);
           } else {
             auto &NewInst = InstOrErr.get();
-            if (SupportMetadata && MDIndexMap.count(i)) {
-              auto MDTok = MDIndexMap.lookup(i);
-              LLVM_DEBUG(dbgs() << "MCI " << NumTraceMIs
-                                << " has Token " << MDTok << "\n");
-              NewInst->setMetadataToken(MDTok);
-            }
             SrcMgr.addInst(std::move(NewInst));
           }
         }

@@ -15,7 +15,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_INSTRUCTIONVIEW_H
 #define LLVM_TOOLS_LLVM_MCA_INSTRUCTIONVIEW_H
 
-#include "View.h"
+#include "llvm/MCA/View.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/Support/raw_ostream.h"
@@ -65,7 +65,7 @@ public:
       return nullptr;
   }
   json::Value toJSON() const override { return json::Object(); }
-  virtual void printViewJSON(llvm::raw_ostream &OS) override {
+  virtual void printViewJSON(llvm::raw_ostream &OS) {
     json::Value JV = toJSON();
     OS << formatv("{0:2}", JV) << "\n";
   }
