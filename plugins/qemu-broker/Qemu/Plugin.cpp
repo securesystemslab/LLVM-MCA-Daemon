@@ -193,7 +193,7 @@ static llvm::Optional<uint64_t> CodeEndAddr;
 
 static void sendCodeStartAddr() {
   using namespace mcad;
-  assert(CodeStartAddr.hasValue());
+  assert(CodeStartAddr.has_value());
 
   flatbuffers::FlatBufferBuilder Builder(16);
   auto FbMD = fbs::CreateMetadata(Builder, *CodeStartAddr);
