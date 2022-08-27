@@ -20,6 +20,7 @@
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/MC/MCInstPrinter.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/SMLoc.h"
 #include <memory>
@@ -108,32 +109,46 @@ void MCACommentConsumer::HandleComment(SMLoc Loc, StringRef CommentText) {
 }
 
 Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions() {
+
+  std::string Error;
+  raw_string_ostream ErrorStream(Error);
+  formatted_raw_ostream InstPrinterOStream(ErrorStream);
+  const std::unique_ptr<MCInstPrinter> InstPrinter(
+      TheTarget.createMCInstPrinter(
+          Ctx.getTargetTriple(), MAI.getAssemblerDialect(),
+          MAI, MCII, *Ctx.getRegisterInfo()));
+
   MCTargetOptions Opts;
   Opts.PreserveAsmComments = false;
-  MCStreamerWrapper Str(Ctx, Regions);
+  // The following call will take care of calling Streamer.setTargetStreamer.
+  MCStreamerWrapper Streamer(Ctx, Regions);
+  TheTarget.createAsmTargetStreamer(Streamer, InstPrinterOStream,
+                                         InstPrinter.get(),
+                                         Opts.AsmVerbose);
+  if (!Streamer.getTargetStreamer())
+    return make_error<StringError>("cannot create target asm streamer", inconvertibleErrorCode());
+
+  const std::unique_ptr<MCAsmParser> AsmParser(
+      createMCAsmParser(Regions.getSourceMgr(), Ctx, Streamer, MAI));
+  if (!AsmParser)
+    return make_error<StringError>("cannot create asm parser", inconvertibleErrorCode());
+  MCACommentConsumer CC(Regions);
+  AsmParser->getLexer().setCommentConsumer(&CC);
+  // Enable support for MASM literal numbers (example: 05h, 101b).
+  AsmParser->getLexer().setLexMasmIntegers(true);
 
   // Create a MCAsmParser and setup the lexer to recognize llvm-mca ASM
   // comments.
-  std::unique_ptr<MCAsmParser> Parser(
-      createMCAsmParser(Regions.getSourceMgr(), Ctx, Str, MAI));
-  MCAsmLexer &Lexer = Parser->getLexer();
-  MCACommentConsumer CC(Regions);
-  Lexer.setCommentConsumer(&CC);
-  // Enable support for MASM literal numbers (example: 05h, 101b).
-  Lexer.setLexMasmIntegers(true);
-
-  std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget.createMCAsmParser(STI, *Parser, MCII, Opts));
-  if (!TAP)
-    return make_error<StringError>(
-        "This target does not support assembly parsing.",
-        inconvertibleErrorCode());
-  Parser->setTargetParser(*TAP);
-  Parser->Run(false);
+  const std::unique_ptr<MCTargetAsmParser> TargetAsmParser(
+      TheTarget.createMCAsmParser(STI, *AsmParser, MCII, Opts));
+  if (!TargetAsmParser)
+    return make_error<StringError>("cannot create target asm parser", inconvertibleErrorCode());
+  AsmParser->setTargetParser(*TargetAsmParser);
+  AsmParser->Run(false);
 
   // Set the assembler dialect from the input. llvm-mca will use this as the
   // default dialect when printing reports.
-  AssemblerDialect = Parser->getAssemblerDialect();
+  AssemblerDialect = AsmParser->getAssemblerDialect();
   return Regions;
 }
 

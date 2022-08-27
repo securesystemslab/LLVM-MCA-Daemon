@@ -290,6 +290,7 @@ int main(int argc, char **argv) {
   // Initialize targets
   InitializeAllTargetInfos();
   InitializeAllTargetMCs();
+  InitializeAllAsmParsers();
   // Although `llvm-mcad` doesn't use the disassembler, some broker
   // plugin might use it. However, if we call InitializeAllDisassemblers
   // in the broker plugin, it will fail to retrieve the correct `Target`
@@ -297,7 +298,6 @@ int main(int argc, char **argv) {
   // Therefore, we have little choises but initializing them here.
   // FIXME: Put "require disassembler" as a Broker feature
   // and initialize them only when that feature is given.
-  // FIXME: What about AsmParser?
   InitializeAllDisassemblers();
 
   // Print all available targets in `--verison`
