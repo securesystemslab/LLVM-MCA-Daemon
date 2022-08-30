@@ -54,6 +54,7 @@ class MCAWorker {
   // SummaryView will only take reference of it.
   std::function<size_t(void)> GetTraceMISize;
 
+  llvm::SourceMgr &SM;
   mca::IncrementalSourceMgr SrcMgr;
 
   std::unordered_map<const mca::InstrDesc*,
@@ -85,7 +86,8 @@ public:
             const MCAsmInfo &MAI,
             const MCInstrInfo &II,
             MCInstPrinter &IP,
-            mca::MetadataRegistry &MDR
+            mca::MetadataRegistry &MDR,
+            llvm::SourceMgr &SM
             );
 
   BrokerFacade getBrokerFacade() {

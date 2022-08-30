@@ -97,6 +97,10 @@ const MCSubtargetInfo &BrokerFacade::getSTI() const {
   return Worker.STI;
 }
 
+SourceMgr &BrokerFacade::getSourceMgr() const {
+  return Worker.SM;
+}
+
 MCAWorker::MCAWorker(const Target &T,
                      const MCSubtargetInfo &TheSTI,
                      mca::Context &MCA,
@@ -107,10 +111,11 @@ MCAWorker::MCAWorker(const Target &T,
                      const MCAsmInfo &AI,
                      const MCInstrInfo &II,
                      MCInstPrinter &IP,
-                     mca::MetadataRegistry &MDR)
+                     mca::MetadataRegistry &MDR,
+                     llvm::SourceMgr &SM)
   : TheTarget(T), STI(TheSTI),
     MCAIB(IB), Ctx(C), MAI(AI), MCII(II), MIP(IP), MDR(MDR),
-    TheMCA(MCA), MCAPO(PO), MCAOF(OF),
+    TheMCA(MCA), MCAPO(PO), MCAOF(OF), SM(SM),
     NumTraceMIs(0U), GetTraceMISize([this]{ return NumTraceMIs; }),
     GetRecycledInst([this](const mca::InstrDesc &Desc) -> mca::Instruction* {
                       if (RecycledInsts.count(&Desc)) {

@@ -330,8 +330,9 @@ int main(int argc, char **argv) {
             TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   assert(MAI);
 
+  llvm::SourceMgr SM;
   auto Ctx = std::make_unique<MCContext>(TheTriple,
-                                         MAI.get(), MRI.get(), STI.get());
+                                         MAI.get(), MRI.get(), STI.get(), &SM);
   std::unique_ptr<MCObjectFileInfo> MOFI(
     TheTarget->createMCObjectFileInfo(*Ctx, /*PIC=*/false));
   Ctx->setObjectFileInfo(MOFI.get());
@@ -373,7 +374,7 @@ int main(int argc, char **argv) {
   mcad::MCAWorker Worker(*TheTarget, *STI,
                          MCA, PO, IB, OF,
                          *Ctx, *MAI, *MCII, *IP, 
-                         *MDR);
+                         *MDR, SM);
 
   if(int Ret = initializeProfilers())
     return Ret;
