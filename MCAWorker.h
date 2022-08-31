@@ -30,6 +30,7 @@ class PipelineOptions;
 class PipelinePrinter;
 class InstrDesc;
 class Instruction;
+class CustomBehaviour;
 } // end namespace mca
 
 namespace mcad {
@@ -55,6 +56,9 @@ class MCAWorker {
   std::function<size_t(void)> GetTraceMISize;
 
   llvm::SourceMgr &SM;
+
+  mca::CustomBehaviour *CB;
+
   mca::IncrementalSourceMgr SrcMgr;
 
   std::unordered_map<const mca::InstrDesc*,
