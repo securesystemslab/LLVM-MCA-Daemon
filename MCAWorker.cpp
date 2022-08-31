@@ -115,7 +115,7 @@ MCAWorker::MCAWorker(const Target &T,
                      llvm::SourceMgr &SM)
   : TheTarget(T), STI(TheSTI),
     MCAIB(IB), Ctx(C), MAI(AI), MCII(II), MIP(IP), MDR(MDR),
-    TheMCA(MCA), MCAPO(PO), MCAOF(OF), SM(SM),
+    TheMCA(MCA), MCAPO(PO), MCAOF(OF), CB(nullptr),
     NumTraceMIs(0U), GetTraceMISize([this]{ return NumTraceMIs; }),
     GetRecycledInst([this](const mca::InstrDesc &Desc) -> mca::Instruction* {
                       if (RecycledInsts.count(&Desc)) {
@@ -147,6 +147,7 @@ void MCAWorker::resetPipeline() {
   MCAIB.clear();
   SrcMgr.clear();
 
+  if(CB) { delete CB; CB = nullptr; }
   CB = new mca::CustomBehaviour(STI, SrcMgr, MCII);
   MCAPipeline = std::move(TheMCA.createDefaultPipeline(MCAPO, SrcMgr, *CB));
   assert(MCAPipeline);
@@ -275,8 +276,11 @@ Error MCAWorker::run() {
       }
 
       if (NumTraceMIs) {
-        if (auto E = runPipeline())
+        if (auto E = runPipeline()) {
+          delete CB;
+          CB = nullptr;
           return E;
+        }
       }
     }
     if (UseRegion) {
@@ -299,6 +303,9 @@ Error MCAWorker::run() {
       }
     }
   }
+
+  delete CB;
+  CB = nullptr;
 
   return ErrorSuccess();
 }
