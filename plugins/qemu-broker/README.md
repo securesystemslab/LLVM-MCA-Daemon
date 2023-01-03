@@ -12,11 +12,11 @@ git apply /path/to/patches/qemu-patch.diff
 After applying the patch, please build QEMU in the following way:
 ```bash
 mkdir -p build && cd build
-../configure --target-list="aarch64-linux-user,arm-linux-user,x86_64-linux-user" \
+../configure --target-list="aarch64-linux-user,arm-linux-user,x86_64-linux-user,ppc64-linux-user,ppc64le-linux-user,ppc-linux-user" \
              --enable-capstone \
              --enable-debug \
              --enable-plugins
-ninja qemu-arm qemu-x86_64 qemu-aarch64
+ninja qemu-arm qemu-x86_64 qemu-aarch64 qemu-ppc{,64,64le}
 ```
 In addition to QEMU. This Broker also uses [Flatbuffers](https://google.github.io/flatbuffers) for serialization. You can install it on Ubuntu via the following command:
 ```bash
