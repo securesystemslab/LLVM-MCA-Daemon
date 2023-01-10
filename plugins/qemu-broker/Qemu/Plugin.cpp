@@ -161,6 +161,13 @@ static void tbExecCallback(unsigned int CPUId, void *Data) {
                                        RIPRegInfo.Size) <= 0)
       WithColor::error() << "Failed to read X86_64 RIP register\n";
   }
+  if (CurrentQemuTarget.startswith_lower("ppc") && RegInfoRegistry.count("nip")) {
+    const auto &NIPRegInfo = RegInfoRegistry["nip"];
+    if (qemu_plugin_vcpu_read_register(NIPRegInfo.RegId, &VAddr,
+                                       NIPRegInfo.Size) <= 0) {
+      WithColor::error() << "Failed to read PPC NIP register\n";
+    }
+  }
 
   CurrentExecTB->TBIdx = TBIdx;
   CurrentExecTB->PC = VAddr;
@@ -312,6 +319,19 @@ static void tbTranslateCallback(qemu_plugin_id_t Id,
         errs() << "Failed to get register id of X86_64 RIP from QEMU\n";
       } else {
         RegInfoRegistry.insert({"rip", {RegId, RegSize}});
+      }
+    }
+  }
+
+  if (CurrentQemuTarget.startswith_lower("ppc")) {
+    if (!RegInfoRegistry.count("nip")) {
+      uint8_t RegSize;
+      int RegId = qemu_plugin_vcpu_get_register_info("nip",
+                                                     &RegSize);
+      if (RegId < 0) {
+        errs() << "Failed to get register id of PPC NIP from QEMU\n";
+      } else {
+        RegInfoRegistry.insert({"nip", {RegId, RegSize}});
       }
     }
   }
