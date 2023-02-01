@@ -1,0 +1,421 @@
+diff --git a/include/hw/core/cpu.h b/include/hw/core/cpu.h
+index 136973655c..f16c599b03 100644
+--- a/include/hw/core/cpu.h
++++ b/include/hw/core/cpu.h
+@@ -79,6 +79,14 @@ typedef enum MMUAccessType {
+     MMU_INST_FETCH = 2
+ } MMUAccessType;
+ 
++typedef union RegisterValue {
++    uint8_t    u8;
++    uint16_t   u16;
++    uint32_t   u32;
++    uint64_t   u64;
++    GByteArray *data;
++} RegisterValue;
++
+ typedef struct CPUWatchpoint CPUWatchpoint;
+ 
+ /* see tcg-cpu-ops.h */
+@@ -148,6 +156,9 @@ struct CPUClass {
+     int (*gdb_write_register)(CPUState *cpu, uint8_t *buf, int reg);
+     vaddr (*gdb_adjust_breakpoint)(CPUState *cpu, vaddr addr);
+ 
++    int (*get_register_info)(CPUState *cpu, const char *reg_name, uint8_t *size);
++    int (*read_register)(CPUState *cpu, RegisterValue *dest, int reg);
++
+     const char *gdb_core_xml_file;
+     gchar * (*gdb_arch_name)(CPUState *cpu);
+     const char * (*gdb_get_dynamic_xml)(CPUState *cpu, const char *xmlname);
+diff --git a/include/qemu/qemu-plugin.h b/include/qemu/qemu-plugin.h
+index 535ddbf0ae..ed27c08b38 100644
+--- a/include/qemu/qemu-plugin.h
++++ b/include/qemu/qemu-plugin.h
+@@ -525,6 +525,13 @@ qemu_plugin_register_vcpu_syscall_ret_cb(qemu_plugin_id_t id,
+ 
+ char *qemu_plugin_insn_disas(const struct qemu_plugin_insn *insn);
+ 
++int qemu_plugin_vcpu_get_register_info(const char *reg_name, uint8_t *size);
++
++/**
++ * Returns the number of bytes read, or -1 if failed
++ * */
++int32_t qemu_plugin_vcpu_read_register(int reg_id, void *val, uint8_t size);
++
+ /**
+  * qemu_plugin_insn_symbol() - best effort symbol lookup
+  * @insn: instruction reference
+@@ -577,6 +584,9 @@ int qemu_plugin_n_max_vcpus(void);
+  */
+ void qemu_plugin_outs(const char *string);
+ 
++uint64_t qemu_plugin_vcpu_code_start_vaddr(void);
++uint64_t qemu_plugin_vcpu_code_end_vaddr(void);
++
+ /**
+  * qemu_plugin_bool_parse() - parses a boolean argument in the form of
+  * "<argname>=[on|yes|true|off|no|false]"
+diff --git a/plugins/api.c b/plugins/api.c
+index 7bf71b189d..f3912d75c4 100644
+--- a/plugins/api.c
++++ b/plugins/api.c
+@@ -238,6 +238,62 @@ char *qemu_plugin_insn_disas(const struct qemu_plugin_insn *insn)
+     return plugin_disas(cpu, insn->vaddr, insn->data->len);
+ }
+ 
++int qemu_plugin_vcpu_get_register_info(const char *reg_name, uint8_t *size) {
++  CPUState *cs = current_cpu;
++  CPUClass *cpu = CPU_GET_CLASS(cs);
++  if (cpu->get_register_info)
++    return cpu->get_register_info(cs, reg_name, size);
++
++  return -1;
++}
++
++int32_t qemu_plugin_vcpu_read_register(int reg_id, void *val, uint8_t size) {
++  CPUState *cs = current_cpu;
++  CPUClass *cpu = CPU_GET_CLASS(cs);
++  if (cpu->read_register) {
++    RegisterValue reg_value;
++    switch (size) {
++    case 1:
++    case 2:
++    case 4:
++    case 8:
++      break;
++    default:
++      reg_value.data = g_byte_array_new();
++    }
++
++    int32_t ret = cpu->read_register(cs, &reg_value, reg_id);
++    if (!ret) {
++      ret = size;
++      switch (size) {
++      case 1:
++        *((uint8_t *)val) = reg_value.u8;
++        break;
++      case 2:
++        *((uint16_t *)val) = reg_value.u16;
++        break;
++      case 4:
++        *((uint32_t *)val) = reg_value.u32;
++        break;
++      case 8:
++        *((uint64_t *)val) = reg_value.u64;
++        break;
++      default: {
++        GByteArray *buffer = reg_value.data;
++        uint32_t len = buffer->len;
++        len = len < size ? len : size;
++        memcpy(val, buffer->data, len);
++        g_byte_array_free(buffer, TRUE);
++        ret = len;
++      }
++      }
++    }
++    return ret;
++  }
++
++  return -1;
++}
++
+ const char *qemu_plugin_insn_symbol(const struct qemu_plugin_insn *insn)
+ {
+     const char *sym = lookup_symbol(insn->vaddr);
+@@ -393,6 +449,28 @@ void qemu_plugin_outs(const char *string)
+     qemu_log_mask(CPU_LOG_PLUGIN, "%s", string);
+ }
+ 
++uint64_t qemu_plugin_vcpu_code_start_vaddr(void) {
++#ifdef CONFIG_USER_ONLY
++  CPUState *cpu = current_cpu;
++  TaskState *ts = (TaskState *)cpu->opaque;
++  const struct image_info *info = ts->info;
++  return info->start_code;
++#else
++  return 0;
++#endif
++}
++
++uint64_t qemu_plugin_vcpu_code_end_vaddr(void) {
++#ifdef CONFIG_USER_ONLY
++  CPUState *cpu = current_cpu;
++  TaskState *ts = (TaskState *)cpu->opaque;
++  const struct image_info *info = ts->info;
++  return info->end_code;
++#else
++  return 0;
++#endif
++}
++
+ bool qemu_plugin_bool_parse(const char *name, const char *value, bool *ret)
+ {
+     return name && value && qapi_bool_parse(name, value, ret, NULL);
+diff --git a/plugins/qemu-plugins.symbols b/plugins/qemu-plugins.symbols
+index 71f6c90549..5d4df629b3 100644
+--- a/plugins/qemu-plugins.symbols
++++ b/plugins/qemu-plugins.symbols
+@@ -18,7 +18,11 @@
+   qemu_plugin_mem_size_shift;
+   qemu_plugin_n_max_vcpus;
+   qemu_plugin_n_vcpus;
++  qemu_plugin_vcpu_get_register_info;
++  qemu_plugin_vcpu_read_register;
+   qemu_plugin_outs;
++  qemu_plugin_vcpu_code_start_vaddr;
++  qemu_plugin_vcpu_code_end_vaddr;
+   qemu_plugin_path_to_binary;
+   qemu_plugin_register_atexit_cb;
+   qemu_plugin_register_flush_cb;
+diff --git a/target/arm/cpu.c b/target/arm/cpu.c
+index 5d4ca7a227..ed0a07219c 100644
+--- a/target/arm/cpu.c
++++ b/target/arm/cpu.c
+@@ -2061,6 +2061,61 @@ static const struct TCGCPUOps arm_tcg_ops = {
+ };
+ #endif /* CONFIG_TCG */
+ 
++static int arm_cpu_get_register_info(CPUState *cs, const char *reg_name,
++                                     uint8_t *size) {
++  ARMCPU *cpu = ARM_CPU(cs);
++  CPUARMState *env = &cpu->env;
++
++  *size = 4;
++
++  static const char *core_regs[16] = {"r0",  "r1", "r2", "r3", "r4",  "r5",
++                                      "r6",  "r7", "r8", "r9", "r10", "r11",
++                                      "r12", "sp", "lr", "pc"};
++  int i;
++  for (i = 0; i < 16; ++i) {
++    if (!strcmp(reg_name, core_regs[i]))
++      return i;
++  }
++
++  if (arm_feature(env, ARM_FEATURE_M)) {
++    if (!strcmp(reg_name, "xpsr"))
++      return 25;
++  } else {
++    if (!strcmp(reg_name, "cpsr"))
++      return 25;
++  }
++
++  return -1;
++}
++
++static int arm_cpu_read_register(CPUState *cs, RegisterValue *dest, int reg_n) {
++  if (reg_n < 0)
++    return reg_n;
++
++  ARMCPU *cpu = ARM_CPU(cs);
++  CPUARMState *env = &cpu->env;
++
++  if (reg_n < 16) {
++    /* Core integer registers */
++    dest->u32 = env->regs[reg_n];
++    return 0;
++  }
++
++  /* CPSR or XPSR register */
++  if (reg_n == 25) {
++    if (arm_feature(env, ARM_FEATURE_M))
++      /* XPSR */
++      dest->u32 = xpsr_read(env);
++    else
++      /* CPSR */
++      dest->u32 = cpsr_read(env);
++
++    return 0;
++  }
++
++  return -1;
++}
++
+ static void arm_cpu_class_init(ObjectClass *oc, void *data)
+ {
+     ARMCPUClass *acc = ARM_CPU_CLASS(oc);
+@@ -2077,6 +2132,8 @@ static void arm_cpu_class_init(ObjectClass *oc, void *data)
+     cc->has_work = arm_cpu_has_work;
+     cc->dump_state = arm_cpu_dump_state;
+     cc->set_pc = arm_cpu_set_pc;
++    cc->get_register_info = arm_cpu_get_register_info;
++    cc->read_register = arm_cpu_read_register;
+     cc->gdb_read_register = arm_cpu_gdb_read_register;
+     cc->gdb_write_register = arm_cpu_gdb_write_register;
+ #ifndef CONFIG_USER_ONLY
+diff --git a/target/i386/cpu.c b/target/i386/cpu.c
+index cb6b5467d0..d729e93d01 100644
+--- a/target/i386/cpu.c
++++ b/target/i386/cpu.c
+@@ -6872,6 +6872,45 @@ void x86_update_hflags(CPUX86State *env)
+     }
+     env->hflags = hflags;
+ }
++static int x86_cpu_get_register_info(CPUState *cs, const char *reg_name,
++                                     uint8_t *size) {
++  // Currently we only implement eip/rip
++  // The LSB 2 bits are reserved to indicate whether the register
++  // is 16/32/64 bits
++  int reg_id = -1;
++  if (!strcmp(reg_name, "eip") || !strcmp(reg_name, "rip")) {
++    reg_id = 0;
++    if (reg_name[0] == 'e') {
++      reg_id = ((reg_id << 2) | 0b001);
++      *size = 4;
++    } else {
++      reg_id = ((reg_id << 2) | 0b010);
++      *size = 8;
++    }
++  }
++
++  return reg_id;
++}
++static int x86_cpu_read_register(CPUState *cs, RegisterValue *dest, int reg_n) {
++  X86CPU *cpu = X86_CPU(cs);
++  CPUX86State *env = &cpu->env;
++
++  uint8_t size_mask = (uint8_t)(reg_n & (int)0b11);
++  reg_n >>= 2;
++  // Currently we only implement eip/rip
++  if (reg_n == 0) {
++    if (size_mask == 0b01) {
++      dest->u32 = (uint32_t)env->eip;
++    } else if (size_mask == 0b10) {
++      dest->u64 = env->eip;
++    } else {
++      return -1;
++    }
++    return 0;
++  }
++
++  return -1;
++}
+ 
+ static Property x86_cpu_properties[] = {
+ #ifdef CONFIG_USER_ONLY
+@@ -7036,6 +7075,8 @@ static void x86_cpu_common_class_init(ObjectClass *oc, void *data)
+     cc->has_work = x86_cpu_has_work;
+     cc->dump_state = x86_cpu_dump_state;
+     cc->set_pc = x86_cpu_set_pc;
++    cc->get_register_info = x86_cpu_get_register_info;
++    cc->read_register = x86_cpu_read_register;
+     cc->gdb_read_register = x86_cpu_gdb_read_register;
+     cc->gdb_write_register = x86_cpu_gdb_write_register;
+     cc->get_arch_id = x86_cpu_get_arch_id;
+diff --git a/target/riscv/cpu.c b/target/riscv/cpu.c
+index 8fe391a408..313d2a399b 100644
+--- a/target/riscv/cpu.c
++++ b/target/riscv/cpu.c
+@@ -1394,6 +1394,104 @@ static const struct TCGCPUOps riscv_tcg_ops = {
+ #endif /* !CONFIG_USER_ONLY */
+ };
+ 
++/*
++ * Returns the register id of reg_name and sets *size to size of that register
++ * in bytes. The register id corresponds to the index into the contatenation of
++ * [pc], riscv_int_regnames and riscv_fpr_regnames. The register id is -1 if the
++ * reg_name could not be found.
++ */
++static int riscv_cpu_get_register_info(CPUState *cs, const char *reg_name,
++                                       uint8_t *size) {
++    RISCVCPU *cpu = RISCV_CPU(cs);
++    CPURISCVState *env = &cpu->env;
++
++    switch(riscv_cpu_mxl(env)) {
++      case MXL_RV32:
++          *size = 4; // 32 / 4
++          break;
++      case MXL_RV64:
++          *size = 8; // 64 / 8
++          break;
++      default:
++        g_assert_not_reached();
++    }
++
++    if (!strcmp("pc", reg_name))
++      return 0;
++
++    const size_t num_int_regs = ARRAY_SIZE(riscv_int_regnames);
++    for (int i = 0; i < num_int_regs; i++) {
++      char *names =
++          strdup(riscv_int_regnames[i]); // strdup because strtok mutates arg
++      char *name1 = strtok(names, "/");
++      char *name2 = strtok(NULL, "/");
++      if (!strcmp(name1, reg_name) || !strcmp(name2, reg_name)) {
++        free(names);
++        return i + 1;
++      }
++      free(names);
++    }
++
++    const size_t num_fpr_regs = ARRAY_SIZE(riscv_fpr_regnames);
++    for (int i = 0; i < num_fpr_regs; i++) {
++      char *names =
++          strdup(riscv_fpr_regnames[i]); // strdup because strtok mutates arg
++      char *name1 = strtok(names, "/");
++      char *name2 = strtok(NULL, "/");
++      if (!strcmp(name1, reg_name) || !strcmp(name2, reg_name)) {
++        free(names);
++        return i + num_int_regs; // simplified from i + 1 + (num_int_regs - 1)
++      }
++      free(names);
++    }
++
++    return -1;
++}
++
++/*
++ * Store the the address of register reg_n in dest. Return 0 if success,
++ * or -1 otherwise.
++ */
++static int riscv_cpu_read_register(CPUState *cs, RegisterValue *dest,
++                                   int reg_n) {
++  RISCVCPU *cpu = RISCV_CPU(cs);
++  CPURISCVState *env = &cpu->env;
++
++  const size_t n_int_regs = ARRAY_SIZE(riscv_int_regnames);
++  const size_t n_fpr_regs = ARRAY_SIZE(riscv_fpr_regnames);
++
++  switch (riscv_cpu_mxl(env)) {
++  case MXL_RV32:
++    if (reg_n == 0) {
++      dest->u32 = env->pc;
++      return 0;
++    } else if (reg_n >= 1 && reg_n <= n_int_regs) {
++      dest->u32 = env->gpr[reg_n - 1];
++      return 0;
++    } else if (reg_n >= 1 + n_int_regs && reg_n <= n_int_regs + n_fpr_regs) {
++      dest->u32 = env->gpr[reg_n - n_int_regs - 1];
++      return 0;
++    }
++    return -1;
++  case MXL_RV64:
++    if (reg_n == 0) {
++      dest->u64 = env->pc;
++      return 0;
++    } else if (reg_n >= 1 && reg_n <= n_int_regs) {
++      dest->u64 = env->gpr[reg_n - 1];
++      return 0;
++    } else if (reg_n >= 1 + n_int_regs && reg_n <= n_int_regs + n_fpr_regs) {
++      dest->u64 = env->gpr[reg_n - n_int_regs - 1];
++      return 0;
++    }
++    return -1;
++  default:
++    g_assert_not_reached();
++  }
++}
++
++
++
+ static void riscv_cpu_class_init(ObjectClass *c, void *data)
+ {
+     RISCVCPUClass *mcc = RISCV_CPU_CLASS(c);
+@@ -1409,6 +1507,8 @@ static void riscv_cpu_class_init(ObjectClass *c, void *data)
+     cc->has_work = riscv_cpu_has_work;
+     cc->dump_state = riscv_cpu_dump_state;
+     cc->set_pc = riscv_cpu_set_pc;
++    cc->get_register_info = riscv_cpu_get_register_info;
++    cc->read_register = riscv_cpu_read_register;
+     cc->gdb_read_register = riscv_cpu_gdb_read_register;
+     cc->gdb_write_register = riscv_cpu_gdb_write_register;
+     cc->gdb_num_core_regs = 33;
