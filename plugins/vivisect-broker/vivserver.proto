@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+service Emulator {
+    rpc RunNumInstructions (RunInstructionsRequest) returns (RunInstructionsReply) {}
+}
+
+message RunInstructionsRequest {
+    int32 numInstructions = 1;
+}
+
+message RunInstructionsReply {
+    int32 numInstructionsRun = 1;
+}
