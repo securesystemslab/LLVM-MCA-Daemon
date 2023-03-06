@@ -27,18 +27,26 @@ class Greeter(vivserver_pb2_grpc.EmulatorServicer):
 
     def RunNumInstructions(self, request, context):
         ops = list(self.step(request.numInstructions))
-        for op in ops:
-            print(op)
-        return vivserver_pb2_grpc.vivserver__pb2.RunInstructionsReply(numInstructionsRun=len(ops))
+        instructions = []
+        print(ops)
+        for (instruction, _, opCode) in ops:
+            print(hex(instruction), hex(opCode))
+            instructions.append(vivserver_pb2.RunInstructionsReply.Instruction(
+                instruction=instruction.to_bytes(length=8, byteorder='little'), opCode=opCode.to_bytes(length=8, byteorder='little')))
+        return vivserver_pb2.RunInstructionsReply(instructions=instructions)
 
     def step(self, n):
+        print(n)
         for i in range(1, n):
             try:
                 pc_before = emu.getProgramCounter()
                 op = emu.parseOpcode(emu.getProgramCounter())
                 emu.stepi()
-                yield hex(emu.readMemValue(emu.getProgramCounter(), 4)), op, hex(op.opcode)
-            except:
+                instruction = emu.readMemValue(
+                    emu.getProgramCounter(), 4)
+                opCode = op.opcode
+                yield instruction, op, opCode
+            except Exception as e:
                 pass
 
 

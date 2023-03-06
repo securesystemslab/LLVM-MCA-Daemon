@@ -9,5 +9,11 @@ message RunInstructionsRequest {
 }
 
 message RunInstructionsReply {
-    int32 numInstructionsRun = 1;
+    repeated Instruction instructions = 1;
+
+    message Instruction {
+        bytes instruction = 1;
+        bytes opCode = 2;
+    }
+
 }
