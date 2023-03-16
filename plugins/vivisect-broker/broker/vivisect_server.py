@@ -51,7 +51,7 @@ class Greeter(vivserver_pb2_grpc.EmulatorServicer):
 
 
 def serve():
-    uds_addresses = ['unix:helloworld.sock']
+    uds_addresses = ['[::]:50051']
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     vivserver_pb2_grpc.add_EmulatorServicer_to_server(Greeter(), server)
     for uds_address in uds_addresses:

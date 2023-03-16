@@ -8,7 +8,7 @@ import vivserver_pb2_grpc
 
 
 def run():
-    uds_addresses = ['unix:helloworld.sock']
+    uds_addresses = ['[::]:50051']
     for uds_address in uds_addresses:
         print(uds_address)
         with grpc.insecure_channel(uds_address) as channel:
