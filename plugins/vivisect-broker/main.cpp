@@ -18,8 +18,8 @@
 
 #include "Broker.h"
 
-
-int main(int argc, char** argv) {
+int main(int argc, char **argv)
+{
   // Instantiate the client. It requires a channel, out of which the actual RPCs
   // are created. This channel models a connection to an endpoint specified by
   // the argument "--target=" which is the only expected argument.
@@ -27,30 +27,40 @@ int main(int argc, char** argv) {
   // InsecureChannelCredentials()).
   std::string target_str;
   std::string arg_str("--target");
-  if (argc > 1) {
+  if (argc > 1)
+  {
     std::string arg_val = argv[1];
     size_t start_pos = arg_val.find(arg_str);
-    if (start_pos != std::string::npos) {
+    if (start_pos != std::string::npos)
+    {
       start_pos += arg_str.size();
-      if (arg_val[start_pos] == '=') {
+      if (arg_val[start_pos] == '=')
+      {
         target_str = arg_val.substr(start_pos + 1);
-      } else {
+      }
+      else
+      {
         std::cout << "The only correct argument syntax is --target="
                   << std::endl;
         return 0;
       }
-    } else {
+    }
+    else
+    {
       std::cout << "The only acceptable argument is --target=" << std::endl;
       return 0;
     }
-  } else {
+  }
+  else
+  {
     target_str = "localhost:50051";
   }
   EmulatorClient emulator(
       grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
   std::string user("world");
-  std::string reply = emulator.RunInstructions(user);
-  std::cout << "Client received: " << reply << std::endl;
+  auto reply = emulator.RunInstructions(user);
+  if (reply)
+    std::cout << "Client received: " << reply->DebugString() << std::endl;
 
   return 0;
 }

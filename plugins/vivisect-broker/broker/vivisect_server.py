@@ -5,11 +5,11 @@ from concurrent import futures
 import vivisect
 import Elf
 import grpc
-binary_path = "/home/davidanekstein/amp/Challenge-Problems-master/Challenge_03/build/program_c"
+# binary_path = "/home/davidanekstein/amp/Challenge-Problems-master/Challenge_03/build/program_c"
 binary_path = "/home/davidanekstein/amp/main"
 
 vw = vivisect.VivWorkspace()
-vw.setMeta('Architecture', 'arm')
+# vw.setMeta('Architecture', 'arm')
 vw.setMeta('bigend', False)
 vw.loadFromFile(binary_path)
 vw.analyze()
@@ -30,9 +30,11 @@ class Greeter(vivserver_pb2_grpc.EmulatorServicer):
         instructions = []
         print(ops)
         for (instruction, _, opCode) in ops:
+            print(instruction, opCode)
+            print(instruction.to_bytes(length=8, byteorder='big'), opCode.to_bytes(length=8, byteorder='big'))
             print(hex(instruction), hex(opCode))
             instructions.append(vivserver_pb2.RunInstructionsReply.Instruction(
-                instruction=instruction.to_bytes(length=8, byteorder='little'), opCode=opCode.to_bytes(length=8, byteorder='little')))
+                instruction=instruction.to_bytes(length=8, byteorder='big'), opCode=opCode.to_bytes(length=8, byteorder='big')))
         return vivserver_pb2.RunInstructionsReply(instructions=instructions)
 
     def step(self, n):
@@ -47,7 +49,7 @@ class Greeter(vivserver_pb2_grpc.EmulatorServicer):
                 opCode = op.opcode
                 yield instruction, op, opCode
             except Exception as e:
-                pass
+                print(e)
 
 
 def serve():

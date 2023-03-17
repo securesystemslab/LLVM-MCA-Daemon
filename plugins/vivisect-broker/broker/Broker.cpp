@@ -33,6 +33,8 @@
 #include "Broker.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "mcad-vivisect-broker"
 using namespace mcad;
 
 class VivisectBroker : public Broker
@@ -41,6 +43,8 @@ class VivisectBroker : public Broker
     const MCSubtargetInfo &mcSubtargetInfo;
     MCContext &mcCtx;
     const Target &target;
+
+    std::vector<std::shared_ptr<MCInst>> mcis;
 
     int fetch(MutableArrayRef<const MCInst *> MCIS, int Size,
               Optional<MDExchanger> MDE) override
@@ -62,11 +66,42 @@ class VivisectBroker : public Broker
         EmulatorClient emulator(
             grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
         std::string user("world");
-        std::string reply = emulator.RunInstructions(user);
-        std::cout << "Client received: " << reply << std::endl;
-        std::cout << "Yo " << Size << std::endl;
+        auto reply = emulator.RunInstructions(user);
 
-        return std::make_pair(-1, RegionDescriptor(true));
+        mcis = {};
+
+        if (reply)
+        {
+            for (int i = 0; i < reply->instructions_size(); i++)
+            {
+                auto inst = reply->instructions(i).instruction();
+                SmallVector<uint8_t, 1024> instructionBuffer;
+                std::cout << "instruction: ";
+                for (uint8_t c : inst)
+                {
+                    instructionBuffer.push_back(c);
+                }
+                ArrayRef<uint8_t> InstBytes(instructionBuffer);
+
+                auto MCI = std::make_shared<MCInst>();
+                uint64_t DisAsmSize;
+                auto Disassembled = disasm->getInstruction(*MCI, DisAsmSize,
+                                                           InstBytes,
+                                                           0,
+                                                           nulls());
+                mcis.push_back(MCI);
+                MCIS[i] = MCI.get();
+
+                // Disassembled
+                std::cout << std::endl
+                          << "status: " << Disassembled << std::endl;
+            }
+            std::cout << "Client received: " << reply->DebugString() << std::endl;
+            std::cout << "Is thumb: " << mcSubtargetInfo.getTargetTriple().isThumb();
+            // std::cout << "Yo " << Size << std::endl;
+        }
+
+        return std::make_pair(reply->instructions_size() == 0 ? -1 : reply->instructions_size(), RegionDescriptor(false));
     }
 
 public:

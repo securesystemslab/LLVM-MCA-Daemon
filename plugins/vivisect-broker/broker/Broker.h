@@ -6,6 +6,7 @@
 #include <thread>
 #include <utility>
 #include <vector>
+#include <optional>
 
 #include <arpa/inet.h>
 #include <cstdlib>
@@ -31,7 +32,7 @@ class EmulatorClient {
 
   // Assembles the client's payload, sends it and presents the response back
   // from the server.
-  std::string RunInstructions(const std::string& user) {
+  std::optional<RunInstructionsReply> RunInstructions(const std::string& user) {
     // Data we are sending to the server.
     RunInstructionsRequest request;
     request.set_numinstructions(20);
@@ -48,11 +49,11 @@ class EmulatorClient {
 
     // Act upon its status.
     if (status.ok()) {
-      return reply.DebugString();
+      return reply;
     } else {
       std::cout << status.error_code() << ": " << status.error_message()
                 << std::endl;
-      return "RPC failed";
+      return std::nullopt;
     }
   }
 
