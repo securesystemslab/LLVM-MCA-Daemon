@@ -22,6 +22,8 @@ Options:
   --help                          Show this message and exit.
 ```
 
+Start the server and **wait for analysis to complete**.
+
 In another window, start the test client
 
 ```
