@@ -8,6 +8,7 @@ import click
 
 from concurrent import futures
 
+
 class Service(vivserver_pb2_grpc.EmulatorServicer):
     def __init__(self, binary_path, architecture, endianness) -> None:
         # binary_path = "/home/davidanekstein/amp/Challenge-Problems-master/Challenge_03/build/program_c"
