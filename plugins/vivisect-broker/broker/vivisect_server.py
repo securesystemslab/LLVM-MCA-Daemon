@@ -40,8 +40,9 @@ class Service(vivserver_pb2_grpc.EmulatorServicer):
             print(f"instruction: {hex(instruction)}, opcode: {hex(opCode)}")
 
             # although the ISA may be little endian, we don't want to alter the byte order of the int that
-            # vivisect returns before sending it. Big endian maintains the byte order, so that's what we
-            # send it as, but this does not reflect the endianess of the instructions themselves
+            # vivisect returns for the instruction and for the opcode before sending it. Big endian maintains
+            # the byte order, so that's what we send, but this does not reflect the endianess of the
+            # instructions themselves
             instructions.append(
                 vivserver_pb2.RunInstructionsReply.Instruction(
                     instruction=instruction.to_bytes(length=8, byteorder="big"),
