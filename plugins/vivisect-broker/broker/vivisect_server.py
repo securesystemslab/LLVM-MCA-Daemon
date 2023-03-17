@@ -52,8 +52,12 @@ class Service(vivserver_pb2_grpc.EmulatorServicer):
             # instructions themselves
             instructions.append(
                 vivserver_pb2.RunInstructionsReply.Instruction(
-                    instruction=instruction.to_bytes(length=max_instruction_size_bytes, byteorder="big"),
-                    opCode=opCode.to_bytes(length=max_instruction_size_bytes, byteorder="big"),
+                    instruction=instruction.to_bytes(
+                        length=max_instruction_size_bytes, byteorder="big"
+                    ),
+                    opCode=opCode.to_bytes(
+                        length=max_instruction_size_bytes, byteorder="big"
+                    ),
                 )
             )
         return vivserver_pb2.RunInstructionsReply(instructions=instructions)
