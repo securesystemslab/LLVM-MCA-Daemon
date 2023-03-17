@@ -57,8 +57,7 @@ int main(int argc, char **argv)
   }
   EmulatorClient emulator(
       grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
-  std::string user("world");
-  auto reply = emulator.RunInstructions(user);
+  auto reply = emulator.RunInstructions(20);
   if (reply)
     std::cout << "Client received: " << reply->DebugString() << std::endl;
 
