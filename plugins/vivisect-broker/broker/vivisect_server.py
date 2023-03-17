@@ -1,12 +1,12 @@
 import vivserver_pb2_grpc
 import vivserver_pb2
 import logging
-from concurrent import futures
 import vivisect
 import Elf
 import grpc
 import click
 
+from concurrent import futures
 
 class Service(vivserver_pb2_grpc.EmulatorServicer):
     def __init__(self, binary_path, architecture, endianness) -> None:
