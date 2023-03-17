@@ -32,10 +32,10 @@ class EmulatorClient {
 
   // Assembles the client's payload, sends it and presents the response back
   // from the server.
-  std::optional<RunInstructionsReply> RunInstructions(const std::string& user) {
+  std::optional<RunInstructionsReply> RunInstructions(int size) {
     // Data we are sending to the server.
     RunInstructionsRequest request;
-    request.set_numinstructions(20);
+    request.set_numinstructions(size);
 
     // Container for the data we expect from the server.
     RunInstructionsReply reply;

@@ -62,7 +62,7 @@ class Service(vivserver_pb2_grpc.EmulatorServicer):
                 yield instruction, op, opCode
 
             except Exception as e:
-                print(e)
+                break
 
 
 @click.command()

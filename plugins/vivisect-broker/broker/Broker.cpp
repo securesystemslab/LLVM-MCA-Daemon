@@ -56,8 +56,10 @@ class VivisectBroker : public Broker
     fetchRegion(MutableArrayRef<const MCInst *> MCIS, int Size = -1,
                 Optional<MDExchanger> MDE = llvm::None) override
     {
-        std::string user("world");
-        auto reply = emulator.RunInstructions(user);
+        if (Size < 0 || Size > MCIS.size())
+            Size = MCIS.size();
+
+        auto reply = emulator.RunInstructions(Size);
 
         mcis.clear();
 
