@@ -43,8 +43,8 @@ class VivisectBroker : public Broker
     const MCSubtargetInfo &mcSubtargetInfo;
     MCContext &mcCtx;
     const Target &target;
-
     std::vector<std::shared_ptr<MCInst>> mcis;
+    EmulatorClient emulator;
 
     int fetch(MutableArrayRef<const MCInst *> MCIS, int Size,
               Optional<MDExchanger> MDE) override
@@ -56,19 +56,10 @@ class VivisectBroker : public Broker
     fetchRegion(MutableArrayRef<const MCInst *> MCIS, int Size = -1,
                 Optional<MDExchanger> MDE = llvm::None) override
     {
-        // Instantiate the client. It requires a channel, out of which the actual RPCs
-        // are created. This channel models a connection to an endpoint specified by
-        // the argument "--target=" which is the only expected argument.
-        // We indicate that the channel isn't authenticated (use of
-        // InsecureChannelCredentials()).
-        std::string target_str = "localhost:50051";
-
-        EmulatorClient emulator(
-            grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
         std::string user("world");
         auto reply = emulator.RunInstructions(user);
 
-        mcis = {};
+        mcis.clear();
 
         if (reply)
         {
@@ -98,7 +89,6 @@ class VivisectBroker : public Broker
             }
             std::cout << "Client received: " << reply->DebugString() << std::endl;
             std::cout << "Is thumb: " << mcSubtargetInfo.getTargetTriple().isThumb();
-            // std::cout << "Yo " << Size << std::endl;
         }
 
         return std::make_pair(reply->instructions_size() == 0 ? -1 : reply->instructions_size(), RegionDescriptor(false));
@@ -107,7 +97,10 @@ class VivisectBroker : public Broker
 public:
     VivisectBroker(const MCSubtargetInfo &mcSubtargetInfo,
                    MCContext &mcCtx, const Target &target) : target(target),
-                                                             mcCtx(mcCtx), mcSubtargetInfo(mcSubtargetInfo)
+                                                             mcCtx(mcCtx),
+                                                             mcSubtargetInfo(mcSubtargetInfo),
+                                                             emulator(EmulatorClient(
+                                                                 grpc::CreateChannel("localhost:50051", grpc::InsecureChannelCredentials())))
     {
 
         std::cout << "STI: " << mcSubtargetInfo.getTargetTriple().normalize() << std::endl;
