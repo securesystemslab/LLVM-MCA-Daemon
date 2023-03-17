@@ -67,7 +67,10 @@ class Service(vivserver_pb2_grpc.EmulatorServicer):
 
 @click.command()
 @click.argument("binary_path")
-@click.option("--architecture", type=click.Choice(["amd64", "arm"]))
+@click.option(
+    "--architecture",
+    type=click.Choice(["amd64", "arm", "ppc32-vle", "ppc64-server", "ppc32-server"]),
+)
 @click.option("--endianness", type=click.Choice(["big", "little"]))
 def serve(binary_path, architecture, endianness):
     uds_addresses = ["[::]:50051"]
