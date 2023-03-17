@@ -39,10 +39,7 @@ Currently only `gRPC` code is generated when built.
 ```
 $ cd .build
 $ cmake .
-```
-
-```
-ninja all
+$ ninja all
 ```
 
 ### Running `MCAD`
