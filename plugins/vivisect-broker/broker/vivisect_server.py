@@ -36,6 +36,13 @@ class Service(vivserver_pb2_grpc.EmulatorServicer):
     def RunNumInstructions(self, request, context):
         ops = list(self.step(request.numInstructions))
         instructions = []
+
+        max_instruction_size_bytes = 0
+        for instruction, _, _ in ops:
+            max_instruction_size_bytes = max(
+                (instruction.bit_length() + 7) // 8, max_instruction_size_bytes
+            )
+
         for instruction, _, opCode in ops:
             print(f"instruction: {hex(instruction)}, opcode: {hex(opCode)}")
 
@@ -45,8 +52,8 @@ class Service(vivserver_pb2_grpc.EmulatorServicer):
             # instructions themselves
             instructions.append(
                 vivserver_pb2.RunInstructionsReply.Instruction(
-                    instruction=instruction.to_bytes(length=8, byteorder="big"),
-                    opCode=opCode.to_bytes(length=8, byteorder="big"),
+                    instruction=instruction.to_bytes(length=max_instruction_size_bytes, byteorder="big"),
+                    opCode=opCode.to_bytes(length=max_instruction_size_bytes, byteorder="big"),
                 )
             )
         return vivserver_pb2.RunInstructionsReply(instructions=instructions)
