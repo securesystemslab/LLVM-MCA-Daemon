@@ -5,6 +5,8 @@ import vivisect
 import Elf
 import grpc
 import click
+import envi
+import envi.archs.ppc.const as eapc
 
 from concurrent import futures
 
@@ -14,25 +16,36 @@ class Service(vivserver_pb2_grpc.EmulatorServicer):
         # binary_path = "/home/davidanekstein/amp/Challenge-Problems-master/Challenge_03/build/program_c"
         self.binary_path = binary_path
 
-        vw = vivisect.VivWorkspace()
+        self.vw = vivisect.VivWorkspace()
 
         if architecture:
-            vw.setMeta("Architecture", architecture)
+            self.vw.setMeta("Architecture", architecture)
 
         if endianness == "big":
-            vw.setMeta("bigend", True)
-        if endianness == "little":
-            vw.setMeta("bigend", False)
+            self.vw.setMeta("bigend", True)
+        elif endianness == "little":
+            self.vw.setMeta("bigend", False)
+        else:
+            raise Exception(f"{endianness} not supported")
 
-        vw.loadFromFile(binary_path)
-        vw.analyze()
+        self.vw.loadFromFile(binary_path)
+        self.vw.analyze()
 
         elf = Elf.elfFromFileName(binary_path)
         print(hex(elf.getBaseAddress()))
 
-        self.emu = vw.getEmulator()
-        print(list(map(lambda x: vw.getName(x), vw.getEntryPoints())))
-        self.emu.setProgramCounter(vw.getEntryPoints()[0])
+        self.emu = self.vw.getEmulator(funconly=False)
+        print(list(map(lambda x: self.vw.getName(x), self.vw.getEntryPoints())))
+        self.entry = self.vw.getEntryPoints()[0]
+        self.emu.setProgramCounter(self.entry)
+
+        # set the link register to determine when the program
+        # calls blr to hand control back to the OS
+        # TODO: this is probably only going to work
+        # for PowerPC or ARM where link registers are a thing
+        self.emu.setRegisterByName("lr", 0xCAFECAFE)
+
+        self.instruction_count = 0
 
     def RunNumInstructions(self, request, context):
         ops = list(self.step(request.numInstructions))
@@ -44,9 +57,7 @@ class Service(vivserver_pb2_grpc.EmulatorServicer):
                 (instruction.bit_length() + 7) // 8, max_instruction_size_bytes
             )
 
-        for instruction, _, opCode in ops:
-            print(f"instruction: {hex(instruction)}, opcode: {hex(opCode)}")
-
+        for instruction, op, opCode in ops:
             # although the ISA may be little endian, we don't want to alter the byte order of the int that
             # vivisect returns for the instruction and for the opcode before sending it. Big endian maintains
             # the byte order, so that's what we send, but this does not reflect the endianess of the
@@ -64,17 +75,28 @@ class Service(vivserver_pb2_grpc.EmulatorServicer):
         return vivserver_pb2.RunInstructionsReply(instructions=instructions)
 
     def step(self, n):
-        print(n)
+        print(f"instructions requested: {n}")
         for i in range(1, n):
             try:
-                pc_before = self.emu.getProgramCounter()
-                op = self.emu.parseOpcode(self.emu.getProgramCounter())
+                pc = self.emu.getProgramCounter()
+                if pc == 0xCAFECAFE:
+                    print("COMPLETE")
+                    break
+
+                op = self.emu.parseOpcode(pc)
+                instruction = self.emu.readMemValue(pc, 4)
+
+                print(f"instruction: {hex(instruction)}, op: {op}, op va: {hex(op.va)}")
+
                 self.emu.stepi()
-                instruction = self.emu.readMemValue(self.emu.getProgramCounter(), 4)
+
                 opCode = op.opcode
+                self.instruction_count += 1
+
                 yield instruction, op, opCode
 
             except Exception as e:
+                print(e)
                 break
 
 
