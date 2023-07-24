@@ -28,11 +28,14 @@ target_link_libraries(vivisect_server_proto
 # Compile protobuf and grpc files in vivisect_server_proto target to cpp
 #
 get_target_property(grpc_cpp_plugin_location gRPC::grpc_cpp_plugin LOCATION)
-protobuf_generate(TARGET vivisect_server_proto LANGUAGE cpp)
+protobuf_generate(TARGET vivisect_server_proto LANGUAGE cpp OUT_VAR proto_files)
 protobuf_generate(TARGET vivisect_server_proto LANGUAGE grpc GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc PLUGIN "protoc-gen-grpc=${grpc_cpp_plugin_location}")
 
+set(proto_include_dir "${CMAKE_CURRENT_BINARY_DIR}")
 
-###
+target_include_directories(vivisect_server_proto PUBLIC ${proto_include_dir})
+message(STATUS "Protobuf include directory: ${proto_include_dir}")
+
 
 set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
 find_package (Python3 REQUIRED
