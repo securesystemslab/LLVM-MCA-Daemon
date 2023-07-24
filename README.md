@@ -12,7 +12,7 @@ cd llvm-project
 mkdir .build && cd .build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
                -DBUILD_SHARED_LIBS=ON \
-               -DLLVM_TARGETS_TO_BUILD="X86;ARM" \
+               -DLLVM_TARGETS_TO_BUILD="X86;ARM;PowerPC" \
                -DLLVM_USE_LINKER=gold \
                ../llvm
 ninja llvm-mca llvm-mc LLVMDebugInfoDWARF
@@ -51,7 +51,13 @@ cd .build
 ./llvm-mcad -mtriple="x86_64-unknown-linux-gnu" -mcpu="skylake" \
             --load-broker-plugin=$PWD/plugins/qemu-broker/libMCADQemuBroker.so \
             -broker-plugin-arg-host="localhost:9487"
+
+# PowerPC 64-bit little endian
+./llvm-mcad -mtriple="powerpcle-linux-gnu" -mcpu="pwr10" \
+    --load-broker-plugin=$PWD/plugins/qemu-broker/libMCADQemuBroker.so \
+    -broker-plugin-arg-host="localhost:9487"
 ```
+
 Then, on the client side:
 ```bash
 # Client
@@ -65,6 +71,11 @@ Then, on the client side:
       -plugin /path/to/llvm-mcad/.build/plugins/qemu-broker/Qemu/libQemuRelay.so,\
       arg="-addr=127.0.0.1",arg="-port=9487" \
       -d plugin ./hello_world.x86_64
+# PowerPC 64-bit little endian
+/path/to/qemu/build/qemu-ppc64le \
+      -plugin /path/to/llvm-mcad/.build/plugins/qemu-broker/Qemu/libQemuRelay.so,\
+      arg="-addr=127.0.0.1",arg="-port=9487" \
+      -d plugin ./hello_world.ppc64le
 ```
 
 Here are some other important command line arguments:
