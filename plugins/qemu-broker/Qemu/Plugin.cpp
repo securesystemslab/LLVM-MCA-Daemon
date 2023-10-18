@@ -137,7 +137,7 @@ static void tbExecCallback(unsigned int CPUId, void *Data) {
 #endif
 
   uint64_t VAddr = TBIdx;
-  if (CurrentQemuTarget.startswith_lower("arm") &&
+  if (CurrentQemuTarget.startswith_insensitive("arm") &&
       RegInfoRegistry.count("cpsr") && RegInfoRegistry.count("pc")) {
     uint32_t CPSR, PC;
     const auto &PCRegInfo = RegInfoRegistry["pc"],
@@ -154,12 +154,20 @@ static void tbExecCallback(unsigned int CPUId, void *Data) {
     } else
       WithColor::error() << "Failed to read ARM PC or CPSR register\n";
   }
-  if (CurrentQemuTarget.startswith_lower("x86_64") &&
+  if (CurrentQemuTarget.startswith_insensitive("x86_64") &&
       RegInfoRegistry.count("rip")) {
     const auto &RIPRegInfo = RegInfoRegistry["rip"];
     if (qemu_plugin_vcpu_read_register(RIPRegInfo.RegId, &VAddr,
                                        RIPRegInfo.Size) <= 0)
       WithColor::error() << "Failed to read X86_64 RIP register\n";
+  }
+
+  if (CurrentQemuTarget.startswith_insensitive("riscv") &&
+      RegInfoRegistry.count("pc")) {
+    const auto &PCRegInfo = RegInfoRegistry["pc"];
+    if (qemu_plugin_vcpu_read_register(PCRegInfo.RegId, &VAddr,
+                                       PCRegInfo.Size) <= 0)
+      WithColor::error() << "Failed to read RISCV PC register\n";
   }
 
   CurrentExecTB->TBIdx = TBIdx;
@@ -185,7 +193,7 @@ static llvm::Optional<uint64_t> CodeEndAddr;
 
 static void sendCodeStartAddr() {
   using namespace mcad;
-  assert(CodeStartAddr.hasValue());
+  assert(CodeStartAddr.has_value());
 
   flatbuffers::FlatBufferBuilder Builder(16);
   auto FbMD = fbs::CreateMetadata(Builder, *CodeStartAddr);
@@ -278,7 +286,7 @@ static void tbTranslateCallback(qemu_plugin_id_t Id,
 
   // Since qemu_plugin_vcpu_get_register_info can only be invoked
   // after the CPU is running, we can't call it in vcpu init callback.
-  if (CurrentQemuTarget.startswith_lower("arm")) {
+  if (CurrentQemuTarget.startswith_insensitive("arm")) {
     if (!RegInfoRegistry.count("cpsr")) {
       // TODO: Cortex-M series processor, which uses
       // XPSR instead of CPSR
@@ -303,7 +311,7 @@ static void tbTranslateCallback(qemu_plugin_id_t Id,
     }
   }
 
-  if (CurrentQemuTarget.startswith_lower("x86_64")) {
+  if (CurrentQemuTarget.startswith_insensitive("x86_64")) {
     if (!RegInfoRegistry.count("rip")) {
       uint8_t RegSize;
       int RegId = qemu_plugin_vcpu_get_register_info("rip",
@@ -313,6 +321,16 @@ static void tbTranslateCallback(qemu_plugin_id_t Id,
       } else {
         RegInfoRegistry.insert({"rip", {RegId, RegSize}});
       }
+    }
+  }
+
+  if (CurrentQemuTarget.startswith_insensitive("riscv")) {
+    uint8_t RegSize;
+    int RegId = qemu_plugin_vcpu_get_register_info("pc", &RegSize);
+    if (RegId < 0) {
+      errs() << "Failed to get register id of RISCV pc from QEMU\n";
+    } else {
+      RegInfoRegistry.insert({"pc", {RegId, RegSize}});
     }
   }
 }

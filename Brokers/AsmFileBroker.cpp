@@ -21,8 +21,9 @@ static cl::opt<std::string>
 
 AsmFileBroker::AsmFileBroker(const Target &T, MCContext &Ctx,
                              const MCAsmInfo &MAI, const MCSubtargetInfo &STI,
-                             const MCInstrInfo &MII)
-  : SrcMgr(), CRG(T, SrcMgr, Ctx, MAI, STI, MII),
+                             const MCInstrInfo &MII,
+                             llvm::SourceMgr &SM)
+  : SrcMgr(SM), CRG(T, SrcMgr, Ctx, MAI, STI, MII),
     Regions(nullptr), CurInstIdx(0U), IsInvalid(false) {
   llvm::InitializeAllAsmParsers();
 
@@ -39,7 +40,8 @@ void AsmFileBroker::Register(BrokerFacade BF) {
   BF.setBroker(
     std::make_unique<AsmFileBroker>(BF.getTarget(), BF.getCtx(),
                                     BF.getAsmInfo(), BF.getSTI(),
-                                    BF.getInstrInfo()));
+                                    BF.getInstrInfo(),
+                                    BF.getSourceMgr()));
 }
 
 bool AsmFileBroker::parseIfNeeded() {

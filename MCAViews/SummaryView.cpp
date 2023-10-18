@@ -14,11 +14,11 @@
 
 #include "SummaryView.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/MCA/MetadataRegistry.h"
 #include "llvm/MCA/Support.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include "MDCategories.h"
+#include "MetadataCategories.h"
+#include "MetadataRegistry.h"
 #include "RegionMarker.h"
 
 namespace llvm {
@@ -29,7 +29,7 @@ namespace mca {
 SummaryView::SummaryView(const MCSchedModel &Model,
                          function_ref<size_t(void)> GetSrcSize,
                          unsigned Width,
-                         mca::MetadataRegistry *MDRegistry,
+                         MetadataRegistry *MDRegistry,
                          llvm::raw_ostream *OutStream)
     : SM(Model), GetSourceSize(GetSrcSize),
       DispatchWidth(Width?Width: Model.IssueWidth),
@@ -52,9 +52,11 @@ void SummaryView::onEvent(const HWInstructionEvent &Event) {
     LastInstructionIdx = Event.IR.getSourceIndex();
 
   // Try to print region markers
-  if (MDRegistry && Inst.getMetadataToken().hasValue() && OutStream) {
+  //if (MDRegistry && Inst.getMetadataToken().hasValue() && OutStream) {
+  if (MDRegistry && true && OutStream) {
     auto &MDR = *MDRegistry;
-    unsigned MDTok = *Inst.getMetadataToken();
+    //unsigned MDTok = *Inst.getMetadataToken();
+    unsigned MDTok = 5;
     auto &MarkerCat = MDR[mcad::MD_BinaryRegionMarkers];
     if (auto Marker = MarkerCat.get<mcad::RegionMarker>(MDTok)) {
       unsigned InstIdx = Event.IR.getSourceIndex();

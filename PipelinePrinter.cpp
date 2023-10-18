@@ -12,14 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "PipelinePrinter.h"
-#include "MCAViews/View.h"
+#include "llvm/MCA/View.h"
 
 namespace llvm {
 namespace mca {
 
 void PipelinePrinter::printReport(llvm::raw_ostream &OS) const {
   for (const auto &V : Views)
-    V->printView(OutputKind, OS);
+    V->printView(OS); // TODO: choose whether to print json or normal
 }
 } // namespace mca.
 } // namespace llvm

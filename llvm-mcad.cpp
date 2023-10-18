@@ -26,7 +26,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -38,6 +38,7 @@
 #include "Brokers/BrokerPlugin.h"
 #include "MCAWorker.h"
 #include "PipelinePrinter.h"
+#include "MetadataRegistry.h"
 
 #ifdef LLVM_MCAD_ENABLE_TCMALLOC
 #include "gperftools/heap-profiler.h"
@@ -289,6 +290,7 @@ int main(int argc, char **argv) {
   // Initialize targets
   InitializeAllTargetInfos();
   InitializeAllTargetMCs();
+  InitializeAllAsmParsers();
   // Although `llvm-mcad` doesn't use the disassembler, some broker
   // plugin might use it. However, if we call InitializeAllDisassemblers
   // in the broker plugin, it will fail to retrieve the correct `Target`
@@ -296,7 +298,6 @@ int main(int argc, char **argv) {
   // Therefore, we have little choises but initializing them here.
   // FIXME: Put "require disassembler" as a Broker feature
   // and initialize them only when that feature is given.
-  // FIXME: What about AsmParser?
   InitializeAllDisassemblers();
 
   // Print all available targets in `--verison`
@@ -329,8 +330,9 @@ int main(int argc, char **argv) {
             TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   assert(MAI);
 
+  llvm::SourceMgr SM;
   auto Ctx = std::make_unique<MCContext>(TheTriple,
-                                         MAI.get(), MRI.get(), STI.get());
+                                         MAI.get(), MRI.get(), STI.get(), &SM);
   std::unique_ptr<MCObjectFileInfo> MOFI(
     TheTarget->createMCObjectFileInfo(*Ctx, /*PIC=*/false));
   Ctx->setObjectFileInfo(MOFI.get());
@@ -353,7 +355,6 @@ int main(int argc, char **argv) {
   mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get());
 
   mca::Context MCA(*MRI, *STI);
-  MCA.createMetadataRegistry();
 
   mca::PipelineOptions PO(/*MicroOpQueue=*/0, /*DecoderThroughput=*/0,
                           /*DispatchWidth=*/0,
@@ -369,9 +370,11 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  std::unique_ptr<mca::MetadataRegistry> MDR = std::make_unique<mca::MetadataRegistry>();
   mcad::MCAWorker Worker(*TheTarget, *STI,
                          MCA, PO, IB, OF,
-                         *Ctx, *MAI, *MCII, *IP);
+                         *Ctx, *MAI, *MCII, *IP, 
+                         *MDR, SM);
 
   if(int Ret = initializeProfilers())
     return Ret;

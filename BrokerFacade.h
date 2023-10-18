@@ -8,6 +8,7 @@ class MCAsmInfo;
 class MCContext;
 class MCSubtargetInfo;
 class MCInstrInfo;
+class SourceMgr;
 
 namespace mcad {
 class Broker;
@@ -35,6 +36,8 @@ public:
   const MCInstrInfo &getInstrInfo() const;
 
   const MCSubtargetInfo &getSTI() const;
+
+  llvm::SourceMgr &getSourceMgr() const;
 };
 } // end namespace mcad
 } // end namespace llvm

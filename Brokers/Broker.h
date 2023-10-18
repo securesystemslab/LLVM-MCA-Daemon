@@ -6,6 +6,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInst.h"
 #include <utility>
+#include "MetadataRegistry.h"
 
 namespace llvm {
 namespace mca {
@@ -14,7 +15,7 @@ class MetadataRegistry;
 
 namespace mcad {
 struct MDExchanger {
-  mca::MetadataRegistry &MDRegistry;
+  llvm::mca::MetadataRegistry &MDRegistry;
   // Mapping MCInst index in the current batch
   // to index in MetadataRegistry
   DenseMap<unsigned, unsigned> &IndexMap;

@@ -11,7 +11,7 @@ namespace mcad {
 // A broker that simply reads from local assembly file.
 // Useful for testing.
 class AsmFileBroker : public Broker {
-  llvm::SourceMgr SrcMgr;
+  llvm::SourceMgr &SrcMgr;
   mca::AsmCodeRegionGenerator CRG;
 
   const mca::CodeRegions *Regions;
@@ -27,7 +27,8 @@ class AsmFileBroker : public Broker {
 public:
   AsmFileBroker(const Target &T, MCContext &C,
                 const MCAsmInfo &A, const MCSubtargetInfo &S,
-                const MCInstrInfo &I);
+                const MCInstrInfo &I,
+                llvm::SourceMgr &SM);
 
   static void Register(BrokerFacade BF);
 

@@ -1,7 +1,7 @@
 #ifndef MCAD_MCAWORKER_H
 #define MCAD_MCAWORKER_H
 #include "llvm/ADT/Optional.h"
-#include "llvm/MCA/SourceMgr.h"
+#include "llvm/MCA/IncrementalSourceMgr.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Timer.h"
 #include <functional>
@@ -30,6 +30,7 @@ class PipelineOptions;
 class PipelinePrinter;
 class InstrDesc;
 class Instruction;
+class CustomBehaviour;
 } // end namespace mca
 
 namespace mcad {
@@ -43,6 +44,7 @@ class MCAWorker {
   const MCInstrInfo &MCII;
   MCInstPrinter &MIP;
   mca::Context &TheMCA;
+  mca::MetadataRegistry &MDR;
   const mca::PipelineOptions &MCAPO;
   ToolOutputFile &MCAOF;
   std::unique_ptr<mca::Pipeline> MCAPipeline;
@@ -52,6 +54,10 @@ class MCAWorker {
   // MCAWorker is the owner of this callback. Note that
   // SummaryView will only take reference of it.
   std::function<size_t(void)> GetTraceMISize;
+
+  llvm::SourceMgr &SM;
+
+  mca::CustomBehaviour *CB;
 
   mca::IncrementalSourceMgr SrcMgr;
 
@@ -65,7 +71,6 @@ class MCAWorker {
 
   std::unique_ptr<Broker> TheBroker;
 
-  std::unique_ptr<mca::Pipeline> createPipeline();
   void resetPipeline();
 
   Error runPipeline();
@@ -84,7 +89,10 @@ public:
             MCContext &Ctx,
             const MCAsmInfo &MAI,
             const MCInstrInfo &II,
-            MCInstPrinter &IP);
+            MCInstPrinter &IP,
+            mca::MetadataRegistry &MDR,
+            llvm::SourceMgr &SM
+            );
 
   BrokerFacade getBrokerFacade() {
     return BrokerFacade(*this);

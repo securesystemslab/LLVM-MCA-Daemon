@@ -28,11 +28,12 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_SUMMARYVIEW_H
 #define LLVM_TOOLS_LLVM_MCA_SUMMARYVIEW_H
 
-#include "View.h"
+#include "llvm/MCA/View.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/raw_ostream.h"
+#include "MetadataRegistry.h"
 
 namespace llvm {
 class raw_ostream;
@@ -95,7 +96,7 @@ public:
   SummaryView(const llvm::MCSchedModel &Model,
               llvm::function_ref<size_t(void)> GetSrcSize,
               unsigned Width,
-              mca::MetadataRegistry *MDRegistry = nullptr,
+              llvm::mca::MetadataRegistry *MDRegistry = nullptr,
               llvm::raw_ostream *OutStream = nullptr);
 
   void onCycleEnd() override { ++TotalCycles; }
