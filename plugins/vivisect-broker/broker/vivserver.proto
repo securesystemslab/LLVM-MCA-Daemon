@@ -9,10 +9,9 @@ message RunInstructionsRequest {
 }
 
 message MemoryAccess {
-    uint32 index = 1;
-    uint64 vAddr = 2;
-    uint32 size = 3;
-    bool isStore = 4;
+    uint64 vAddr = 1;
+    uint32 size = 2;
+    bool isStore = 3;
 }
 
 message RunInstructionsReply {

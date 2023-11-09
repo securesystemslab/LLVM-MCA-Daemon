@@ -67,10 +67,11 @@ class VivisectBroker : public Broker
         {
             for (int i = 0; i < reply->instructions_size(); i++)
             {
-                auto inst = reply->instructions(i).instruction();
+                auto inst = reply->instructions(i);
+                auto inst_bytes = inst.instruction();
                 SmallVector<uint8_t, 1024> instructionBuffer;
                 std::cout << "instruction: ";
-                for (uint8_t c : inst)
+                for (uint8_t c : inst_bytes)
                 {
                     instructionBuffer.push_back(c);
                 }
@@ -84,6 +85,18 @@ class VivisectBroker : public Broker
                                                            nulls());
                 mcis.push_back(MCI);
                 MCIS[i] = MCI.get();
+
+                if (MDE && inst.has_memoryaccess()) {
+                    auto MemAccess = inst.memoryaccess();
+                    auto &Registry = MDE->MDRegistry;
+                    auto &IndexMap = MDE->IndexMap;
+                    auto &MemAccessCat = Registry[mca::MD_LSUnit_MemAccess];
+
+                    MemAccessCat[i] = std::move(mca::MDMemoryAccess{
+                                                    MemAccess.isstore(),
+                                                    MemAccess.vaddr(),
+                                                    MemAccess.size()});
+                }
 
                 // Disassembled
                 std::cout << std::endl
@@ -109,6 +122,10 @@ public:
         std::cout << "Target: " << target.getName() << std::endl;
 
         disasm.reset(target.createMCDisassembler(mcSubtargetInfo, mcCtx));
+    }
+
+    unsigned getFeatures() const override {
+        return Broker::Feature_Metadata;
     }
 };
 
