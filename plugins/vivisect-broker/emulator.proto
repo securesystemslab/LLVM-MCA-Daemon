@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+service Emulator {
+    rpc RecordEmulatorActions (EmulatorActions) returns (NextAction);
+}
+
+message NextAction {
+    optional int32 num_instructions = 1;
+}
+
+message EmulatorActions {
+    repeated Instruction instructions = 1;
+
+    message MemoryAccess {
+        uint64 vaddr = 1;
+        uint32 size = 2;
+        bool is_store = 3;
+    }
+
+    message Instruction {
+        bytes opcode = 1;
+        optional MemoryAccess mem_access= 2;
+    }
+}

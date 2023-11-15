@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import vivserver_pb2 as vivserver__pb2
+import emulator_pb2 as emulator__pb2
 
 
 class EmulatorStub(object):
@@ -14,17 +14,17 @@ class EmulatorStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.RunNumInstructions = channel.unary_unary(
-                '/Emulator/RunNumInstructions',
-                request_serializer=vivserver__pb2.RunInstructionsRequest.SerializeToString,
-                response_deserializer=vivserver__pb2.RunInstructionsReply.FromString,
+        self.RecordEmulatorActions = channel.unary_unary(
+                '/Emulator/RecordEmulatorActions',
+                request_serializer=emulator__pb2.EmulatorActions.SerializeToString,
+                response_deserializer=emulator__pb2.NextAction.FromString,
                 )
 
 
 class EmulatorServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def RunNumInstructions(self, request, context):
+    def RecordEmulatorActions(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -33,10 +33,10 @@ class EmulatorServicer(object):
 
 def add_EmulatorServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'RunNumInstructions': grpc.unary_unary_rpc_method_handler(
-                    servicer.RunNumInstructions,
-                    request_deserializer=vivserver__pb2.RunInstructionsRequest.FromString,
-                    response_serializer=vivserver__pb2.RunInstructionsReply.SerializeToString,
+            'RecordEmulatorActions': grpc.unary_unary_rpc_method_handler(
+                    servicer.RecordEmulatorActions,
+                    request_deserializer=emulator__pb2.EmulatorActions.FromString,
+                    response_serializer=emulator__pb2.NextAction.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -49,7 +49,7 @@ class Emulator(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def RunNumInstructions(request,
+    def RecordEmulatorActions(request,
             target,
             options=(),
             channel_credentials=None,
@@ -59,8 +59,8 @@ class Emulator(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/Emulator/RunNumInstructions',
-            vivserver__pb2.RunInstructionsRequest.SerializeToString,
-            vivserver__pb2.RunInstructionsReply.FromString,
+        return grpc.experimental.unary_unary(request, target, '/Emulator/RecordEmulatorActions',
+            emulator__pb2.EmulatorActions.SerializeToString,
+            emulator__pb2.NextAction.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
