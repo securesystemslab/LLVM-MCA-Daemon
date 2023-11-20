@@ -1,0 +1,66 @@
+diff --git a/cm2350/e200z7.py b/cm2350/e200z7.py
+index 507a012..b38b9f1 100644
+--- a/cm2350/e200z7.py
++++ b/cm2350/e200z7.py
+@@ -26,6 +26,8 @@ import envi
+ import envi.bits as e_bits
+ import envi.memory as e_mem
+ 
++from .grpc_client import grpc_client
++
+ # PPC registers
+ from envi.archs.ppc.regs import REG_MCSR, REG_MSR, REG_TSR, REG_TCR, REG_DEC, \
+         REG_DECAR, REG_HID0, REG_HID1, REG_TBU, REG_TB, REG_TBU_WO, REG_TBL_WO
+@@ -140,6 +142,8 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
+ 
+         vimp_emu.WorkspaceEmulator.__init__(self, vw, nostack=True, funconly=False)
+ 
++        self.grpc_client = grpc_client.grpc_client(self)
++
+         ppc_time.PpcEmuTime.__init__(self)
+         #emutimers.ScaledEmuTimeCore.__init__(self, 0.1)
+         emutimers.EmuTimeCore.__init__(self)
+@@ -628,7 +632,8 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
+ 
+             # do normal opcode parsing and execution
+             pc = self.getProgramCounter()
+-            op = self.parseOpcode(pc)
++            op, op_bytes = self._parseOpcode(pc)
++            self.grpc_client.record_instruction(op, op_bytes)
+ 
+             # TODO: check MSR for FP (MSR_FP_MASK) and SPE (MSR_SPE_MASK)
+             # support here?
+@@ -741,7 +746,7 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
+         if perm & e_mem.MM_READ_WRITE:
+             self.clearOpcache(ea, len(bytez))
+ 
+-    def parseOpcode(self, va, arch=envi.ARCH_PPC_E32, skipcache=False, skipcallbacks=False):
++    def _parseOpcode(self, va, arch=envi.ARCH_PPC_E32, skipcache=False, skipcallbacks=False):
+         '''
+         Combination of the WorkspaceEmulator and the standard envi.memory
+         parseOpcode functions that handles translating instruction addresses
+@@ -754,8 +759,8 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
+         else:
+             op = self.opcache[vle].get(ea)
+ 
++        off, b = mmio.ComplexMemoryMap.getByteDef(self, ea)
+         if op is None:
+-            off, b = mmio.ComplexMemoryMap.getByteDef(self, ea)
+             if vle:
+                 op = self._arch_vle_dis.disasm(b, off, va)
+             else:
+@@ -779,7 +784,13 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
+         # handling information
+         self._cur_instr = (op, va, va+op.size, vle)
+ 
+-        return op
++        return op, b[off:off+4]
++
++    def parseOpcode(self, va, arch=envi.ARCH_PPC_E32, skipcache=False, skipcallbacks=False):
++        return self._parseOpcode(va,arch,skipcache,skipcallbacks)[0]
++
++    def getOpcodeBytes(self, va, arch=envi.ARCH_PPC_E32, skipcache=False, skipcallbacks=False):
++        return self._parseOpcode(va,arch,skipcache,skipcallbacks)[1]
+ 
+     def _checkReadCallbacks(self, src, addr, data=None, size=0, instr=False):
+         '''
