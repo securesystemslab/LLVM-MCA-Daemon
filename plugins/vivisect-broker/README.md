@@ -1,51 +1,69 @@
 # Vivisect Broker
 
-## Generating Vivisect Server Python Protobuf / gRPC code
+This broker works with emulators based off of the vivisect disassembler framework.
+
+## Regenerating Protobuf/gRPC code
+
+This directory already contains a copy of the protobuf/gRPC code for the
+C++-based server and a python client. To update them, edit the interface
+`emulator.proto` and rerun the following.
 
 ```
-python3 -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=.
+python3 -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. emulator.proto
+protoc --grpc_out=. --cpp_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` emulator.proto
 ```
 
-## Testing the server
-
-### Usage
+This may require running the following if they are not already installed on your system
 
 ```
-$ python3 vivisect_server.py --help
-Usage: vivisect_server.py [OPTIONS] BINARY_PATH
-
-Options:
-  -a, --architecture [amd64|arm|ppc32-vle|ppc64-server|ppc32-server]
-  --address TEXT                  [default: localhost]
-  -p, --port TEXT                 [default: 50051]
-  -e, --endianness [big|little]
-  --help                          Show this message and exit.
+pip install grpcio
+pip install protobuf
 ```
 
-Start the server and **wait for analysis to complete**.
+## Build
 
-In another window, start the test client
-
-```
-python vivisect_test_client.py
-```
-
-or, run with `MCAD`
-
-## `MCAD` Vivisect Broker
-
-Currently only `gRPC` code is generated when built.
+To build MCAD plugins you must set `-DLLVM_MCAD_BUILD_PLUGINS=ON` when running
+the CMake config step. For example
 
 ```
-$ cd .build
-$ cmake .
-$ ninja all
+mkdir build && build
+cmake -GNinja -DCMAKE_BUILD_TYPE=Debug \
+              -DLLVM_DIR=/path/to/installed-llvm/lib/cmake/llvm \
+              -DLLVM_MCAD_BUILD_PLUGINS=ON \
+              ..
+ninja llvm-mcad MCADVivisectBroker
 ```
 
-### Running `MCAD`
-
-### x86
+This broker also requires modifying the emulator to make use of the grpc client
+to record instructions executed. This directory contains cm2350.patch which can
+be applied to the CM2350 emulator
 
 ```
-$ .build/llvm-mcad -mtriple="x86_64-unknown-linux-gnu" -mcpu="skylake" --load-broker-plugin=.build/plugins/vivisect-broker/broker/libMCADVivisectBroker.so -broker-plugin-arg-host=127.0.0.1:10090 -debug
+git clone git@github.com:Assured-Micropatching/CM2350-Emulator
+git checkout 12c2811ee20b8aa52ad5e705f2be71902ca2f848
+git apply /path/to/this/directory/cm2350.patch
 ```
+
+## Usage
+
+This directory generates
+`/$BUILD_DIR/plugins/vivisect-broker/libMCADVivisectBroker.so` which is the
+broker plugin that is loaded by MCAD. It sets up a gRPC server in MCAD to handle
+client requests from an emulator for recording instructions executed. See
+`emulator.proto` for all the actions that an emulator can record in MCAD.
+
+To use it, first start MCAD
+```
+./llvm-mcad -mtriple="powerpcle-linux-gnu" -mcpu="pwr10" \
+            -load-broker-plugin=$PWD/plugins/vivisect-broker/libMCADVivisectBroker.so
+```
+
+Then start the emulator, for example in the case of the CM2350 emulator
+
+```
+./ECU.py -vvv test_program.bin
+```
+
+After shutting down the emulator, the gRPC client will ensure that the
+connection to the server is closed and notify MCAD that the emulator has
+terminated.

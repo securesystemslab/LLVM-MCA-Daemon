@@ -3,7 +3,8 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(protobuf CONFIG REQUIRED)
 find_package(gRPC CONFIG REQUIRED)
 
-add_library(vivisect_service_proto SHARED emulator.proto)
+add_library(vivisect_service_proto emulator.proto)
+target_compile_options(vivisect_service_proto PRIVATE "-fPIC")
 target_link_libraries(vivisect_service_proto
     PUBLIC
         protobuf::libprotobuf
@@ -47,9 +48,7 @@ add_llvm_library(MCADVivisectBroker SHARED
 add_dependencies(MCADVivisectBroker 
     vivisect_service_proto)
 
-target_link_libraries(MCADVivisectBroker
-    PUBLIC
-        vivisect_service_proto)
+target_link_libraries(MCADVivisectBroker PUBLIC vivisect_service_proto)
 
 unset(LLVM_EXPORTED_SYMBOL_FILE)
 
