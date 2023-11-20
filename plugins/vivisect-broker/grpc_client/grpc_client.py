@@ -1,5 +1,10 @@
 import grpc
 
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import emulator_pb2
 import emulator_pb2_grpc
 
