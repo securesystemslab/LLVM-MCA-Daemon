@@ -99,7 +99,8 @@ class VivisectBroker : public Broker {
         }
 
         for (int i = 0; i < Size; i++) {
-            auto insn_bytes = Service.InsnQueue.back().opcode();
+            auto insn = Service.InsnQueue.back();
+            auto insn_bytes = insn.opcode();
 
             SmallVector<uint8_t, 4> instructionBuffer;
             for (uint8_t c : insn_bytes) {
@@ -112,6 +113,18 @@ class VivisectBroker : public Broker {
             auto Disassembled = DisAsm->getInstruction(*MCI, DisAsmSize, InstBytes, 0, nulls());
 
             MCIS[i] = MCI.get();
+
+            if (MDE && insn.has_memory_access()) {
+                auto MemAccess = insn.memory_access();
+                auto &Registry = MDE->MDRegistry;
+                auto &IndexMap = MDE->IndexMap;
+                auto &MemAccessCat = Registry[mca::MD_LSUnit_MemAccess];
+                MemAccessCat[i] = std::move(mca::MDMemoryAccess{
+                    MemAccess.is_store(),
+                    MemAccess.vaddr(),
+                    MemAccess.size(),
+                });
+            }
             Service.InsnQueue.pop();
         }
         return std::make_pair(num_insn, RegionDescriptor(false));
