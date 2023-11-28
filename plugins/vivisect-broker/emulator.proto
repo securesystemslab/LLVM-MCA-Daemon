@@ -19,6 +19,6 @@ message EmulatorActions {
 
     message Instruction {
         bytes opcode = 1;
-        optional MemoryAccess mem_access= 2;
+        optional MemoryAccess memory_access= 2;
     }
 }

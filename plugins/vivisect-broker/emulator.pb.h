@@ -587,7 +587,7 @@ class EmulatorActions_Instruction final :
 
   enum : int {
     kOpcodeFieldNumber = 1,
-    kMemAccessFieldNumber = 2,
+    kMemoryAccessFieldNumber = 2,
   };
   // bytes opcode = 1;
   void clear_opcode() ;
@@ -605,19 +605,19 @@ class EmulatorActions_Instruction final :
   std::string* _internal_mutable_opcode();
 
   public:
-  // optional .EmulatorActions.MemoryAccess mem_access = 2;
-  bool has_mem_access() const;
-  void clear_mem_access() ;
-  const ::EmulatorActions_MemoryAccess& mem_access() const;
-  PROTOBUF_NODISCARD ::EmulatorActions_MemoryAccess* release_mem_access();
-  ::EmulatorActions_MemoryAccess* mutable_mem_access();
-  void set_allocated_mem_access(::EmulatorActions_MemoryAccess* value);
-  void unsafe_arena_set_allocated_mem_access(::EmulatorActions_MemoryAccess* value);
-  ::EmulatorActions_MemoryAccess* unsafe_arena_release_mem_access();
+  // optional .EmulatorActions.MemoryAccess memory_access = 2;
+  bool has_memory_access() const;
+  void clear_memory_access() ;
+  const ::EmulatorActions_MemoryAccess& memory_access() const;
+  PROTOBUF_NODISCARD ::EmulatorActions_MemoryAccess* release_memory_access();
+  ::EmulatorActions_MemoryAccess* mutable_memory_access();
+  void set_allocated_memory_access(::EmulatorActions_MemoryAccess* value);
+  void unsafe_arena_set_allocated_memory_access(::EmulatorActions_MemoryAccess* value);
+  ::EmulatorActions_MemoryAccess* unsafe_arena_release_memory_access();
 
   private:
-  const ::EmulatorActions_MemoryAccess& _internal_mem_access() const;
-  ::EmulatorActions_MemoryAccess* _internal_mutable_mem_access();
+  const ::EmulatorActions_MemoryAccess& _internal_memory_access() const;
+  ::EmulatorActions_MemoryAccess* _internal_mutable_memory_access();
 
   public:
   // @@protoc_insertion_point(class_scope:EmulatorActions.Instruction)
@@ -646,7 +646,7 @@ class EmulatorActions_Instruction final :
     ::google::protobuf::internal::HasBits<1> _has_bits_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     ::google::protobuf::internal::ArenaStringPtr opcode_;
-    ::EmulatorActions_MemoryAccess* mem_access_;
+    ::EmulatorActions_MemoryAccess* memory_access_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -1013,45 +1013,45 @@ inline void EmulatorActions_Instruction::set_allocated_opcode(std::string* value
   // @@protoc_insertion_point(field_set_allocated:EmulatorActions.Instruction.opcode)
 }
 
-// optional .EmulatorActions.MemoryAccess mem_access = 2;
-inline bool EmulatorActions_Instruction::has_mem_access() const {
+// optional .EmulatorActions.MemoryAccess memory_access = 2;
+inline bool EmulatorActions_Instruction::has_memory_access() const {
   bool value = (_impl_._has_bits_[0] & 0x00000001u) != 0;
-  PROTOBUF_ASSUME(!value || _impl_.mem_access_ != nullptr);
+  PROTOBUF_ASSUME(!value || _impl_.memory_access_ != nullptr);
   return value;
 }
-inline void EmulatorActions_Instruction::clear_mem_access() {
+inline void EmulatorActions_Instruction::clear_memory_access() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  if (_impl_.mem_access_ != nullptr) _impl_.mem_access_->Clear();
+  if (_impl_.memory_access_ != nullptr) _impl_.memory_access_->Clear();
   _impl_._has_bits_[0] &= ~0x00000001u;
 }
-inline const ::EmulatorActions_MemoryAccess& EmulatorActions_Instruction::_internal_mem_access() const {
+inline const ::EmulatorActions_MemoryAccess& EmulatorActions_Instruction::_internal_memory_access() const {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
-  const ::EmulatorActions_MemoryAccess* p = _impl_.mem_access_;
+  const ::EmulatorActions_MemoryAccess* p = _impl_.memory_access_;
   return p != nullptr ? *p : reinterpret_cast<const ::EmulatorActions_MemoryAccess&>(::_EmulatorActions_MemoryAccess_default_instance_);
 }
-inline const ::EmulatorActions_MemoryAccess& EmulatorActions_Instruction::mem_access() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:EmulatorActions.Instruction.mem_access)
-  return _internal_mem_access();
+inline const ::EmulatorActions_MemoryAccess& EmulatorActions_Instruction::memory_access() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:EmulatorActions.Instruction.memory_access)
+  return _internal_memory_access();
 }
-inline void EmulatorActions_Instruction::unsafe_arena_set_allocated_mem_access(::EmulatorActions_MemoryAccess* value) {
+inline void EmulatorActions_Instruction::unsafe_arena_set_allocated_memory_access(::EmulatorActions_MemoryAccess* value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   if (GetArena() == nullptr) {
-    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.mem_access_);
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.memory_access_);
   }
-  _impl_.mem_access_ = reinterpret_cast<::EmulatorActions_MemoryAccess*>(value);
+  _impl_.memory_access_ = reinterpret_cast<::EmulatorActions_MemoryAccess*>(value);
   if (value != nullptr) {
     _impl_._has_bits_[0] |= 0x00000001u;
   } else {
     _impl_._has_bits_[0] &= ~0x00000001u;
   }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:EmulatorActions.Instruction.mem_access)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:EmulatorActions.Instruction.memory_access)
 }
-inline ::EmulatorActions_MemoryAccess* EmulatorActions_Instruction::release_mem_access() {
+inline ::EmulatorActions_MemoryAccess* EmulatorActions_Instruction::release_memory_access() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
 
   _impl_._has_bits_[0] &= ~0x00000001u;
-  ::EmulatorActions_MemoryAccess* released = _impl_.mem_access_;
-  _impl_.mem_access_ = nullptr;
+  ::EmulatorActions_MemoryAccess* released = _impl_.memory_access_;
+  _impl_.memory_access_ = nullptr;
 #ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
   auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
   released = ::google::protobuf::internal::DuplicateIfNonNull(released);
@@ -1065,34 +1065,34 @@ inline ::EmulatorActions_MemoryAccess* EmulatorActions_Instruction::release_mem_
 #endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
   return released;
 }
-inline ::EmulatorActions_MemoryAccess* EmulatorActions_Instruction::unsafe_arena_release_mem_access() {
+inline ::EmulatorActions_MemoryAccess* EmulatorActions_Instruction::unsafe_arena_release_memory_access() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  // @@protoc_insertion_point(field_release:EmulatorActions.Instruction.mem_access)
+  // @@protoc_insertion_point(field_release:EmulatorActions.Instruction.memory_access)
 
   _impl_._has_bits_[0] &= ~0x00000001u;
-  ::EmulatorActions_MemoryAccess* temp = _impl_.mem_access_;
-  _impl_.mem_access_ = nullptr;
+  ::EmulatorActions_MemoryAccess* temp = _impl_.memory_access_;
+  _impl_.memory_access_ = nullptr;
   return temp;
 }
-inline ::EmulatorActions_MemoryAccess* EmulatorActions_Instruction::_internal_mutable_mem_access() {
+inline ::EmulatorActions_MemoryAccess* EmulatorActions_Instruction::_internal_mutable_memory_access() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   _impl_._has_bits_[0] |= 0x00000001u;
-  if (_impl_.mem_access_ == nullptr) {
+  if (_impl_.memory_access_ == nullptr) {
     auto* p = CreateMaybeMessage<::EmulatorActions_MemoryAccess>(GetArena());
-    _impl_.mem_access_ = reinterpret_cast<::EmulatorActions_MemoryAccess*>(p);
+    _impl_.memory_access_ = reinterpret_cast<::EmulatorActions_MemoryAccess*>(p);
   }
-  return _impl_.mem_access_;
+  return _impl_.memory_access_;
 }
-inline ::EmulatorActions_MemoryAccess* EmulatorActions_Instruction::mutable_mem_access() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  ::EmulatorActions_MemoryAccess* _msg = _internal_mutable_mem_access();
-  // @@protoc_insertion_point(field_mutable:EmulatorActions.Instruction.mem_access)
+inline ::EmulatorActions_MemoryAccess* EmulatorActions_Instruction::mutable_memory_access() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::EmulatorActions_MemoryAccess* _msg = _internal_mutable_memory_access();
+  // @@protoc_insertion_point(field_mutable:EmulatorActions.Instruction.memory_access)
   return _msg;
 }
-inline void EmulatorActions_Instruction::set_allocated_mem_access(::EmulatorActions_MemoryAccess* value) {
+inline void EmulatorActions_Instruction::set_allocated_memory_access(::EmulatorActions_MemoryAccess* value) {
   ::google::protobuf::Arena* message_arena = GetArena();
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   if (message_arena == nullptr) {
-    delete reinterpret_cast<::EmulatorActions_MemoryAccess*>(_impl_.mem_access_);
+    delete reinterpret_cast<::EmulatorActions_MemoryAccess*>(_impl_.memory_access_);
   }
 
   if (value != nullptr) {
@@ -1105,8 +1105,8 @@ inline void EmulatorActions_Instruction::set_allocated_mem_access(::EmulatorActi
     _impl_._has_bits_[0] &= ~0x00000001u;
   }
 
-  _impl_.mem_access_ = reinterpret_cast<::EmulatorActions_MemoryAccess*>(value);
-  // @@protoc_insertion_point(field_set_allocated:EmulatorActions.Instruction.mem_access)
+  _impl_.memory_access_ = reinterpret_cast<::EmulatorActions_MemoryAccess*>(value);
+  // @@protoc_insertion_point(field_set_allocated:EmulatorActions.Instruction.memory_access)
 }
 
 // -------------------------------------------------------------------
