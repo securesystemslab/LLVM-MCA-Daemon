@@ -58,6 +58,9 @@ extern const ::google::protobuf::internal::DescriptorTable
 class EmulatorActions;
 struct EmulatorActionsDefaultTypeInternal;
 extern EmulatorActionsDefaultTypeInternal _EmulatorActions_default_instance_;
+class EmulatorActions_BranchFlow;
+struct EmulatorActions_BranchFlowDefaultTypeInternal;
+extern EmulatorActions_BranchFlowDefaultTypeInternal _EmulatorActions_BranchFlow_default_instance_;
 class EmulatorActions_Instruction;
 struct EmulatorActions_InstructionDefaultTypeInternal;
 extern EmulatorActions_InstructionDefaultTypeInternal _EmulatorActions_Instruction_default_instance_;
@@ -454,6 +457,181 @@ class EmulatorActions_MemoryAccess final :
   friend struct ::TableStruct_emulator_2eproto;
 };// -------------------------------------------------------------------
 
+class EmulatorActions_BranchFlow final :
+    public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:EmulatorActions.BranchFlow) */ {
+ public:
+  inline EmulatorActions_BranchFlow() : EmulatorActions_BranchFlow(nullptr) {}
+  ~EmulatorActions_BranchFlow() override;
+  template<typename = void>
+  explicit PROTOBUF_CONSTEXPR EmulatorActions_BranchFlow(::google::protobuf::internal::ConstantInitialized);
+
+  inline EmulatorActions_BranchFlow(const EmulatorActions_BranchFlow& from)
+      : EmulatorActions_BranchFlow(nullptr, from) {}
+  EmulatorActions_BranchFlow(EmulatorActions_BranchFlow&& from) noexcept
+    : EmulatorActions_BranchFlow() {
+    *this = ::std::move(from);
+  }
+
+  inline EmulatorActions_BranchFlow& operator=(const EmulatorActions_BranchFlow& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline EmulatorActions_BranchFlow& operator=(EmulatorActions_BranchFlow&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetArena() == from.GetArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::google::protobuf::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::google::protobuf::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const EmulatorActions_BranchFlow& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const EmulatorActions_BranchFlow* internal_default_instance() {
+    return reinterpret_cast<const EmulatorActions_BranchFlow*>(
+               &_EmulatorActions_BranchFlow_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    2;
+
+  friend void swap(EmulatorActions_BranchFlow& a, EmulatorActions_BranchFlow& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(EmulatorActions_BranchFlow* other) {
+    if (other == this) return;
+  #ifdef PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() != nullptr &&
+        GetArena() == other->GetArena()) {
+   #else  // PROTOBUF_FORCE_COPY_IN_SWAP
+    if (GetArena() == other->GetArena()) {
+  #endif  // !PROTOBUF_FORCE_COPY_IN_SWAP
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(EmulatorActions_BranchFlow* other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  EmulatorActions_BranchFlow* New(::google::protobuf::Arena* arena = nullptr) const final {
+    return CreateMaybeMessage<EmulatorActions_BranchFlow>(arena);
+  }
+  using ::google::protobuf::Message::CopyFrom;
+  void CopyFrom(const EmulatorActions_BranchFlow& from);
+  using ::google::protobuf::Message::MergeFrom;
+  void MergeFrom( const EmulatorActions_BranchFlow& from) {
+    EmulatorActions_BranchFlow::MergeImpl(*this, from);
+  }
+  private:
+  static void MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg);
+  public:
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  ::size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::google::protobuf::internal::ParseContext* ctx) final;
+  ::uint8_t* _InternalSerialize(
+      ::uint8_t* target, ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  ::google::protobuf::internal::CachedSize* AccessCachedSize() const final;
+  void SharedCtor(::google::protobuf::Arena* arena);
+  void SharedDtor();
+  void InternalSwap(EmulatorActions_BranchFlow* other);
+
+  private:
+  friend class ::google::protobuf::internal::AnyMetadata;
+  static ::absl::string_view FullMessageName() {
+    return "EmulatorActions.BranchFlow";
+  }
+  protected:
+  explicit EmulatorActions_BranchFlow(::google::protobuf::Arena* arena);
+  EmulatorActions_BranchFlow(::google::protobuf::Arena* arena, const EmulatorActions_BranchFlow& from);
+  public:
+
+  static const ClassData _class_data_;
+  const ::google::protobuf::Message::ClassData*GetClassData() const final;
+
+  ::google::protobuf::Metadata GetMetadata() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kIsMispredictFieldNumber = 1,
+  };
+  // bool is_mispredict = 1;
+  void clear_is_mispredict() ;
+  bool is_mispredict() const;
+  void set_is_mispredict(bool value);
+
+  private:
+  bool _internal_is_mispredict() const;
+  void _internal_set_is_mispredict(bool value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:EmulatorActions.BranchFlow)
+ private:
+  class _Internal;
+
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<
+      0, 1, 0,
+      0, 2>
+      _table_;
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+
+        inline explicit constexpr Impl_(
+            ::google::protobuf::internal::ConstantInitialized) noexcept;
+        inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                              ::google::protobuf::Arena* arena);
+        inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                              ::google::protobuf::Arena* arena, const Impl_& from);
+    bool is_mispredict_;
+    mutable ::google::protobuf::internal::CachedSize _cached_size_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_emulator_2eproto;
+};// -------------------------------------------------------------------
+
 class EmulatorActions_Instruction final :
     public ::google::protobuf::Message /* @@protoc_insertion_point(class_definition:EmulatorActions.Instruction) */ {
  public:
@@ -513,7 +691,7 @@ class EmulatorActions_Instruction final :
                &_EmulatorActions_Instruction_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    2;
+    3;
 
   friend void swap(EmulatorActions_Instruction& a, EmulatorActions_Instruction& b) {
     a.Swap(&b);
@@ -588,6 +766,7 @@ class EmulatorActions_Instruction final :
   enum : int {
     kOpcodeFieldNumber = 1,
     kMemoryAccessFieldNumber = 2,
+    kBranchFlowFieldNumber = 3,
   };
   // bytes opcode = 1;
   void clear_opcode() ;
@@ -620,13 +799,28 @@ class EmulatorActions_Instruction final :
   ::EmulatorActions_MemoryAccess* _internal_mutable_memory_access();
 
   public:
+  // optional .EmulatorActions.BranchFlow branch_flow = 3;
+  bool has_branch_flow() const;
+  void clear_branch_flow() ;
+  const ::EmulatorActions_BranchFlow& branch_flow() const;
+  PROTOBUF_NODISCARD ::EmulatorActions_BranchFlow* release_branch_flow();
+  ::EmulatorActions_BranchFlow* mutable_branch_flow();
+  void set_allocated_branch_flow(::EmulatorActions_BranchFlow* value);
+  void unsafe_arena_set_allocated_branch_flow(::EmulatorActions_BranchFlow* value);
+  ::EmulatorActions_BranchFlow* unsafe_arena_release_branch_flow();
+
+  private:
+  const ::EmulatorActions_BranchFlow& _internal_branch_flow() const;
+  ::EmulatorActions_BranchFlow* _internal_mutable_branch_flow();
+
+  public:
   // @@protoc_insertion_point(class_scope:EmulatorActions.Instruction)
  private:
   class _Internal;
 
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      1, 2, 1,
+      2, 3, 2,
       0, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -647,6 +841,7 @@ class EmulatorActions_Instruction final :
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     ::google::protobuf::internal::ArenaStringPtr opcode_;
     ::EmulatorActions_MemoryAccess* memory_access_;
+    ::EmulatorActions_BranchFlow* branch_flow_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -712,7 +907,7 @@ class EmulatorActions final :
                &_EmulatorActions_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    3;
+    4;
 
   friend void swap(EmulatorActions& a, EmulatorActions& b) {
     a.Swap(&b);
@@ -783,6 +978,7 @@ class EmulatorActions final :
   // nested types ----------------------------------------------------
 
   using MemoryAccess = EmulatorActions_MemoryAccess;
+  using BranchFlow = EmulatorActions_BranchFlow;
   using Instruction = EmulatorActions_Instruction;
 
   // accessors -------------------------------------------------------
@@ -958,6 +1154,33 @@ inline void EmulatorActions_MemoryAccess::_internal_set_is_store(bool value) {
 
 // -------------------------------------------------------------------
 
+// EmulatorActions_BranchFlow
+
+// bool is_mispredict = 1;
+inline void EmulatorActions_BranchFlow::clear_is_mispredict() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.is_mispredict_ = false;
+}
+inline bool EmulatorActions_BranchFlow::is_mispredict() const {
+  // @@protoc_insertion_point(field_get:EmulatorActions.BranchFlow.is_mispredict)
+  return _internal_is_mispredict();
+}
+inline void EmulatorActions_BranchFlow::set_is_mispredict(bool value) {
+  _internal_set_is_mispredict(value);
+  // @@protoc_insertion_point(field_set:EmulatorActions.BranchFlow.is_mispredict)
+}
+inline bool EmulatorActions_BranchFlow::_internal_is_mispredict() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.is_mispredict_;
+}
+inline void EmulatorActions_BranchFlow::_internal_set_is_mispredict(bool value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  _impl_.is_mispredict_ = value;
+}
+
+// -------------------------------------------------------------------
+
 // EmulatorActions_Instruction
 
 // bytes opcode = 1;
@@ -1107,6 +1330,102 @@ inline void EmulatorActions_Instruction::set_allocated_memory_access(::EmulatorA
 
   _impl_.memory_access_ = reinterpret_cast<::EmulatorActions_MemoryAccess*>(value);
   // @@protoc_insertion_point(field_set_allocated:EmulatorActions.Instruction.memory_access)
+}
+
+// optional .EmulatorActions.BranchFlow branch_flow = 3;
+inline bool EmulatorActions_Instruction::has_branch_flow() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000002u) != 0;
+  PROTOBUF_ASSUME(!value || _impl_.branch_flow_ != nullptr);
+  return value;
+}
+inline void EmulatorActions_Instruction::clear_branch_flow() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (_impl_.branch_flow_ != nullptr) _impl_.branch_flow_->Clear();
+  _impl_._has_bits_[0] &= ~0x00000002u;
+}
+inline const ::EmulatorActions_BranchFlow& EmulatorActions_Instruction::_internal_branch_flow() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  const ::EmulatorActions_BranchFlow* p = _impl_.branch_flow_;
+  return p != nullptr ? *p : reinterpret_cast<const ::EmulatorActions_BranchFlow&>(::_EmulatorActions_BranchFlow_default_instance_);
+}
+inline const ::EmulatorActions_BranchFlow& EmulatorActions_Instruction::branch_flow() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:EmulatorActions.Instruction.branch_flow)
+  return _internal_branch_flow();
+}
+inline void EmulatorActions_Instruction::unsafe_arena_set_allocated_branch_flow(::EmulatorActions_BranchFlow* value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.branch_flow_);
+  }
+  _impl_.branch_flow_ = reinterpret_cast<::EmulatorActions_BranchFlow*>(value);
+  if (value != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000002u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000002u;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:EmulatorActions.Instruction.branch_flow)
+}
+inline ::EmulatorActions_BranchFlow* EmulatorActions_Instruction::release_branch_flow() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+
+  _impl_._has_bits_[0] &= ~0x00000002u;
+  ::EmulatorActions_BranchFlow* released = _impl_.branch_flow_;
+  _impl_.branch_flow_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+  released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+  if (GetArena() == nullptr) {
+    delete old;
+  }
+#else   // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArena() != nullptr) {
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return released;
+}
+inline ::EmulatorActions_BranchFlow* EmulatorActions_Instruction::unsafe_arena_release_branch_flow() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  // @@protoc_insertion_point(field_release:EmulatorActions.Instruction.branch_flow)
+
+  _impl_._has_bits_[0] &= ~0x00000002u;
+  ::EmulatorActions_BranchFlow* temp = _impl_.branch_flow_;
+  _impl_.branch_flow_ = nullptr;
+  return temp;
+}
+inline ::EmulatorActions_BranchFlow* EmulatorActions_Instruction::_internal_mutable_branch_flow() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_._has_bits_[0] |= 0x00000002u;
+  if (_impl_.branch_flow_ == nullptr) {
+    auto* p = CreateMaybeMessage<::EmulatorActions_BranchFlow>(GetArena());
+    _impl_.branch_flow_ = reinterpret_cast<::EmulatorActions_BranchFlow*>(p);
+  }
+  return _impl_.branch_flow_;
+}
+inline ::EmulatorActions_BranchFlow* EmulatorActions_Instruction::mutable_branch_flow() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::EmulatorActions_BranchFlow* _msg = _internal_mutable_branch_flow();
+  // @@protoc_insertion_point(field_mutable:EmulatorActions.Instruction.branch_flow)
+  return _msg;
+}
+inline void EmulatorActions_Instruction::set_allocated_branch_flow(::EmulatorActions_BranchFlow* value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::EmulatorActions_BranchFlow*>(_impl_.branch_flow_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = reinterpret_cast<::EmulatorActions_BranchFlow*>(value)->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    _impl_._has_bits_[0] |= 0x00000002u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000002u;
+  }
+
+  _impl_.branch_flow_ = reinterpret_cast<::EmulatorActions_BranchFlow*>(value);
+  // @@protoc_insertion_point(field_set_allocated:EmulatorActions.Instruction.branch_flow)
 }
 
 // -------------------------------------------------------------------

@@ -172,7 +172,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createPipeline() {
   auto HWS = std::make_unique<Scheduler>(SM, *LSU, HWC.get());
 
   // Create the pipeline stages.
-  auto Fetch = std::make_unique<EntryStage>(SrcMgr, TheMCA.getMetadataRegistry());
+  auto Fetch = std::make_unique<EntryStage>(SrcMgr, STI, TheMCA.getMetadataRegistry());
   auto Dispatch = std::make_unique<DispatchStage>(STI, MRI, MCAPO.DispatchWidth,
                                                    *RCU, *PRF);
   auto Execute =

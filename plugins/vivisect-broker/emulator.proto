@@ -17,8 +17,13 @@ message EmulatorActions {
         bool is_store = 3;
     }
 
+    message BranchFlow {
+        bool is_mispredict = 1;
+    }
+
     message Instruction {
         bytes opcode = 1;
-        optional MemoryAccess memory_access= 2;
+        optional MemoryAccess memory_access = 2;
+        optional BranchFlow branch_flow = 3;
     }
 }

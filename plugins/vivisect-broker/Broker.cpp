@@ -125,6 +125,15 @@ class VivisectBroker : public Broker {
                     MemAccess.size(),
                 });
             }
+
+            if (MDE && insn.has_branch_flow()) {
+                auto BranchFlow = insn.branch_flow();
+                auto &Registry = MDE->MDRegistry;
+                auto &IndexMap = MDE->IndexMap;
+                auto &BranchFlowCat = Registry[mca::MD_FrontEnd_BranchFlow];
+                BranchFlowCat[i] = BranchFlow.is_mispredict();
+            }
+
             Service.InsnQueue.pop();
         }
         return std::make_pair(num_insn, RegionDescriptor(false));
