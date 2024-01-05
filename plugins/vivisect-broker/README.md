@@ -40,8 +40,11 @@ be applied to the CM2350 emulator
 
 ```
 git clone git@github.com:Assured-Micropatching/CM2350-Emulator
-git checkout 12c2811ee20b8aa52ad5e705f2be71902ca2f848
+cd CM2350-Emulator
+git checkout 2fe2f84a8a64f882cb5ec23407b710083482b78f
 git apply /path/to/this/directory/cm2350.patch
+cp -r /path/to/this/repo/plugins/vivisect-broker/grpc_client /path/to/CM2350-Emulator/cm2350/
+# Optionally add grpcio and protobuf to that repo's requirements.txt to install in the virtualenv
 ```
 
 ## Usage
