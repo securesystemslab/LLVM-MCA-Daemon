@@ -69,6 +69,7 @@ class VivisectBroker : public Broker {
   MCContext &Ctx;
   const MCSubtargetInfo &STI;
   EmulatorService Service;
+  uint32_t TotalNumTraces;
 
   std::unique_ptr<std::thread> ServerThread;
   std::unique_ptr<grpc::Server> server;
@@ -119,7 +120,8 @@ class VivisectBroker : public Broker {
                 auto &Registry = MDE->MDRegistry;
                 auto &IndexMap = MDE->IndexMap;
                 auto &MemAccessCat = Registry[mca::MD_LSUnit_MemAccess];
-                MemAccessCat[i] = std::move(mca::MDMemoryAccess{
+                IndexMap[i] = TotalNumTraces;
+                MemAccessCat[TotalNumTraces] = std::move(mca::MDMemoryAccess{
                     MemAccess.is_store(),
                     MemAccess.vaddr(),
                     MemAccess.size(),
@@ -131,9 +133,11 @@ class VivisectBroker : public Broker {
                 auto &Registry = MDE->MDRegistry;
                 auto &IndexMap = MDE->IndexMap;
                 auto &BranchFlowCat = Registry[mca::MD_FrontEnd_BranchFlow];
-                BranchFlowCat[i] = BranchFlow.is_mispredict();
+                IndexMap[i] = TotalNumTraces;
+                BranchFlowCat[TotalNumTraces] = BranchFlow.is_mispredict();
             }
 
+            ++TotalNumTraces;
             Service.InsnQueue.pop();
         }
         return std::make_pair(num_insn, RegionDescriptor(false));
@@ -146,7 +150,7 @@ class VivisectBroker : public Broker {
 
 public:
   VivisectBroker(const MCSubtargetInfo &MSTI, MCContext &C, const Target &T)
-      : TheTarget(T), Ctx(C), STI(MSTI), Service(EmulatorService()) {
+      : TheTarget(T), Ctx(C), STI(MSTI), Service(EmulatorService()), TotalNumTraces(0U) {
       ServerThread = std::make_unique<std::thread>(&VivisectBroker::serverLoop, this);
       DisAsm.reset(TheTarget.createMCDisassembler(STI, Ctx));
   }

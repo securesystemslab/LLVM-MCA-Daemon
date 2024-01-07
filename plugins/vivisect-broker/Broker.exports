@@ -1,3 +1,4 @@
 mcadGetBrokerPluginInfo
 _ZN4llvm3Any6TypeIdINS_3mca14MDMemoryAccessEE2IdE
 _ZN4llvm3Any6TypeIdINS_4mcad12RegionMarkerEE2IdE
+_ZN4llvm3Any6TypeIdIbE2IdE

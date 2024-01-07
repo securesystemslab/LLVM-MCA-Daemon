@@ -52,13 +52,13 @@ class grpc_client:
             # XXX: Fix this - or make it random
             is_mispredict = True
             if is_mispredict:
-                branch_arg = emulator_pb2.EmulatorAction.BranchFlow(
-                    branch_flow=is_mispredict)
+                branch_arg = emulator_pb2.EmulatorActions.BranchFlow(
+                    is_mispredict=is_mispredict)
 
         insn_arg = emulator_pb2.EmulatorActions.Instruction(opcode=opcode)
         if mem_arg is not None:
             insn_arg = emulator_pb2.EmulatorActions.Instruction(opcode=opcode,
-                mem_access=mem_arg)
+                memory_access=mem_arg)
 
         if branch_arg is not None:
             insn_arg = emulator_pb2.EmulatorActions.Instruction(opcode=opcode,
