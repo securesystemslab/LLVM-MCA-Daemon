@@ -24,6 +24,7 @@
 #include <queue>
 #include <mutex>
 #include <thread>
+#include <algorithm>
 
 #include "BrokerFacade.h"
 #include "Brokers/Broker.h"
@@ -99,9 +100,13 @@ class VivisectBroker : public Broker {
             Size = num_insn;
         }
 
+        const Triple &the_triple = STI.getTargetTriple();
         for (int i = 0; i < Size; i++) {
             auto insn = Service.InsnQueue.back();
             auto insn_bytes = insn.opcode();
+            if (the_triple.isLittleEndian()) {
+                reverse(insn_bytes.begin(), insn_bytes.end());
+            }
 
             SmallVector<uint8_t, 4> instructionBuffer;
             for (uint8_t c : insn_bytes) {
