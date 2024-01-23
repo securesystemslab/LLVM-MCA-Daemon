@@ -96,6 +96,10 @@ void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
 }
 
+void BrokerFacade::registerListener(mca::HWEventListener *EL) {
+  Worker.MCAPipeline->addEventListener(EL);
+}
+
 const Target &BrokerFacade::getTarget() const {
   return Worker.TheTarget;
 }

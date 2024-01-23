@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+service Binja {
+    rpc RequestCycleCounts (BinjaInstructions) returns (CycleCounts);
+}
+
+message BinjaInstructions {
+    repeated Instruction instructions = 1;
+    
+    message Instruction {
+        bytes opcode = 1;
+    }
+}
+
+message CycleCounts {
+    repeated CycleCount cycle_counts = 1;
+
+    message CycleCount {
+        uint64 start = 2;
+        uint64 end = 3;
+    }
+}

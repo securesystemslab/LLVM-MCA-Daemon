@@ -9,6 +9,10 @@ class MCContext;
 class MCSubtargetInfo;
 class MCInstrInfo;
 
+namespace mca {
+class HWEventListener;
+}
+
 namespace mcad {
 class Broker;
 class MCAWorker;
@@ -25,6 +29,8 @@ class BrokerFacade {
 
 public:
   void setBroker(std::unique_ptr<Broker> &&B);
+
+  void registerListener(mca::HWEventListener *EL);
 
   const Target &getTarget() const;
 
