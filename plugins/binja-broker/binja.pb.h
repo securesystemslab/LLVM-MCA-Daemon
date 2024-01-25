@@ -210,27 +210,27 @@ class CycleCounts_CycleCount final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kStartFieldNumber = 2,
-    kEndFieldNumber = 3,
+    kReadyFieldNumber = 1,
+    kExecutedFieldNumber = 2,
   };
-  // uint64 start = 2;
-  void clear_start() ;
-  ::uint64_t start() const;
-  void set_start(::uint64_t value);
+  // uint64 ready = 1;
+  void clear_ready() ;
+  ::uint64_t ready() const;
+  void set_ready(::uint64_t value);
 
   private:
-  ::uint64_t _internal_start() const;
-  void _internal_set_start(::uint64_t value);
+  ::uint64_t _internal_ready() const;
+  void _internal_set_ready(::uint64_t value);
 
   public:
-  // uint64 end = 3;
-  void clear_end() ;
-  ::uint64_t end() const;
-  void set_end(::uint64_t value);
+  // uint64 executed = 2;
+  void clear_executed() ;
+  ::uint64_t executed() const;
+  void set_executed(::uint64_t value);
 
   private:
-  ::uint64_t _internal_end() const;
-  void _internal_set_end(::uint64_t value);
+  ::uint64_t _internal_executed() const;
+  void _internal_set_executed(::uint64_t value);
 
   public:
   // @@protoc_insertion_point(class_scope:CycleCounts.CycleCount)
@@ -256,8 +256,8 @@ class CycleCounts_CycleCount final :
                               ::google::protobuf::Arena* arena);
         inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
                               ::google::protobuf::Arena* arena, const Impl_& from);
-    ::uint64_t start_;
-    ::uint64_t end_;
+    ::uint64_t ready_;
+    ::uint64_t executed_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -580,26 +580,26 @@ class CycleCounts final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kCycleCountsFieldNumber = 1,
+    kCycleCountFieldNumber = 1,
   };
-  // repeated .CycleCounts.CycleCount cycle_counts = 1;
-  int cycle_counts_size() const;
+  // repeated .CycleCounts.CycleCount cycle_count = 1;
+  int cycle_count_size() const;
   private:
-  int _internal_cycle_counts_size() const;
+  int _internal_cycle_count_size() const;
 
   public:
-  void clear_cycle_counts() ;
-  ::CycleCounts_CycleCount* mutable_cycle_counts(int index);
+  void clear_cycle_count() ;
+  ::CycleCounts_CycleCount* mutable_cycle_count(int index);
   ::google::protobuf::RepeatedPtrField< ::CycleCounts_CycleCount >*
-      mutable_cycle_counts();
+      mutable_cycle_count();
   private:
-  const ::google::protobuf::RepeatedPtrField<::CycleCounts_CycleCount>& _internal_cycle_counts() const;
-  ::google::protobuf::RepeatedPtrField<::CycleCounts_CycleCount>* _internal_mutable_cycle_counts();
+  const ::google::protobuf::RepeatedPtrField<::CycleCounts_CycleCount>& _internal_cycle_count() const;
+  ::google::protobuf::RepeatedPtrField<::CycleCounts_CycleCount>* _internal_mutable_cycle_count();
   public:
-  const ::CycleCounts_CycleCount& cycle_counts(int index) const;
-  ::CycleCounts_CycleCount* add_cycle_counts();
+  const ::CycleCounts_CycleCount& cycle_count(int index) const;
+  ::CycleCounts_CycleCount* add_cycle_count();
   const ::google::protobuf::RepeatedPtrField< ::CycleCounts_CycleCount >&
-      cycle_counts() const;
+      cycle_count() const;
   // @@protoc_insertion_point(class_scope:CycleCounts)
  private:
   class _Internal;
@@ -623,7 +623,7 @@ class CycleCounts final :
                               ::google::protobuf::Arena* arena);
         inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
                               ::google::protobuf::Arena* arena, const Impl_& from);
-    ::google::protobuf::RepeatedPtrField< ::CycleCounts_CycleCount > cycle_counts_;
+    ::google::protobuf::RepeatedPtrField< ::CycleCounts_CycleCount > cycle_count_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -765,26 +765,26 @@ class BinjaInstructions final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kInstructionsFieldNumber = 1,
+    kInstructionFieldNumber = 1,
   };
-  // repeated .BinjaInstructions.Instruction instructions = 1;
-  int instructions_size() const;
+  // repeated .BinjaInstructions.Instruction instruction = 1;
+  int instruction_size() const;
   private:
-  int _internal_instructions_size() const;
+  int _internal_instruction_size() const;
 
   public:
-  void clear_instructions() ;
-  ::BinjaInstructions_Instruction* mutable_instructions(int index);
+  void clear_instruction() ;
+  ::BinjaInstructions_Instruction* mutable_instruction(int index);
   ::google::protobuf::RepeatedPtrField< ::BinjaInstructions_Instruction >*
-      mutable_instructions();
+      mutable_instruction();
   private:
-  const ::google::protobuf::RepeatedPtrField<::BinjaInstructions_Instruction>& _internal_instructions() const;
-  ::google::protobuf::RepeatedPtrField<::BinjaInstructions_Instruction>* _internal_mutable_instructions();
+  const ::google::protobuf::RepeatedPtrField<::BinjaInstructions_Instruction>& _internal_instruction() const;
+  ::google::protobuf::RepeatedPtrField<::BinjaInstructions_Instruction>* _internal_mutable_instruction();
   public:
-  const ::BinjaInstructions_Instruction& instructions(int index) const;
-  ::BinjaInstructions_Instruction* add_instructions();
+  const ::BinjaInstructions_Instruction& instruction(int index) const;
+  ::BinjaInstructions_Instruction* add_instruction();
   const ::google::protobuf::RepeatedPtrField< ::BinjaInstructions_Instruction >&
-      instructions() const;
+      instruction() const;
   // @@protoc_insertion_point(class_scope:BinjaInstructions)
  private:
   class _Internal;
@@ -808,7 +808,7 @@ class BinjaInstructions final :
                               ::google::protobuf::Arena* arena);
         inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
                               ::google::protobuf::Arena* arena, const Impl_& from);
-    ::google::protobuf::RepeatedPtrField< ::BinjaInstructions_Instruction > instructions_;
+    ::google::protobuf::RepeatedPtrField< ::BinjaInstructions_Instruction > instruction_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -889,156 +889,156 @@ inline void BinjaInstructions_Instruction::set_allocated_opcode(std::string* val
 
 // BinjaInstructions
 
-// repeated .BinjaInstructions.Instruction instructions = 1;
-inline int BinjaInstructions::_internal_instructions_size() const {
-  return _internal_instructions().size();
+// repeated .BinjaInstructions.Instruction instruction = 1;
+inline int BinjaInstructions::_internal_instruction_size() const {
+  return _internal_instruction().size();
 }
-inline int BinjaInstructions::instructions_size() const {
-  return _internal_instructions_size();
+inline int BinjaInstructions::instruction_size() const {
+  return _internal_instruction_size();
 }
-inline void BinjaInstructions::clear_instructions() {
+inline void BinjaInstructions::clear_instruction() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.instructions_.Clear();
+  _impl_.instruction_.Clear();
 }
-inline ::BinjaInstructions_Instruction* BinjaInstructions::mutable_instructions(int index)
+inline ::BinjaInstructions_Instruction* BinjaInstructions::mutable_instruction(int index)
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_mutable:BinjaInstructions.instructions)
-  return _internal_mutable_instructions()->Mutable(index);
+  // @@protoc_insertion_point(field_mutable:BinjaInstructions.instruction)
+  return _internal_mutable_instruction()->Mutable(index);
 }
-inline ::google::protobuf::RepeatedPtrField<::BinjaInstructions_Instruction>* BinjaInstructions::mutable_instructions()
+inline ::google::protobuf::RepeatedPtrField<::BinjaInstructions_Instruction>* BinjaInstructions::mutable_instruction()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_mutable_list:BinjaInstructions.instructions)
+  // @@protoc_insertion_point(field_mutable_list:BinjaInstructions.instruction)
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  return _internal_mutable_instructions();
+  return _internal_mutable_instruction();
 }
-inline const ::BinjaInstructions_Instruction& BinjaInstructions::instructions(int index) const
+inline const ::BinjaInstructions_Instruction& BinjaInstructions::instruction(int index) const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:BinjaInstructions.instructions)
-  return _internal_instructions().Get(index);
+  // @@protoc_insertion_point(field_get:BinjaInstructions.instruction)
+  return _internal_instruction().Get(index);
 }
-inline ::BinjaInstructions_Instruction* BinjaInstructions::add_instructions() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+inline ::BinjaInstructions_Instruction* BinjaInstructions::add_instruction() ABSL_ATTRIBUTE_LIFETIME_BOUND {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  ::BinjaInstructions_Instruction* _add = _internal_mutable_instructions()->Add();
-  // @@protoc_insertion_point(field_add:BinjaInstructions.instructions)
+  ::BinjaInstructions_Instruction* _add = _internal_mutable_instruction()->Add();
+  // @@protoc_insertion_point(field_add:BinjaInstructions.instruction)
   return _add;
 }
-inline const ::google::protobuf::RepeatedPtrField<::BinjaInstructions_Instruction>& BinjaInstructions::instructions() const
+inline const ::google::protobuf::RepeatedPtrField<::BinjaInstructions_Instruction>& BinjaInstructions::instruction() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_list:BinjaInstructions.instructions)
-  return _internal_instructions();
+  // @@protoc_insertion_point(field_list:BinjaInstructions.instruction)
+  return _internal_instruction();
 }
 inline const ::google::protobuf::RepeatedPtrField<::BinjaInstructions_Instruction>&
-BinjaInstructions::_internal_instructions() const {
+BinjaInstructions::_internal_instruction() const {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
-  return _impl_.instructions_;
+  return _impl_.instruction_;
 }
 inline ::google::protobuf::RepeatedPtrField<::BinjaInstructions_Instruction>*
-BinjaInstructions::_internal_mutable_instructions() {
+BinjaInstructions::_internal_mutable_instruction() {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
-  return &_impl_.instructions_;
+  return &_impl_.instruction_;
 }
 
 // -------------------------------------------------------------------
 
 // CycleCounts_CycleCount
 
-// uint64 start = 2;
-inline void CycleCounts_CycleCount::clear_start() {
+// uint64 ready = 1;
+inline void CycleCounts_CycleCount::clear_ready() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.start_ = ::uint64_t{0u};
+  _impl_.ready_ = ::uint64_t{0u};
 }
-inline ::uint64_t CycleCounts_CycleCount::start() const {
-  // @@protoc_insertion_point(field_get:CycleCounts.CycleCount.start)
-  return _internal_start();
+inline ::uint64_t CycleCounts_CycleCount::ready() const {
+  // @@protoc_insertion_point(field_get:CycleCounts.CycleCount.ready)
+  return _internal_ready();
 }
-inline void CycleCounts_CycleCount::set_start(::uint64_t value) {
-  _internal_set_start(value);
-  // @@protoc_insertion_point(field_set:CycleCounts.CycleCount.start)
+inline void CycleCounts_CycleCount::set_ready(::uint64_t value) {
+  _internal_set_ready(value);
+  // @@protoc_insertion_point(field_set:CycleCounts.CycleCount.ready)
 }
-inline ::uint64_t CycleCounts_CycleCount::_internal_start() const {
+inline ::uint64_t CycleCounts_CycleCount::_internal_ready() const {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
-  return _impl_.start_;
+  return _impl_.ready_;
 }
-inline void CycleCounts_CycleCount::_internal_set_start(::uint64_t value) {
+inline void CycleCounts_CycleCount::_internal_set_ready(::uint64_t value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   ;
-  _impl_.start_ = value;
+  _impl_.ready_ = value;
 }
 
-// uint64 end = 3;
-inline void CycleCounts_CycleCount::clear_end() {
+// uint64 executed = 2;
+inline void CycleCounts_CycleCount::clear_executed() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.end_ = ::uint64_t{0u};
+  _impl_.executed_ = ::uint64_t{0u};
 }
-inline ::uint64_t CycleCounts_CycleCount::end() const {
-  // @@protoc_insertion_point(field_get:CycleCounts.CycleCount.end)
-  return _internal_end();
+inline ::uint64_t CycleCounts_CycleCount::executed() const {
+  // @@protoc_insertion_point(field_get:CycleCounts.CycleCount.executed)
+  return _internal_executed();
 }
-inline void CycleCounts_CycleCount::set_end(::uint64_t value) {
-  _internal_set_end(value);
-  // @@protoc_insertion_point(field_set:CycleCounts.CycleCount.end)
+inline void CycleCounts_CycleCount::set_executed(::uint64_t value) {
+  _internal_set_executed(value);
+  // @@protoc_insertion_point(field_set:CycleCounts.CycleCount.executed)
 }
-inline ::uint64_t CycleCounts_CycleCount::_internal_end() const {
+inline ::uint64_t CycleCounts_CycleCount::_internal_executed() const {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
-  return _impl_.end_;
+  return _impl_.executed_;
 }
-inline void CycleCounts_CycleCount::_internal_set_end(::uint64_t value) {
+inline void CycleCounts_CycleCount::_internal_set_executed(::uint64_t value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   ;
-  _impl_.end_ = value;
+  _impl_.executed_ = value;
 }
 
 // -------------------------------------------------------------------
 
 // CycleCounts
 
-// repeated .CycleCounts.CycleCount cycle_counts = 1;
-inline int CycleCounts::_internal_cycle_counts_size() const {
-  return _internal_cycle_counts().size();
+// repeated .CycleCounts.CycleCount cycle_count = 1;
+inline int CycleCounts::_internal_cycle_count_size() const {
+  return _internal_cycle_count().size();
 }
-inline int CycleCounts::cycle_counts_size() const {
-  return _internal_cycle_counts_size();
+inline int CycleCounts::cycle_count_size() const {
+  return _internal_cycle_count_size();
 }
-inline void CycleCounts::clear_cycle_counts() {
+inline void CycleCounts::clear_cycle_count() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.cycle_counts_.Clear();
+  _impl_.cycle_count_.Clear();
 }
-inline ::CycleCounts_CycleCount* CycleCounts::mutable_cycle_counts(int index)
+inline ::CycleCounts_CycleCount* CycleCounts::mutable_cycle_count(int index)
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_mutable:CycleCounts.cycle_counts)
-  return _internal_mutable_cycle_counts()->Mutable(index);
+  // @@protoc_insertion_point(field_mutable:CycleCounts.cycle_count)
+  return _internal_mutable_cycle_count()->Mutable(index);
 }
-inline ::google::protobuf::RepeatedPtrField<::CycleCounts_CycleCount>* CycleCounts::mutable_cycle_counts()
+inline ::google::protobuf::RepeatedPtrField<::CycleCounts_CycleCount>* CycleCounts::mutable_cycle_count()
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_mutable_list:CycleCounts.cycle_counts)
+  // @@protoc_insertion_point(field_mutable_list:CycleCounts.cycle_count)
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  return _internal_mutable_cycle_counts();
+  return _internal_mutable_cycle_count();
 }
-inline const ::CycleCounts_CycleCount& CycleCounts::cycle_counts(int index) const
+inline const ::CycleCounts_CycleCount& CycleCounts::cycle_count(int index) const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:CycleCounts.cycle_counts)
-  return _internal_cycle_counts().Get(index);
+  // @@protoc_insertion_point(field_get:CycleCounts.cycle_count)
+  return _internal_cycle_count().Get(index);
 }
-inline ::CycleCounts_CycleCount* CycleCounts::add_cycle_counts() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+inline ::CycleCounts_CycleCount* CycleCounts::add_cycle_count() ABSL_ATTRIBUTE_LIFETIME_BOUND {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  ::CycleCounts_CycleCount* _add = _internal_mutable_cycle_counts()->Add();
-  // @@protoc_insertion_point(field_add:CycleCounts.cycle_counts)
+  ::CycleCounts_CycleCount* _add = _internal_mutable_cycle_count()->Add();
+  // @@protoc_insertion_point(field_add:CycleCounts.cycle_count)
   return _add;
 }
-inline const ::google::protobuf::RepeatedPtrField<::CycleCounts_CycleCount>& CycleCounts::cycle_counts() const
+inline const ::google::protobuf::RepeatedPtrField<::CycleCounts_CycleCount>& CycleCounts::cycle_count() const
     ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_list:CycleCounts.cycle_counts)
-  return _internal_cycle_counts();
+  // @@protoc_insertion_point(field_list:CycleCounts.cycle_count)
+  return _internal_cycle_count();
 }
 inline const ::google::protobuf::RepeatedPtrField<::CycleCounts_CycleCount>&
-CycleCounts::_internal_cycle_counts() const {
+CycleCounts::_internal_cycle_count() const {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
-  return _impl_.cycle_counts_;
+  return _impl_.cycle_count_;
 }
 inline ::google::protobuf::RepeatedPtrField<::CycleCounts_CycleCount>*
-CycleCounts::_internal_mutable_cycle_counts() {
+CycleCounts::_internal_mutable_cycle_count() {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
-  return &_impl_.cycle_counts_;
+  return &_impl_.cycle_count_;
 }
 
 #ifdef __GNUC__

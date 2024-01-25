@@ -39,35 +39,90 @@ using namespace mcad;
 
 #define DEBUG_TYPE "mcad-binja-broker"
 
+struct InstructionEntry {
+    unsigned CycleReady;
+    unsigned CycleExecuted;
+};
+
 class BinjaBridge final : public Binja::Service {
     grpc::Status RequestCycleCounts(grpc::ServerContext *ctxt,
-                                    const BinjaInstructions *insns,
-                                    CycleCounts *ccs) override {
-        if (!insns || !running) {
+                                   const BinjaInstructions *insns,
+                                   CycleCounts *ccs) {
+        if (!insns || !Running) {
             return grpc::Status::OK;
         }
-        if (insns->instructions_size() == 0) {
-            running = false;
+        if (insns->instruction_size() == 0) {
+            Running = false;
             return grpc::Status::OK;
         }
+
         {
             std::lock_guard<std::mutex> Lock(QueueMutex);
-            for (int i = 0; i < insns->instructions_size(); i++) {
-                InsnQueue.push(insns->instructions(i));
+            for (int i = 0; i < insns->instruction_size(); i++) {
+                InsnQueue.push(insns->instruction(i));
             }
+            HasHandledInput.store(false);
         }
+
+        IsWaitingForWorker.store(true);
+        while (IsWaitingForWorker.load()) {};
+
+        for (int i = 0; i < insns->instruction_size(); i++) {
+            auto* cc = ccs->add_cycle_count();
+            if (!CountStore.count(i)) {
+                continue;
+            }
+            cc->set_ready(CountStore[i].CycleReady);
+            cc->set_executed(CountStore[i].CycleExecuted);
+        }
+
+        HasHandledInput.store(true);
 
         return grpc::Status::OK;
     }
 
 public:
     BinjaBridge() {}
-    bool running = true;
+    bool Running = true;
     std::queue<BinjaInstructions::Instruction> InsnQueue;
+    std::queue<CycleCounts::CycleCount> CCQueue;
     std::mutex QueueMutex;
+    std::atomic<bool> IsWaitingForWorker = false; 
+    std::atomic<bool> HasHandledInput = true;
+    DenseMap<unsigned, InstructionEntry> CountStore;
 };
 
-class RawListener : public llvm::mca::HWEventListener {
+class RawListener : public mca::HWEventListener {
+    BinjaBridge &BridgeRef;
+    unsigned CurrentCycle;
+
+public:
+    RawListener(BinjaBridge &bridge) : BridgeRef(bridge), CurrentCycle(0U) {}
+
+    void onEvent(const mca::HWInstructionEvent &Event) {
+        const mca::Instruction &inst = *Event.IR.getInstruction();
+        const unsigned index = Event.IR.getSourceIndex();
+
+        if (!BridgeRef.CountStore.count(index)) {
+            BridgeRef.CountStore.insert(std::make_pair(index, InstructionEntry{0, 0}));
+        }
+
+        switch (Event.Type) {
+        case mca::HWInstructionEvent::GenericEventType::Executed: {
+            BridgeRef.CountStore[index].CycleReady = CurrentCycle;
+        }
+        case mca::HWInstructionEvent::GenericEventType::Ready: {
+             BridgeRef.CountStore[index].CycleExecuted = CurrentCycle;
+        }
+        default: break;
+        }
+    }
+
+    void onEvent(const mca::HWStallEvent &Event) {}
+
+    void onEvent(const mca::HWPressureEvent &Event) {}
+
+    void onCycleEnd() override { ++CurrentCycle; }
 };
 
 class BinjaBroker : public Broker {
@@ -77,12 +132,16 @@ class BinjaBroker : public Broker {
     const MCSubtargetInfo &STI;
     BinjaBridge Bridge;
     uint32_t TotalNumTraces;
-    std::unique_ptr<RawListener> listener;
+    std::unique_ptr<RawListener> Listener;
 
     std::unique_ptr<std::thread> ServerThread;
     std::unique_ptr<grpc::Server> server;
 
     void serverLoop();
+
+    void signalWorkerComplete() {
+        Bridge.IsWaitingForWorker.store(false);
+    }
 
     int fetch(MutableArrayRef<const MCInst *> MCIS, int Size,
               Optional<MDExchanger> MDE) override {
@@ -91,51 +150,53 @@ class BinjaBroker : public Broker {
 
     std::pair<int, RegionDescriptor>
     fetchRegion(MutableArrayRef<const MCInst *> MCIS, int Size = -1,
-                Optional<MDExchanger> MDE = llvm::None) override {
+                Optional<MDExchanger> MDE = None) override {
         {
-            std::lock_guard<std::mutex> Lock(Bridge.QueueMutex);
-            if (!Bridge.running) {
-                return std::make_pair(-1, RegionDescriptor(false));
-            }
-
-            if (Size < 0 || Size > MCIS.size()) {
-                Size = MCIS.size();
-            }
-
-            int num_insn = Bridge.InsnQueue.size();
-            if (num_insn < Size) {
-                Size = num_insn;
-            }
-
-            const Triple &the_triple = STI.getTargetTriple();
-            for (int i = 0; i < Size; i++) {
-                auto insn = Bridge.InsnQueue.back();
-                auto insn_bytes = insn.opcode();
-                if (the_triple.isLittleEndian()) {
-                    reverse(insn_bytes.begin(), insn_bytes.end());
+            {
+                std::lock_guard<std::mutex> Lock(Bridge.QueueMutex);
+                if (!Bridge.Running) {
+                    return std::make_pair(-1, RegionDescriptor(true));
                 }
 
-                SmallVector<uint8_t, 4> instructionBuffer;
-                for (uint8_t c : insn_bytes) {
-                    instructionBuffer.push_back(c);
+                if (Bridge.HasHandledInput.load()) {
+                    return std::make_pair(0, RegionDescriptor(false));
                 }
-                ArrayRef<uint8_t> InstBytes(instructionBuffer);
 
-                auto MCI = std::make_shared<MCInst>();
-                uint64_t DisAsmSize;
-                auto Disassembled = DisAsm->getInstruction(*MCI, DisAsmSize, InstBytes, 0, nulls());
+                if (Size < 0 || Size > MCIS.size()) {
+                    Size = MCIS.size();
+                }
 
-                MCIS[i] = MCI.get();
+                int num_insn = Bridge.InsnQueue.size();
+                if (num_insn < Size) {
+                    Size = num_insn;
+                }
 
-                ++TotalNumTraces;
-                Bridge.InsnQueue.pop();
+                for (int i = 0; i < Size; i++) {
+                    auto insn = Bridge.InsnQueue.back();
+                    auto insn_bytes = insn.opcode();
+
+                    SmallVector<uint8_t, 4> instructionBuffer;
+                    for (uint8_t c : insn_bytes) {
+                        instructionBuffer.push_back(c);
+                    }
+                    ArrayRef<uint8_t> InstBytes(instructionBuffer);
+
+                    auto MCI = std::make_shared<MCInst>();
+                    uint64_t DisAsmSize;
+                    auto Disassembled = DisAsm->getInstruction(*MCI, DisAsmSize, InstBytes, 0, nulls());
+
+                    MCIS[i] = MCI.get();
+
+                    ++TotalNumTraces;
+                    Bridge.InsnQueue.pop();
+                }
+                return std::make_pair(num_insn, RegionDescriptor(true));
             }
-            return std::make_pair(num_insn, RegionDescriptor(false));
         }
     }
 
     unsigned getFeatures() const override {
-        return Broker::Feature_Metadata;
+        return Broker::Feature_Metadata | Broker::Feature_Region; 
     }
 
 public:
@@ -143,10 +204,11 @@ public:
         : TheTarget(T), Ctx(C), STI(MSTI), Bridge(BinjaBridge()), TotalNumTraces(0U) {
         ServerThread = std::make_unique<std::thread>(&BinjaBroker::serverLoop, this);
         DisAsm.reset(TheTarget.createMCDisassembler(STI, Ctx));
+        Listener = std::make_unique<RawListener>(Bridge);
     }
 
     RawListener* getListener() {
-        return listener.get();
+        return Listener.get();
     }
 
     ~BinjaBroker() {

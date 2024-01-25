@@ -32,6 +32,8 @@
 #include "llvm/Support/WithColor.h"
 #include <string>
 #include <system_error>
+#include <iostream>
+#include <unistd.h>
 
 #include "MCAWorker.h"
 #include "MCAViews/SummaryView.h"
@@ -385,6 +387,8 @@ Error MCAWorker::run() {
                  std::string(1, ']'));
     } else
       printMCA();
+    
+    TheBroker->signalWorkerComplete();
 
     if (EndOfStream)
       break;

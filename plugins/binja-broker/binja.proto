@@ -5,7 +5,7 @@ service Binja {
 }
 
 message BinjaInstructions {
-    repeated Instruction instructions = 1;
+    repeated Instruction instruction = 1;
     
     message Instruction {
         bytes opcode = 1;
@@ -13,10 +13,10 @@ message BinjaInstructions {
 }
 
 message CycleCounts {
-    repeated CycleCount cycle_counts = 1;
+    repeated CycleCount cycle_count = 1;
 
     message CycleCount {
-        uint64 start = 2;
-        uint64 end = 3;
+        uint64 ready = 1;
+        uint64 executed = 2;
     }
 }

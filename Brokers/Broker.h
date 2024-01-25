@@ -55,6 +55,8 @@ struct Broker {
   }
 
   struct RegionDescriptor {
+    static constexpr StringRef END_OF_STREAM = "END_OF_STREAM";
+
     bool IsEnd;
     llvm::StringRef Description;
 
@@ -74,6 +76,8 @@ struct Broker {
               Optional<MDExchanger> MDE = llvm::None) {
     return std::make_pair(-1, RegionDescriptor(true));
   }
+
+  virtual void signalWorkerComplete() {};
 
   virtual ~Broker() {}
 };
