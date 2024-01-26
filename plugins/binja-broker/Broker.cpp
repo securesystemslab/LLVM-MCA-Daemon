@@ -40,8 +40,9 @@ using namespace mcad;
 #define DEBUG_TYPE "mcad-binja-broker"
 
 struct InstructionEntry {
-    unsigned CycleReady;
-    unsigned CycleExecuted;
+    unsigned CycleReady = 0;
+    unsigned CycleExecuted = 0;
+    bool IsUnderPressure = false;
 };
 
 class BinjaBridge final : public Binja::Service {
@@ -74,6 +75,7 @@ class BinjaBridge final : public Binja::Service {
             }
             cc->set_ready(CountStore[i].CycleReady);
             cc->set_executed(CountStore[i].CycleExecuted);
+            cc->set_is_under_pressure(CountStore[i].IsUnderPressure);
         }
 
         HasHandledInput.store(true);
@@ -104,7 +106,7 @@ public:
         const unsigned index = Event.IR.getSourceIndex();
 
         if (!BridgeRef.CountStore.count(index)) {
-            BridgeRef.CountStore.insert(std::make_pair(index, InstructionEntry{0, 0}));
+            BridgeRef.CountStore.insert(std::make_pair(index, InstructionEntry{}));
         }
 
         switch (Event.Type) {
@@ -120,7 +122,18 @@ public:
 
     void onEvent(const mca::HWStallEvent &Event) {}
 
-    void onEvent(const mca::HWPressureEvent &Event) {}
+    void onEvent(const mca::HWPressureEvent &Event) {
+        for (const auto &inst : Event.AffectedInstructions) {
+            const unsigned index = inst.getSourceIndex();
+
+            if (!BridgeRef.CountStore.count(index)) {
+                BridgeRef.CountStore.insert(std::make_pair(index, InstructionEntry{}));
+            }
+
+            BridgeRef.CountStore[index].IsUnderPressure = true;
+        }
+
+    }
 
     void onCycleEnd() override { ++CurrentCycle; }
 };

@@ -19,12 +19,14 @@ class BinjaInstructions(_message.Message):
 class CycleCounts(_message.Message):
     __slots__ = ("cycle_count",)
     class CycleCount(_message.Message):
-        __slots__ = ("ready", "executed")
+        __slots__ = ("ready", "executed", "is_under_pressure")
         READY_FIELD_NUMBER: _ClassVar[int]
         EXECUTED_FIELD_NUMBER: _ClassVar[int]
+        IS_UNDER_PRESSURE_FIELD_NUMBER: _ClassVar[int]
         ready: int
         executed: int
-        def __init__(self, ready: _Optional[int] = ..., executed: _Optional[int] = ...) -> None: ...
+        is_under_pressure: bool
+        def __init__(self, ready: _Optional[int] = ..., executed: _Optional[int] = ..., is_under_pressure: bool = ...) -> None: ...
     CYCLE_COUNT_FIELD_NUMBER: _ClassVar[int]
     cycle_count: _containers.RepeatedCompositeFieldContainer[CycleCounts.CycleCount]
     def __init__(self, cycle_count: _Optional[_Iterable[_Union[CycleCounts.CycleCount, _Mapping]]] = ...) -> None: ...

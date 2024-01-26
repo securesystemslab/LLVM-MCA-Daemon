@@ -18,5 +18,6 @@ message CycleCounts {
     message CycleCount {
         uint64 ready = 1;
         uint64 executed = 2;
+        bool is_under_pressure = 3;
     }
 }

@@ -212,6 +212,7 @@ class CycleCounts_CycleCount final :
   enum : int {
     kReadyFieldNumber = 1,
     kExecutedFieldNumber = 2,
+    kIsUnderPressureFieldNumber = 3,
   };
   // uint64 ready = 1;
   void clear_ready() ;
@@ -233,13 +234,23 @@ class CycleCounts_CycleCount final :
   void _internal_set_executed(::uint64_t value);
 
   public:
+  // bool is_under_pressure = 3;
+  void clear_is_under_pressure() ;
+  bool is_under_pressure() const;
+  void set_is_under_pressure(bool value);
+
+  private:
+  bool _internal_is_under_pressure() const;
+  void _internal_set_is_under_pressure(bool value);
+
+  public:
   // @@protoc_insertion_point(class_scope:CycleCounts.CycleCount)
  private:
   class _Internal;
 
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      1, 2, 0,
+      2, 3, 0,
       0, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -258,6 +269,7 @@ class CycleCounts_CycleCount final :
                               ::google::protobuf::Arena* arena, const Impl_& from);
     ::uint64_t ready_;
     ::uint64_t executed_;
+    bool is_under_pressure_;
     mutable ::google::protobuf::internal::CachedSize _cached_size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -986,6 +998,29 @@ inline void CycleCounts_CycleCount::_internal_set_executed(::uint64_t value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   ;
   _impl_.executed_ = value;
+}
+
+// bool is_under_pressure = 3;
+inline void CycleCounts_CycleCount::clear_is_under_pressure() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.is_under_pressure_ = false;
+}
+inline bool CycleCounts_CycleCount::is_under_pressure() const {
+  // @@protoc_insertion_point(field_get:CycleCounts.CycleCount.is_under_pressure)
+  return _internal_is_under_pressure();
+}
+inline void CycleCounts_CycleCount::set_is_under_pressure(bool value) {
+  _internal_set_is_under_pressure(value);
+  // @@protoc_insertion_point(field_set:CycleCounts.CycleCount.is_under_pressure)
+}
+inline bool CycleCounts_CycleCount::_internal_is_under_pressure() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.is_under_pressure_;
+}
+inline void CycleCounts_CycleCount::_internal_set_is_under_pressure(bool value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  _impl_.is_under_pressure_ = value;
 }
 
 // -------------------------------------------------------------------

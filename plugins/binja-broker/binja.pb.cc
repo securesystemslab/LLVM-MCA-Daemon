@@ -25,6 +25,7 @@ inline constexpr CycleCounts_CycleCount::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : ready_{::uint64_t{0u}},
         executed_{::uint64_t{0u}},
+        is_under_pressure_{false},
         _cached_size_{0} {}
 
 template <typename>
@@ -134,6 +135,7 @@ const ::uint32_t TableStruct_binja_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
     ~0u,  // no sizeof(Split)
     PROTOBUF_FIELD_OFFSET(::CycleCounts_CycleCount, _impl_.ready_),
     PROTOBUF_FIELD_OFFSET(::CycleCounts_CycleCount, _impl_.executed_),
+    PROTOBUF_FIELD_OFFSET(::CycleCounts_CycleCount, _impl_.is_under_pressure_),
     ~0u,  // no _has_bits_
     PROTOBUF_FIELD_OFFSET(::CycleCounts, _internal_metadata_),
     ~0u,  // no _extensions_
@@ -150,7 +152,7 @@ static const ::_pbi::MigrationSchema
         {0, -1, -1, sizeof(::BinjaInstructions_Instruction)},
         {9, -1, -1, sizeof(::BinjaInstructions)},
         {18, -1, -1, sizeof(::CycleCounts_CycleCount)},
-        {28, -1, -1, sizeof(::CycleCounts)},
+        {29, -1, -1, sizeof(::CycleCounts)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -162,18 +164,19 @@ static const ::_pb::Message* const file_default_instances[] = {
 const char descriptor_table_protodef_binja_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
     "\n\013binja.proto\"g\n\021BinjaInstructions\0223\n\013in"
     "struction\030\001 \003(\0132\036.BinjaInstructions.Inst"
-    "ruction\032\035\n\013Instruction\022\016\n\006opcode\030\001 \001(\014\"j"
-    "\n\013CycleCounts\022,\n\013cycle_count\030\001 \003(\0132\027.Cyc"
-    "leCounts.CycleCount\032-\n\nCycleCount\022\r\n\005rea"
-    "dy\030\001 \001(\004\022\020\n\010executed\030\002 \001(\0042\?\n\005Binja\0226\n\022R"
-    "equestCycleCounts\022\022.BinjaInstructions\032\014."
-    "CycleCountsb\006proto3"
+    "ruction\032\035\n\013Instruction\022\016\n\006opcode\030\001 \001(\014\"\205"
+    "\001\n\013CycleCounts\022,\n\013cycle_count\030\001 \003(\0132\027.Cy"
+    "cleCounts.CycleCount\032H\n\nCycleCount\022\r\n\005re"
+    "ady\030\001 \001(\004\022\020\n\010executed\030\002 \001(\004\022\031\n\021is_under_"
+    "pressure\030\003 \001(\0102\?\n\005Binja\0226\n\022RequestCycleC"
+    "ounts\022\022.BinjaInstructions\032\014.CycleCountsb"
+    "\006proto3"
 };
 static ::absl::once_flag descriptor_table_binja_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_binja_2eproto = {
     false,
     false,
-    299,
+    327,
     descriptor_table_protodef_binja_2eproto,
     "binja.proto",
     &descriptor_table_binja_2eproto_once,
@@ -599,9 +602,9 @@ inline void CycleCounts_CycleCount::SharedCtor(::_pb::Arena* arena) {
   ::memset(reinterpret_cast<char *>(&_impl_) +
                offsetof(Impl_, ready_),
            0,
-           offsetof(Impl_, executed_) -
+           offsetof(Impl_, is_under_pressure_) -
                offsetof(Impl_, ready_) +
-               sizeof(Impl_::executed_));
+               sizeof(Impl_::is_under_pressure_));
 }
 CycleCounts_CycleCount::~CycleCounts_CycleCount() {
   // @@protoc_insertion_point(destructor:CycleCounts.CycleCount)
@@ -621,8 +624,8 @@ PROTOBUF_NOINLINE void CycleCounts_CycleCount::Clear() {
   (void) cached_has_bits;
 
   ::memset(&_impl_.ready_, 0, static_cast<::size_t>(
-      reinterpret_cast<char*>(&_impl_.executed_) -
-      reinterpret_cast<char*>(&_impl_.ready_)) + sizeof(_impl_.executed_));
+      reinterpret_cast<char*>(&_impl_.is_under_pressure_) -
+      reinterpret_cast<char*>(&_impl_.ready_)) + sizeof(_impl_.is_under_pressure_));
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
 
@@ -634,26 +637,30 @@ const char* CycleCounts_CycleCount::_InternalParse(
 
 
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<1, 2, 0, 0, 2> CycleCounts_CycleCount::_table_ = {
+const ::_pbi::TcParseTable<2, 3, 0, 0, 2> CycleCounts_CycleCount::_table_ = {
   {
     0,  // no _has_bits_
     0, // no _extensions_
-    2, 8,  // max_field_number, fast_idx_mask
+    3, 24,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967292,  // skipmap
+    4294967288,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    2,  // num_field_entries
+    3,  // num_field_entries
     0,  // num_aux_entries
     offsetof(decltype(_table_), field_names),  // no aux_entries
     &_CycleCounts_CycleCount_default_instance_._instance,
     ::_pbi::TcParser::GenericFallback,  // fallback
   }, {{
-    // uint64 executed = 2;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(CycleCounts_CycleCount, _impl_.executed_), 63>(),
-     {16, 63, 0, PROTOBUF_FIELD_OFFSET(CycleCounts_CycleCount, _impl_.executed_)}},
+    {::_pbi::TcParser::MiniParse, {}},
     // uint64 ready = 1;
     {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(CycleCounts_CycleCount, _impl_.ready_), 63>(),
      {8, 63, 0, PROTOBUF_FIELD_OFFSET(CycleCounts_CycleCount, _impl_.ready_)}},
+    // uint64 executed = 2;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(CycleCounts_CycleCount, _impl_.executed_), 63>(),
+     {16, 63, 0, PROTOBUF_FIELD_OFFSET(CycleCounts_CycleCount, _impl_.executed_)}},
+    // bool is_under_pressure = 3;
+    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(CycleCounts_CycleCount, _impl_.is_under_pressure_), 63>(),
+     {24, 63, 0, PROTOBUF_FIELD_OFFSET(CycleCounts_CycleCount, _impl_.is_under_pressure_)}},
   }}, {{
     65535, 65535
   }}, {{
@@ -663,6 +670,9 @@ const ::_pbi::TcParseTable<1, 2, 0, 0, 2> CycleCounts_CycleCount::_table_ = {
     // uint64 executed = 2;
     {PROTOBUF_FIELD_OFFSET(CycleCounts_CycleCount, _impl_.executed_), 0, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
+    // bool is_under_pressure = 3;
+    {PROTOBUF_FIELD_OFFSET(CycleCounts_CycleCount, _impl_.is_under_pressure_), 0, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kBool)},
   }},
   // no aux_entries
   {{
@@ -688,6 +698,13 @@ const ::_pbi::TcParseTable<1, 2, 0, 0, 2> CycleCounts_CycleCount::_table_ = {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
         2, this->_internal_executed(), target);
+  }
+
+  // bool is_under_pressure = 3;
+  if (this->_internal_is_under_pressure() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteBoolToArray(
+        3, this->_internal_is_under_pressure(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -719,6 +736,11 @@ const ::_pbi::TcParseTable<1, 2, 0, 0, 2> CycleCounts_CycleCount::_table_ = {
         this->_internal_executed());
   }
 
+  // bool is_under_pressure = 3;
+  if (this->_internal_is_under_pressure() != 0) {
+    total_size += 2;
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -744,6 +766,9 @@ void CycleCounts_CycleCount::MergeImpl(::google::protobuf::Message& to_msg, cons
   if (from._internal_executed() != 0) {
     _this->_internal_set_executed(from._internal_executed());
   }
+  if (from._internal_is_under_pressure() != 0) {
+    _this->_internal_set_is_under_pressure(from._internal_is_under_pressure());
+  }
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -765,8 +790,8 @@ void CycleCounts_CycleCount::InternalSwap(CycleCounts_CycleCount* PROTOBUF_RESTR
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(CycleCounts_CycleCount, _impl_.executed_)
-      + sizeof(CycleCounts_CycleCount::_impl_.executed_)
+      PROTOBUF_FIELD_OFFSET(CycleCounts_CycleCount, _impl_.is_under_pressure_)
+      + sizeof(CycleCounts_CycleCount::_impl_.is_under_pressure_)
       - PROTOBUF_FIELD_OFFSET(CycleCounts_CycleCount, _impl_.ready_)>(
           reinterpret_cast<char*>(&_impl_.ready_),
           reinterpret_cast<char*>(&other->_impl_.ready_));
