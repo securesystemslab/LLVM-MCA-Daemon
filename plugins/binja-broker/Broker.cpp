@@ -203,6 +203,7 @@ class BinjaBroker : public Broker {
                     ++TotalNumTraces;
                     Bridge.InsnQueue.pop();
                 }
+                std::cout << "Found insn : " << num_insn << "\n";
                 return std::make_pair(num_insn, RegionDescriptor(true));
             }
         }
