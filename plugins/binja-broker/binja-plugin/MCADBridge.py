@@ -20,8 +20,42 @@ def get_triple_and_cpu_info(view):
     if view.arch.name == "x86_64":
         return "x86_64-unknown-linux-gnu", "skylake"
 
-def get_instruction_trace_from_function(function):
-    instructions = []
+class WrappedInstruction:
+    def __init__(self, addr=0, length=0, disasm_text=None, block=None, bytez=None):
+        self.addr = addr
+        self.length = length 
+        self.block = block
+        self.bytez = bytez
+
+    def get_wrapped_instruction(function, addr):
+        i = WrappedInstruction()
+        i.addr = addr
+        i.length = function.view.get_instruction_length(addr)
+        i.block = function.get_basic_block_at(addr)
+        i.bytez = function.view.read(i.addr, i.length)
+        return i
+
+class Trace:
+    def __init__(self, function, blocks=dict(), instructions=[]):
+        self.function = function
+        self.view = function.view
+
+        self.blocks = blocks
+        self.instructions = instructions
+
+    def add_instruction_at_addr(self, addr):
+        self.instructions.append(WrappedInstruction.get_wrapped_instruction(self.function, addr))
+
+    def add_block(self, block):
+        self.blocks[block.start] = block
+
+    def get_block_at_addr(self, addr):
+        if addr in self.blocks:
+            return self.blocks[addr]
+        return None
+
+def get_trace(function):
+    trace = Trace(function)
     view = function.view
     member_tag = view.get_tag_type("Trace Member")
 
@@ -31,14 +65,15 @@ def get_instruction_trace_from_function(function):
     while explore:
         explore = False
         visited.add(current_block.start)
+        trace.add_block(current_block)
 
         for insn in current_block.disassembly_text:
-            addr = insn.address
-            length = view.get_instruction_length(addr)
-            instructions.append(view.read(addr, length))
+            trace.add_instruction_at_addr(insn.address)
 
         for edge in current_block.outgoing_edges:
             target = edge.target.start
+            # XXX: This does not handle loops yet. We need to identify loop heads so that we can visit them twice.
+            # Or, generate a true reverse post-order traversal
             if target in visited:
                 continue
 
@@ -54,7 +89,9 @@ def get_instruction_trace_from_function(function):
                 current_block = edge.target
                 break
 
-    return instructions
+        # TODO: Warn user if trace ends in a non-exit block?
+
+    return trace
 
 class GRPCClient:
     def __init__(self, view):
@@ -63,8 +100,7 @@ class GRPCClient:
         self.stub = binja_pb2_grpc.BinjaStub(self.channel)
 
     def request_cycle_counts(self, instructions):
-        b_instructions = [binja_pb2.BinjaInstructions.Instruction(opcode=bytes(insn)) for insn in instructions]
-        print(b_instructions)
+        b_instructions = [binja_pb2.BinjaInstructions.Instruction(opcode=bytes(insn.bytez)) for insn in instructions]
         return self.stub.RequestCycleCounts(binja_pb2.BinjaInstructions(instruction=b_instructions))
 
 class MCADBridge:
@@ -93,6 +129,51 @@ class MCADBridge:
         else:
             return False
 
+def generate_graph(response, trace):
+    graph = FlowGraph()
+    blocks = dict()
+    instructions = dict()
+
+    for block_addr in trace.blocks:
+        node = FlowGraphNode(graph)
+        blocks[block_addr] = node
+
+    if len(trace.instructions) != len(response.cycle_count):
+        logging.error("[MCAD] Incomplete cycle count received from MCAD.")
+        return graph
+
+    for idx, insn in enumerate(trace.instructions):
+        instructions[insn.addr] = (insn, response.cycle_count[idx])
+
+    for block_addr in trace.blocks:
+        lines = []
+        block = trace.get_block_at_addr(block_addr)
+        for insn in block.disassembly_text:
+            cycle_start = instructions[insn.address][1].ready
+            cycle_end = instructions[insn.address][1].executed
+
+            s = ""
+            s += str(cycle_start)
+            s += ".."
+            s += str(cycle_end)
+            s += " "
+            s += "".join([str(tok) for tok in insn.tokens])
+            lines.append(s)
+
+        blocks[block_addr].lines = lines
+        graph.append(blocks[block_addr])
+
+    for block_addr in trace.blocks:
+        block = trace.get_block_at_addr(block_addr)
+        source = blocks[block.start]
+        for outgoing in block.outgoing_edges:
+            if outgoing.target.start in blocks:
+                dest = blocks[outgoing.target.start]
+                edge = EdgeStyle(EdgePenStyle.DashDotDotLine, 2, ThemeColor.AddressColor)
+                source.add_outgoing_edge(BranchType.UnconditionalBranch, dest, edge)
+
+    return graph
+
 def get_cycle_counts(view, function):
     global bridge
     
@@ -104,11 +185,15 @@ def get_cycle_counts(view, function):
         logging.error("[MCAD] Server is not alive.")
         return
 
-    instructions = get_instruction_trace_from_function(function)
-    print(instructions)
+    trace = get_trace(function)
 
     client = GRPCClient(view)
-    response = client.request_cycle_counts(instructions)
+    response = client.request_cycle_counts(trace.instructions)
+
+    print(response)
+
+    g = generate_graph(response, trace)
+    show_graph_report("MCAD Trace Graph", g)
 
 def initialize(view):
     view.create_tag_type("Trace Member", "🌊")
