@@ -152,13 +152,21 @@ def generate_graph(response, trace):
             cycle_start = instructions[insn.address][1].ready
             cycle_end = instructions[insn.address][1].executed
 
-            s = ""
-            s += str(cycle_start)
-            s += ".."
-            s += str(cycle_end)
-            s += " "
-            s += "".join([str(tok) for tok in insn.tokens])
-            lines.append(s)
+            tokens = []
+            cycle_str = str(cycle_start) + " - " + str(cycle_end)
+            tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, cycle_str))
+            tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, " " * (12 - len(cycle_str))))
+            tokens.append(InstructionTextToken(InstructionTextTokenType.AddressDisplayToken, str(hex(insn.address))))
+            tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, "  "))
+            for token in insn.tokens:
+                if token.type != InstructionTextTokenType.TagToken:
+                    tokens.append(token)
+
+            color = None
+            if instructions[insn.address][1].is_under_pressure:
+                color = HighlightStandardColor.RedHighlightColor
+
+            lines.append(DisassemblyTextLine(tokens, insn.address, color=color))
 
         blocks[block_addr].lines = lines
         graph.append(blocks[block_addr])
@@ -190,10 +198,11 @@ def get_cycle_counts(view, function):
     client = GRPCClient(view)
     response = client.request_cycle_counts(trace.instructions)
 
-    print(response)
-
     g = generate_graph(response, trace)
     show_graph_report("MCAD Trace Graph", g)
+
+    del trace
+    del response
 
 def initialize(view):
     view.create_tag_type("Trace Member", "🌊")
@@ -206,7 +215,7 @@ def start(view):
 
     logging.info("[MCAD] Server started.")
 
-def cleanup(view):
+def stop(view):
     global bridge
 
     bridge.stop()
@@ -216,5 +225,5 @@ def cleanup(view):
 # Commands
 PluginCommand.register("MCAD\\Initialize Plugin", "Initialize custom tag for annotations", initialize)
 PluginCommand.register("MCAD\\Start Server", "Starts MCAD Server in the background", start)
-PluginCommand.register("MCAD\\Cleanup Server", "Stops MCAD Server running in the background", cleanup)
+PluginCommand.register("MCAD\\Stop Server", "Stops MCAD Server running in the background", stop)
 PluginCommand.register_for_function("MCAD\\Get Cycle Counts from MCAD", "Retrieve cycle counts for a path using LLVM MCA Daemon", get_cycle_counts)
