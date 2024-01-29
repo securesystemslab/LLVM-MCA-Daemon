@@ -314,8 +314,9 @@ Error MCAWorker::run() {
           ++NumTraceMIs;
           const auto &MCID = MCII.get(MCI.getOpcode());
           // Always ignore return instruction since it's
-          // not really meaningful
-          if (MCID.isReturn()) continue;
+          // not really meaningful.
+          // XXX: Currently preserving return instructions as they can be part of a trace
+          // if (MCID.isReturn()) continue;
           if (!PreserveCallInst)
             if (MCID.isCall())
               continue;
