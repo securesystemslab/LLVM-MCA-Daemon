@@ -87,7 +87,6 @@ public:
     BinjaBridge() {}
     bool Running = true;
     std::queue<BinjaInstructions::Instruction> InsnQueue;
-    std::queue<CycleCounts::CycleCount> CCQueue;
     std::mutex QueueMutex;
     std::atomic<bool> IsWaitingForWorker = false; 
     std::atomic<bool> HasHandledInput = true;
@@ -110,10 +109,10 @@ public:
         }
 
         switch (Event.Type) {
-        case mca::HWInstructionEvent::GenericEventType::Executed: {
+        case mca::HWInstructionEvent::GenericEventType::Ready: {
             BridgeRef.CountStore[index].CycleReady = CurrentCycle;
         }
-        case mca::HWInstructionEvent::GenericEventType::Ready: {
+        case mca::HWInstructionEvent::GenericEventType::Executed: {
              BridgeRef.CountStore[index].CycleExecuted = CurrentCycle;
         }
         default: break;
@@ -132,7 +131,6 @@ public:
 
             BridgeRef.CountStore[index].IsUnderPressure = true;
         }
-
     }
 
     void onCycleEnd() override { ++CurrentCycle; }
@@ -144,10 +142,10 @@ class BinjaBroker : public Broker {
     MCContext &Ctx;
     const MCSubtargetInfo &STI;
     BinjaBridge Bridge;
-    uint32_t TotalNumTraces;
     std::unique_ptr<RawListener> Listener;
+    std::vector<std::unique_ptr<MCInst>> Local_MCIS;
 
-    std::unique_ptr<std::thread> ServerThread;
+    std::unique_ptr<std::jthread> ServerThread;
     std::unique_ptr<grpc::Server> server;
 
     void serverLoop();
@@ -184,23 +182,25 @@ class BinjaBroker : public Broker {
                     Size = num_insn;
                 }
 
-                for (int i = 0; i < Size; i++) {
-                    auto insn = Bridge.InsnQueue.back();
+                unsigned i = 0;
+                while (!Bridge.InsnQueue.empty()) {
+                    auto insn = Bridge.InsnQueue.front();
                     auto insn_bytes = insn.opcode();
 
-                    SmallVector<uint8_t, 4> instructionBuffer;
+                    SmallVector<uint8_t, 4> instructionBuffer{};
                     for (uint8_t c : insn_bytes) {
                         instructionBuffer.push_back(c);
                     }
                     ArrayRef<uint8_t> InstBytes(instructionBuffer);
 
-                    auto MCI = std::make_shared<MCInst>();
+                    auto MCI = std::make_unique<MCInst>();
                     uint64_t DisAsmSize;
                     auto Disassembled = DisAsm->getInstruction(*MCI, DisAsmSize, InstBytes, 0, nulls());
 
                     MCIS[i] = MCI.get();
+                    Local_MCIS.push_back(std::move(MCI));
 
-                    ++TotalNumTraces;
+                    ++i;
                     Bridge.InsnQueue.pop();
                 }
                 return std::make_pair(num_insn, RegionDescriptor(true));
@@ -214,8 +214,8 @@ class BinjaBroker : public Broker {
 
 public:
     BinjaBroker(const MCSubtargetInfo &MSTI, MCContext &C, const Target &T)
-        : TheTarget(T), Ctx(C), STI(MSTI), Bridge(BinjaBridge()), TotalNumTraces(0U) {
-        ServerThread = std::make_unique<std::thread>(&BinjaBroker::serverLoop, this);
+        : TheTarget(T), Ctx(C), STI(MSTI), Bridge(BinjaBridge()) {
+        ServerThread = std::make_unique<std::jthread>(&BinjaBroker::serverLoop, this);
         DisAsm.reset(TheTarget.createMCDisassembler(STI, Ctx));
         Listener = std::make_unique<RawListener>(Bridge);
     }
@@ -226,7 +226,6 @@ public:
 
     ~BinjaBroker() {
         server->Shutdown();
-        ServerThread->join();
     }
 };
 

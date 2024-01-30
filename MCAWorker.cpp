@@ -63,6 +63,11 @@ static cl::opt<bool>
                    cl::desc("Include call instruction in MCA"),
                    cl::init(false));
 
+static cl::opt<bool>
+  PreserveReturnInst("use-return-inst",
+                   cl::desc("Include return instruction in MCA"),
+                   cl::init(false));
+
 #define DEFAULT_MAX_NUM_PROCESSED 1000U
 static cl::opt<unsigned>
   MaxNumProcessedInst("mca-max-chunk-size",
@@ -315,8 +320,10 @@ Error MCAWorker::run() {
           const auto &MCID = MCII.get(MCI.getOpcode());
           // Always ignore return instruction since it's
           // not really meaningful.
-          // XXX: Currently preserving return instructions as they can be part of a trace
-          // if (MCID.isReturn()) continue;
+          if (!PreserveReturnInst)
+            if (MCID.isReturn())
+              continue;
+
           if (!PreserveCallInst)
             if (MCID.isCall())
               continue;

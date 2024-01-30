@@ -24,4 +24,4 @@ class grpc_client:
 
 G = grpc_client()
 response = G.send_instructions()
-ipdb.set_trace()
+# ipdb.set_trace()

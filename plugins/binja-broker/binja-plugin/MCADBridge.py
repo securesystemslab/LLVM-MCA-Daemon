@@ -21,18 +21,20 @@ def get_triple_and_cpu_info(view):
         return "x86_64-unknown-linux-gnu", "skylake"
 
 class WrappedInstruction:
-    def __init__(self, addr=0, length=0, disasm_text=None, block=None, bytez=None):
+    def __init__(self, addr=0, length=0, disasm_text=None, block=None, bytez=None, opcode=None):
         self.addr = addr
         self.length = length 
         self.block = block
         self.bytez = bytez
+        self.disasm_text = disasm_text
 
     def get_wrapped_instruction(function, addr):
         i = WrappedInstruction()
         i.addr = addr
         i.length = function.view.get_instruction_length(addr)
         i.block = function.get_basic_block_at(addr)
-        i.bytez = function.view.read(i.addr, i.length)
+        i.bytez = function.view.read(addr, i.length)
+        i.disasm_text = function.view.get_disassembly(addr)
         return i
 
 class Trace:
@@ -116,12 +118,14 @@ class MCADBridge:
         args.append("--debug")
         args.append("-mtriple=" + self.triple)
         args.append("-mcpu=" + self.mcpu)
+        args.append("--use-call-inst")
+        args.append("--use-return-inst")
         args.append("-load-broker-plugin=" + os.path.join(MCAD_BUILD_PATH, "plugins", "binja-broker", "libMCADBinjaBroker.so"))
         self.p = subprocess.Popen(args)
 
     def stop(self):
-        if self.p:
-            self.p.kill()
+        client = GRPCClient(self.view)
+        response = client.request_cycle_counts([])
 
     def is_alive(self):
         if self.p:
