@@ -6,7 +6,7 @@ service Binja {
 
 message BinjaInstructions {
     repeated Instruction instruction = 1;
-    
+
     message Instruction {
         bytes opcode = 1;
     }

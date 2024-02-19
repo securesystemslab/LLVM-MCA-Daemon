@@ -6,6 +6,7 @@ import subprocess
 import ipdb
 import sys
 import grpc
+import time
 
 from binaryninja import *
 
@@ -19,6 +20,8 @@ bridge = None
 def get_triple_and_cpu_info(view):
     if view.arch.name == "x86_64":
         return "x86_64-unknown-linux-gnu", "skylake"
+    elif view.arch.name == "thumb2":
+        return "arm-none-linux-gnueabi", "cortex-a17"
 
 class WrappedInstruction:
     def __init__(self, addr=0, length=0, disasm_text=None, block=None, bytez=None, opcode=None):
@@ -95,6 +98,18 @@ def get_trace(function):
 
     return trace
 
+def get_trace_for_function(function):
+    trace = Trace(function)
+    view = function.view
+
+    for block in function.basic_blocks:
+        trace.add_block(block)
+
+        for insn in block.disassembly_text:
+            trace.add_instruction_at_addr(insn.address)
+
+    return trace
+
 class GRPCClient:
     def __init__(self, view):
         self.view = view
@@ -113,6 +128,9 @@ class MCADBridge:
         self.triple, self.mcpu = get_triple_and_cpu_info(view)
 
     def start(self):
+        if self.is_alive():
+            return
+
         args = []
         args.append(os.path.join(MCAD_BUILD_PATH, "llvm-mcad"))
         args.append("--debug")
@@ -120,6 +138,7 @@ class MCADBridge:
         args.append("-mcpu=" + self.mcpu)
         args.append("--use-call-inst")
         args.append("--use-return-inst")
+        args.append("--noalias=false")
         args.append("-load-broker-plugin=" + os.path.join(MCAD_BUILD_PATH, "plugins", "binja-broker", "libMCADBinjaBroker.so"))
         self.p = subprocess.Popen(args)
 
@@ -127,11 +146,10 @@ class MCADBridge:
         client = GRPCClient(self.view)
         response = client.request_cycle_counts([])
 
+        self.p = None
+
     def is_alive(self):
-        if self.p:
-            return True
-        else:
-            return False
+        return bool(self.p)
 
 def generate_graph(response, trace):
     graph = FlowGraph()
@@ -157,9 +175,11 @@ def generate_graph(response, trace):
             cycle_end = instructions[insn.address][1].executed
 
             tokens = []
-            cycle_str = str(cycle_start) + " - " + str(cycle_end)
+            # cycle_str = str(cycle_start) + " - " + str(cycle_end)
+            num_cycles = cycle_end - cycle_start
+            cycle_str = str(num_cycles)
             tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, cycle_str))
-            tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, " " * (12 - len(cycle_str))))
+            tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, " " * (6 - len(cycle_str))))
             tokens.append(InstructionTextToken(InstructionTextTokenType.AddressDisplayToken, str(hex(insn.address))))
             tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, "  "))
             for token in insn.tokens:
@@ -186,15 +206,11 @@ def generate_graph(response, trace):
 
     return graph
 
-def get_cycle_counts(view, function):
+def get_for_trace(view, function):
     global bridge
     
-    if not bridge:
-        logging.error("[MCAD] Bridge has not been initialized.")
-        return
-
-    if not bridge.is_alive():
-        logging.error("[MCAD] Server is not alive.")
+    if not bridge or not bridge.is_alive():
+        logging.error("[MCAD] Bridge is not initialized")
         return
 
     trace = get_trace(function)
@@ -208,26 +224,42 @@ def get_cycle_counts(view, function):
     del trace
     del response
 
-def initialize(view):
-    view.create_tag_type("Trace Member", "🌊")
+def get_for_function(view, function):
+    global bridge 
+
+    if not bridge or not bridge.is_alive():
+        logging.error("[MCAD] Bridge is not initialized")
+        return
+
+    trace = get_trace_for_function(function)
+
+    client = GRPCClient(view)
+    response = client.request_cycle_counts(trace.instructions)
+
+    g = generate_graph(response, trace)
+    show_graph_report("MCAD Trace Graph", g)
+
+    del trace
+    del response
 
 def start(view):
     global bridge
 
-    bridge = MCADBridge(view)
-    bridge.start()
+    if not bridge:
+        view.create_tag_type("Trace Member", "🌊")
+        bridge = MCADBridge(view)
 
-    logging.info("[MCAD] Server started.")
+    bridge.start()
 
 def stop(view):
     global bridge
 
     bridge.stop()
 
-    logging.info("[MCAD] Server stopped.")
-
 # Commands
-PluginCommand.register("MCAD\\Initialize Plugin", "Initialize custom tag for annotations", initialize)
-PluginCommand.register("MCAD\\Start Server", "Starts MCAD Server in the background", start)
-PluginCommand.register("MCAD\\Stop Server", "Stops MCAD Server running in the background", stop)
-PluginCommand.register_for_function("MCAD\\Get Cycle Counts from MCAD", "Retrieve cycle counts for a path using LLVM MCA Daemon", get_cycle_counts)
+PluginCommand.register("MCAD\\1. Start server", "Start server", start)
+
+PluginCommand.register_for_function("MCAD\\2. Get Cycle Counts for function", "Retrieve cycle counts for the entire function using LLVM MCA Daemon", get_for_function)
+PluginCommand.register_for_function("MCAD\\3. Get Cycle Counts for trace", "Retrieve cycle counts for a path using LLVM MCA Daemon", get_for_trace)
+
+PluginCommand.register("MCAD\\5. Stop server", "Stop MCAD server", stop)
