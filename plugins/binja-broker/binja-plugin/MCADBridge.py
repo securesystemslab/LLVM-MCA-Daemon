@@ -41,12 +41,12 @@ class WrappedInstruction:
         return i
 
 class Trace:
-    def __init__(self, function, blocks=dict(), instructions=[]):
+    def __init__(self, function):
         self.function = function
         self.view = function.view
 
-        self.blocks = blocks
-        self.instructions = instructions
+        self.blocks = dict()
+        self.instructions = []
 
     def add_instruction_at_addr(self, addr):
         self.instructions.append(WrappedInstruction.get_wrapped_instruction(self.function, addr))
@@ -175,7 +175,6 @@ def generate_graph(response, trace):
             cycle_end = instructions[insn.address][1].executed
 
             tokens = []
-            # cycle_str = str(cycle_start) + " - " + str(cycle_end)
             num_cycles = cycle_end - cycle_start
             cycle_str = str(num_cycles)
             tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, cycle_str))
@@ -189,6 +188,8 @@ def generate_graph(response, trace):
             color = None
             if instructions[insn.address][1].is_under_pressure:
                 color = HighlightStandardColor.RedHighlightColor
+            elif num_cycles > 20:
+                color = HighlightStandardColor.OrangeHighlightColor
 
             lines.append(DisassemblyTextLine(tokens, insn.address, color=color))
 
@@ -223,6 +224,7 @@ def get_for_trace(view, function):
 
     del trace
     del response
+    del g
 
 def get_for_function(view, function):
     global bridge 
@@ -241,6 +243,7 @@ def get_for_function(view, function):
 
     del trace
     del response
+    del g
 
 def start(view):
     global bridge

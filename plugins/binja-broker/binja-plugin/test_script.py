@@ -19,9 +19,23 @@ class grpc_client:
         print(instructions)
         return self.stub.RequestCycleCounts(binja_pb2.BinjaInstructions(instruction=instructions))
 
+    # mov    rbx,rcx
+    # add    rax,rbx
+    # cdqe / syscall
+    def send_instructions2(self):
+        insn_1 = binja_pb2.BinjaInstructions.Instruction(opcode=bytes(bytearray([0x48, 0x01, 0xD8])))
+        insn_2 = binja_pb2.BinjaInstructions.Instruction(opcode=bytes(bytearray([0x48, 0x89, 0xCB])))
+        insn_3 = binja_pb2.BinjaInstructions.Instruction(opcode=bytes(bytearray([0x0f, 0x05])))
+        instructions = [insn_1, insn_2, insn_3]
+        print(instructions)
+        return self.stub.RequestCycleCounts(binja_pb2.BinjaInstructions(instruction=instructions))
+
     def send_empty(self):
         self.stub.RequestCycleCounts(binja_pb2.BinjaInstructions(instruction=[]))
 
 G = grpc_client()
+response = G.send_instructions2()
+ipdb.set_trace()
 response = G.send_instructions()
+ipdb.set_trace()
 # ipdb.set_trace()

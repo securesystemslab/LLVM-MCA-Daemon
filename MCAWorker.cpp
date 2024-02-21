@@ -65,8 +65,13 @@ static cl::opt<bool>
 
 static cl::opt<bool>
   PreserveReturnInst("use-return-inst",
-                   cl::desc("Include return instruction in MCA"),
-                   cl::init(false));
+                     cl::desc("Include return instruction in MCA"),
+                     cl::init(false));
+
+static cl::opt<bool>
+  AssumeNoAlias("noalias",
+                cl::desc("If set, assumes that none of the loads and stores alias"),
+                cl::init(true));
 
 #define DEFAULT_MAX_NUM_PROCESSED 1000U
 static cl::opt<unsigned>
@@ -104,6 +109,7 @@ void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
 }
 
 void BrokerFacade::registerListener(mca::HWEventListener *EL) {
+  Worker.Listeners.insert(EL);
   Worker.MCAPipeline->addEventListener(EL);
 }
 
@@ -174,7 +180,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createPipeline() {
   auto RCU = std::make_unique<RetireControlUnit>(SM);
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, MCAPO.RegisterFileSize);
   auto LSU = std::make_unique<LSUnit>(SM, MCAPO.LoadQueueSize,
-                                       MCAPO.StoreQueueSize, MCAPO.AssumeNoAlias,
+                                       MCAPO.StoreQueueSize, AssumeNoAlias,
                                        TheMCA.getMetadataRegistry());
   std::unique_ptr<CacheManager> HWC;
   if (CacheConfigFile.size() && TheMCA.getMetadataRegistry())
@@ -207,6 +213,11 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createPipeline() {
   StagePipeline->appendStage(std::move(Dispatch));
   StagePipeline->appendStage(std::move(Execute));
   StagePipeline->appendStage(std::move(Retire));
+
+  for (auto *listener : Listeners) {
+      StagePipeline->addEventListener(listener);
+  }
+
   return StagePipeline;
 }
 

@@ -47,6 +47,7 @@ class MCAWorker {
   ToolOutputFile &MCAOF;
   std::unique_ptr<mca::Pipeline> MCAPipeline;
   std::unique_ptr<mca::PipelinePrinter> MCAPipelinePrinter;
+  std::set<mca::HWEventListener*> Listeners;
 
   size_t NumTraceMIs;
   // MCAWorker is the owner of this callback. Note that
