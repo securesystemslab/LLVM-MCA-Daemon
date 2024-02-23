@@ -21,7 +21,7 @@ This directory already contains a copy of the protobuf/gRPC code for the C++-bas
 ```bash
 $ protoc --grpc_out=. --cpp_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` binja.proto
 $ cd binja-plugin
-$ python3 -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. binja.proto
+$ python3 -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. ../binja.proto
 ```
 
 This may require running the following if they are not already installed on your system -  
