@@ -34,8 +34,8 @@ class grpc_client:
         self.stub.RequestCycleCounts(binja_pb2.BinjaInstructions(instruction=[]))
 
 G = grpc_client()
-response = G.send_instructions2()
+response1 = G.send_instructions2()
 ipdb.set_trace()
-response = G.send_instructions()
+response2 = G.send_instructions()
 ipdb.set_trace()
 # ipdb.set_trace()
