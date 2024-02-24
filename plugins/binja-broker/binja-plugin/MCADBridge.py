@@ -14,6 +14,10 @@ from infoctx import get_info_ctx_for_function, get_info_ctx_for_annotated
 MCAD_BUILD_PATH = "/home/chinmay_dd/Projects/LLVM-MCA-Daemon/build"
 bridge = None
 
+# Define aliases
+ITT = InstructionTextToken
+ITTType = InstructionTextTokenType
+
 def get_triple_and_cpu_info(view):
     if view.arch.name == "x86_64":
         return "x86_64-unknown-linux-gnu", "skylake"
@@ -76,12 +80,12 @@ def generate_graph(response, info_ctx):
             cycle_str = str(num_cycles)
 
             tokens = []
-            tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, cycle_str))
-            tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, " " * (6 - len(cycle_str))))
-            tokens.append(InstructionTextToken(InstructionTextTokenType.AddressDisplayToken, str(hex(insn.address))))
-            tokens.append(InstructionTextToken(InstructionTextTokenType.TextToken, "  "))
+            tokens.append(ITT(ITTType.TextToken, cycle_str))
+            tokens.append(ITT(ITTType.TextToken, " " * (6 - len(cycle_str))))
+            tokens.append(ITT(ITTType.AddressDisplayToken, str(hex(insn.address))))
+            tokens.append(ITT(ITTType.TextToken, "  "))
             for token in insn.tokens:
-                if token.type != InstructionTextTokenType.TagToken:
+                if token.type != ITTType.TagToken:
                     tokens.append(token)
 
             color = None
@@ -93,6 +97,8 @@ def generate_graph(response, info_ctx):
             lines.append(DisassemblyTextLine(tokens, insn.address, color=color))
             idx += 1
 
+        total_string = "~   " + str(block_total_cycles) + "   ~"
+        lines.append(DisassemblyTextLine([ITT(ITTType.TextToken, total_string)]))
         g_blocks[block_addr].lines = lines
         graph.append(g_blocks[block_addr])
 
