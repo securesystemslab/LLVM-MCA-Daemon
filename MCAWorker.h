@@ -66,6 +66,8 @@ class MCAWorker {
 
   std::unique_ptr<Broker> TheBroker;
 
+  std::unique_ptr<mca::Pipeline> createDefaultPipeline();
+  std::unique_ptr<mca::Pipeline> createInOrderPipeline();
   std::unique_ptr<mca::Pipeline> createPipeline();
   void resetPipeline();
 

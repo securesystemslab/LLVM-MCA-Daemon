@@ -7,6 +7,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MCA/Context.h"
+#include "llvm/MCA/CustomBehaviour.h"
 #include "llvm/MCA/HardwareUnits/CacheManager.h"
 #include "llvm/MCA/HardwareUnits/RegisterFile.h"
 #include "llvm/MCA/HardwareUnits/RetireControlUnit.h"
@@ -18,6 +19,7 @@
 #include "llvm/MCA/Stages/EntryStage.h"
 #include "llvm/MCA/Stages/ExecuteStage.h"
 #include "llvm/MCA/Stages/InstructionTables.h"
+#include "llvm/MCA/Stages/InOrderIssueStage.h"
 #include "llvm/MCA/Stages/MicroOpQueueStage.h"
 #include "llvm/MCA/Stages/RetireStage.h"
 #include "llvm/MCA/Support.h"
@@ -171,7 +173,49 @@ MCAWorker::MCAWorker(const Target &T,
   resetPipeline();
 }
 
+
 std::unique_ptr<mca::Pipeline> MCAWorker::createPipeline() {
+  const MCSchedModel &SM = STI.getSchedModel();
+  if (SM.isOutOfOrder()) {
+      return createDefaultPipeline();
+  } else {
+      return createInOrderPipeline();
+  }
+}
+
+std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
+    using namespace mca;
+    const MCSchedModel &SM = STI.getSchedModel();
+    const MCRegisterInfo &MRI = TheMCA.getMCRegisterInfo();
+    auto CB = std::make_unique<CustomBehaviour>(STI, SrcMgr, MCII);
+
+    // Create hardware units that define the backend
+    auto PRF = std::make_unique<RegisterFile>(SM, MRI, MCAPO.RegisterFileSize);
+    auto LSU = std::make_unique<LSUnit>(SM, MCAPO.LoadQueueSize,
+                                        MCAPO.StoreQueueSize, AssumeNoAlias,
+                                        TheMCA.getMetadataRegistry());
+
+    // Create the pipeline stages.
+    auto Entry = std::make_unique<EntryStage>(SrcMgr, STI);
+    auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF, *CB, *LSU);
+    auto StagePipeline = std::make_unique<Pipeline>();
+
+    // Pass the ownership of all the hardware units to this Context.
+    TheMCA.addHardwareUnit(std::move(PRF));
+    TheMCA.addHardwareUnit(std::move(LSU));
+
+    // Build the pipeline.
+    StagePipeline->appendStage(std::move(Entry));
+    StagePipeline->appendStage(std::move(InOrderIssue));
+
+    for (auto *listener : Listeners) {
+        StagePipeline->addEventListener(listener);
+    }
+
+    return StagePipeline;
+}
+
+std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
   using namespace mca;
   const MCSchedModel &SM = STI.getSchedModel();
   const MCRegisterInfo &MRI = TheMCA.getMCRegisterInfo();
@@ -406,7 +450,7 @@ Error MCAWorker::run() {
                  std::string(1, ']'));
     } else
       printMCA();
-    
+
     TheBroker->signalWorkerComplete();
 
     if (EndOfStream)

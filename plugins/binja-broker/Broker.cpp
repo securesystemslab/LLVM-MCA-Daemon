@@ -88,7 +88,7 @@ public:
     bool Running = true;
     std::queue<BinjaInstructions::Instruction> InsnQueue;
     std::mutex QueueMutex;
-    std::atomic<bool> IsWaitingForWorker = false; 
+    std::atomic<bool> IsWaitingForWorker = false;
     std::atomic<bool> HasHandledInput = true;
     DenseMap<unsigned, InstructionEntry> CountStore;
 };
@@ -119,9 +119,12 @@ public:
         }
     }
 
-    void onEvent(const mca::HWStallEvent &Event) {}
+    void onEvent(const mca::HWStallEvent &Event) {
+        std::cout << "[BINJA] Stall !\n";
+    }
 
     void onEvent(const mca::HWPressureEvent &Event) {
+        std::cout << "[BINJA] Pressure !\n";
         for (const auto &inst : Event.AffectedInstructions) {
             const unsigned index = inst.getSourceIndex();
 
@@ -209,7 +212,7 @@ class BinjaBroker : public Broker {
     }
 
     unsigned getFeatures() const override {
-        return Broker::Feature_Metadata | Broker::Feature_Region; 
+        return Broker::Feature_Metadata | Broker::Feature_Region;
     }
 
 public:

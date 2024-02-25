@@ -25,6 +25,9 @@ def get_triple_and_cpu_info(view):
     elif view.arch.name == "thumb2":
         return "arm-none-linux-gnueabi", "cortex-a17"
 
+    elif view.arch.name == "aarch64":
+        return "aarch64-unknown-linux-gnu", "cortex-a55"
+
 class MCADBridge:
     def __init__(self, view):
         self.view = view
@@ -41,9 +44,9 @@ class MCADBridge:
         args.append("--debug")
         args.append("-mtriple=" + self.triple)
         args.append("-mcpu=" + self.mcpu)
-        args.append("--use-call-inst")
-        args.append("--use-return-inst")
-        args.append("--noalias=false")
+        # args.append("--use-call-inst")
+        # args.append("--use-return-inst")
+        # args.append("--noalias=false")
         args.append("-load-broker-plugin=" + os.path.join(MCAD_BUILD_PATH, "plugins", "binja-broker", "libMCADBinjaBroker.so"))
         self.p = subprocess.Popen(args)
 
@@ -116,7 +119,7 @@ def generate_graph(response, info_ctx):
 #####################################
 def get_for_annotated(view, function):
     global bridge
-    
+
     if not bridge or not bridge.is_alive():
         logging.error("[MCAD] Bridge is not initialized")
         return
@@ -134,7 +137,7 @@ def get_for_annotated(view, function):
     del g
 
 def get_for_function(view, function):
-    global bridge 
+    global bridge
 
     if not bridge or not bridge.is_alive():
         logging.error("[MCAD] Bridge is not initialized")
