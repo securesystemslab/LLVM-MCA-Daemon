@@ -48,9 +48,9 @@ class MCADBridge:
         args.append("--debug")
         args.append("-mtriple=" + self.triple)
         args.append("-mcpu=" + self.mcpu)
-        # args.append("--use-call-inst")
-        # args.append("--use-return-inst")
-        # args.append("--noalias=false")
+        args.append("--use-call-inst")
+        args.append("--use-return-inst")
+        args.append("--noalias=false")
         args.append("-load-broker-plugin=" + os.path.join(MCAD_BUILD_PATH, "plugins", "binja-broker", "libMCADBinjaBroker.so"))
         self.p = subprocess.Popen(args)
 
