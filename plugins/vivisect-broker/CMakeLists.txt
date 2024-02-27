@@ -1,29 +1,19 @@
 set(CMAKE_CXX_STANDARD 17)
 
-find_package(protobuf CONFIG REQUIRED)
-find_package(gRPC CONFIG REQUIRED)
-
 add_library(vivisect_service_proto emulator.proto)
 target_compile_options(vivisect_service_proto PRIVATE "-fPIC")
 target_link_libraries(vivisect_service_proto
     PUBLIC
-        protobuf::libprotobuf
-        gRPC::grpc
-        gRPC::grpc++
+        libprotobuf
+        grpc
+        grpc++
 )
 
-#
 # Compile protobuf and grpc files in vivisect_service_proto target to cpp
-#
-get_target_property(grpc_cpp_plugin_location gRPC::grpc_cpp_plugin LOCATION)
 protobuf_generate(TARGET vivisect_service_proto LANGUAGE cpp OUT_VAR proto_files)
 protobuf_generate(TARGET vivisect_service_proto LANGUAGE grpc GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc PLUGIN "protoc-gen-grpc=${grpc_cpp_plugin_location}")
 
-set(proto_include_dir "${CMAKE_CURRENT_BINARY_DIR}")
-
 target_include_directories(vivisect_service_proto PUBLIC ${proto_include_dir})
-message(STATUS "Protobuf include directory: ${proto_include_dir}")
-
 
 set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
 find_package (Python3 REQUIRED

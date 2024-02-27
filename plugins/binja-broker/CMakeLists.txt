@@ -1,29 +1,20 @@
 set(CMAKE_CXX_STANDARD 20)
 
-find_package(protobuf CONFIG REQUIRED)
-find_package(gRPC CONFIG REQUIRED)
-
 add_library(binja_bridge_proto binja.proto)
 target_compile_options(binja_bridge_proto PRIVATE "-fPIC")
 target_link_libraries(binja_bridge_proto
     PUBLIC
-        protobuf::libprotobuf
-        gRPC::grpc
-        gRPC::grpc++
+        libprotobuf
+        grpc
+        grpc++
 )
 
-#
 # Compile protobuf and grpc files in binja_bridge_proto target to cpp
-#
-get_target_property(grpc_cpp_plugin_location gRPC::grpc_cpp_plugin LOCATION)
 protobuf_generate(TARGET binja_bridge_proto LANGUAGE cpp OUT_VAR proto_files)
 protobuf_generate(TARGET binja_bridge_proto LANGUAGE grpc GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc PLUGIN "protoc-gen-grpc=${grpc_cpp_plugin_location}")
 
-set(proto_include_dir "${CMAKE_CURRENT_BINARY_DIR}")
 
 target_include_directories(binja_bridge_proto PUBLIC ${proto_include_dir})
-message(STATUS "Protobuf include directory: ${proto_include_dir}")
-
 
 set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
 find_package (Python3 REQUIRED

@@ -28,6 +28,10 @@ def get_triple_and_cpu_info(view):
     elif view.arch.name == "aarch64":
         return "aarch64-unknown-linux-gnu", "cortex-a55"
 
+    else:
+        logging.error("[MCAD] Unknown architecture. Please update MCADBridge")
+        sys.exit(0)
+
 class MCADBridge:
     def __init__(self, view):
         self.view = view
@@ -175,4 +179,4 @@ PluginCommand.register("MCAD\\1. Start server", "Start server", start)
 PluginCommand.register_for_function("MCAD\\2. Get Cycle Counts for function", "Retrieve cycle counts for the entire function", get_for_function)
 PluginCommand.register_for_function("MCAD\\3. Get Cycle Counts for annotated", "Retrieve cycle counts for annotated blocks", get_for_annotated)
 
-PluginCommand.register("MCAD\\5. Stop server", "Stop MCAD server", stop)
+PluginCommand.register("MCAD\\4. Stop server", "Stop MCAD server", stop)
