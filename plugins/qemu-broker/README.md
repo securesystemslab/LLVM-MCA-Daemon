@@ -1,13 +1,19 @@
 # Broker for QEMU
 A Broker that works with QEMU TCG plugin.
+## Prerequisites
+The following will get you started on Ubuntu 22.04:
+```bash
+sudo apt install build-essential ninja-build libglib2.0-dev python3
+```
 ## Preparations
 Since we add some custom features in QEMU, please apply the patch `patches/qemu-patch.diff` in the following way:
 ```bash
+git clone https://gitlab.com/qemu-project/qemu.git
 cd qemu
 # The patch is built on top of this HEAD
 git checkout 0cef06d18762374c94eb4d511717a4735d668a24
 # Apply the patch
-git apply /path/to/patches/qemu-patch.diff
+git apply /path/to/MCAD/plugins/qemu-broker/patches/qemu-patch.diff
 ```
 After applying the patch, please build QEMU in the following way:
 ```bash
@@ -32,6 +38,7 @@ Things in this folder -- including the broker plugin and the QEMU "relay" plugin
 
 In addition, you need to supply the QEMU include folder via the `QEMU_INCLUDE_DIR` CMake argument. Here is a complete example:
 ```bash
+cd /path/to/LLVM-MCA-Daemon  # root of this project
 mkdir .build && cd .build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
                -DLLVM_DIR=/path/to/installed-llvm/lib/cmake/llvm \
