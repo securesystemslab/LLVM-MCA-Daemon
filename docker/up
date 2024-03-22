@@ -2,16 +2,9 @@
 
 set -e
 
-DOCKER_USER=$(id -un)
-export DOCKER_USER
-DOCKER_UID=$(id -u)
-export DOCKER_UID
-DOCKER_GID=$(id -g)
-export DOCKER_GID
-
 DOCKER_SSH_PORT=$((DOCKER_UID + 1222))
 export DOCKER_SSH_PORT
-DOCKER_HOSTNAME="$(hostname)-mcad-2"
+DOCKER_HOSTNAME="$(hostname)-mcad"
 export DOCKER_HOSTNAME
 
-docker-compose --project-name "$DOCKER_USER-mcad-2" up -d --build
+docker-compose --project-name "$DOCKER_USER-mcad" up -d --build

@@ -36,6 +36,15 @@ Note that plugins under the `plugins` folder are not built by default. Please ad
  - `LLVM_MCAD_ENABLE_PROFILER`. Uses CPU profiler from [gperftools](https://github.com/gperftools/gperftools).
  - `LLVM_MCAD_FORCE_ENABLE_STATS`. Enable LLVM statistics even in non-debug builds.
 
+## Docker
+
+We also ship LLVM-MCAD with Docker. Simply run `./up` from the docker directory. Then use MCAD as so:  
+
+```bash
+$ # LLVM-MCA-Daemon directory is located inside /work
+$ docker run <container-name> llvm-mcad --debug -mtriple="armv7-linux-gnueabihf" -mcpu="cortex-a57" --use-call-inst --use-return-inst --noalias=false -load-broker-plugin=/work/LLVM-MCA-Daemon/build/plugins/binja-broker/libMCADBinjaBroker.so
+```
+
 ## Usages
 Here is an example of using `llvm-mcad` -- the main command line tool -- with the qemu-broker Broker plugin (Please refer to the `plugins/qemu-broker` folder for more details about how to build this plugin).
 
