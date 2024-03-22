@@ -166,7 +166,7 @@ public:
 };
 
 void VivisectBroker::serverLoop() {
-    std::string srv_addr("localhost:50051");
+    std::string srv_addr("0.0.0.0:50051");
 
     grpc::ServerBuilder builder;
     builder.AddListeningPort(srv_addr, grpc::InsecureServerCredentials());

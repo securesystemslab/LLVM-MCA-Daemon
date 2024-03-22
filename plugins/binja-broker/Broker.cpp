@@ -233,7 +233,7 @@ public:
 };
 
 void BinjaBroker::serverLoop() {
-    std::string srv_addr("localhost:50052");
+    std::string srv_addr("0.0.0.0:50052");
 
     grpc::ServerBuilder builder;
     builder.AddListeningPort(srv_addr, grpc::InsecureServerCredentials());

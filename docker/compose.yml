@@ -3,9 +3,6 @@ services:
     build:
       context: ..
       dockerfile: ./docker/Dockerfile
-    ports:
-      - ${DOCKER_SSH_PORT}:22
-      - "50052:50052"
     volumes:
       - ../../:/work/host
       - ${HOME}:${HOME}
@@ -13,4 +10,3 @@ services:
     environment:
       - TZ=America/Los_Angeles
     privileged: true
-    network_mode: "host"

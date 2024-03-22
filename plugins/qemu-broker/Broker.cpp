@@ -890,7 +890,7 @@ int QemuBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size,
 }
 
 QemuBroker::Options::Options()
-  : ListenAddress("localhost"), ListenPort(),
+  : ListenAddress("0.0.0.0"), ListenPort(),
     MaxNumConnections(1),
     BinaryRegionsManifestFile(),
     BinaryRegionsOpMode(qemu_broker::BinaryRegions::M_Trim),

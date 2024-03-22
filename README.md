@@ -42,7 +42,8 @@ We also ship LLVM-MCAD with Docker. Simply run `./up` from the docker directory.
 
 ```bash
 $ # LLVM-MCA-Daemon directory is located inside /work
-$ docker run <container-name> llvm-mcad --debug -mtriple="armv7-linux-gnueabihf" -mcpu="cortex-a57" --use-call-inst --use-return-inst --noalias=false -load-broker-plugin=/work/LLVM-MCA-Daemon/build/plugins/binja-broker/libMCADBinjaBroker.so
+$ # Port mappings are different for different Brokers. 50051 - Vivisect, 50052 - Binja
+$ docker run -p 50052:50052 mcad_dev --debug -mtriple="armv7-linux-gnueabihf" -mcpu="cortex-a57" --use-call-inst --use-return-inst --noalias=false -load-broker-plugin=/work/LLVM-MCA-Daemon/build/plugins/binja-broker/libMCADBinjaBroker.so
 ```
 
 ## Usages
