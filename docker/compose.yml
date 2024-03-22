@@ -1,0 +1,21 @@
+services:
+  dev:
+    build:
+      context: ..
+      dockerfile: ./docker/Dockerfile
+      args:
+        UID: ${DOCKER_UID}
+        GID: ${DOCKER_GID}
+        USER: ${DOCKER_USER}
+    ports:
+      - ${DOCKER_SSH_PORT}:22
+      - "50052:50052"
+    volumes:
+      - ../../:/work/host
+      - ${HOME}:${HOME}
+    hostname: ${DOCKER_HOSTNAME}-focal
+    environment:
+      - TZ=America/Los_Angeles
+    ulimits:
+      stack: -1
+    privileged: true
