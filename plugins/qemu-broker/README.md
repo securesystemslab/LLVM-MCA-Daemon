@@ -34,7 +34,7 @@ sudo apt install flatbuffers-compiler
 ```
 
 ## Build
-Things in this folder -- including the broker plugin and the QEMU "relay" plugin -- will be built with rest of the LLVM-MCAD project if the `-DLLVM_MCAD_BUILD_PLUGINS=ON` is given when configuring.
+Things in this folder -- including the broker plugin and the QEMU "relay" plugin -- will be built with rest of the LLVM-MCAD project if the `-DLLVM_MCAD_ENABLE_PLUGINS=qemu` is given when configuring.
 
 In addition, you need to supply the QEMU include folder via the `QEMU_INCLUDE_DIR` CMake argument. Here is a complete example:
 ```bash
@@ -42,7 +42,7 @@ cd /path/to/LLVM-MCA-Daemon  # root of this project
 mkdir .build && cd .build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
                -DLLVM_DIR=/path/to/installed-llvm/lib/cmake/llvm \
-               -DLLVM_MCAD_BUILD_PLUGINS=ON \
+               -DLLVM_MCAD_ENABLE_PLUGINS=qemu \
                -DQEMU_INCLUDE_DIR=/path/to/qemu/include \
                ../
 ninja all
@@ -51,7 +51,7 @@ If you want to use a custom Flatbuffers, you can use the `CMAKE_PREFIX_PATH` CMa
 ```bash
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
                -DLLVM_DIR=/path/to/installed-llvm/lib/cmake/llvm \
-               -DLLVM_MCAD_BUILD_PLUGINS=ON \
+               -DLLVM_MCAD_ENABLE_PLUGINS=qemu \
                -DQEMU_INCLUDE_DIR=/path/to/qemu/include \
                -DCMAKE_PREFIX_PATH=/path/to/your/flatbuffers \
                ../

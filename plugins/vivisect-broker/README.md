@@ -22,14 +22,14 @@ pip install protobuf
 
 ## Build
 
-To build MCAD plugins you must set `-DLLVM_MCAD_BUILD_PLUGINS=ON` when running
+To build MCAD plugins you must set `-DLLVM_MCAD_ENABLE_PLUGINS=vivisect` when running
 the CMake config step. For example
 
 ```
 mkdir build && build
 cmake -GNinja -DCMAKE_BUILD_TYPE=Debug \
               -DLLVM_DIR=/path/to/installed-llvm/lib/cmake/llvm \
-              -DLLVM_MCAD_BUILD_PLUGINS=ON \
+              -DLLVM_MCAD_ENABLE_PLUGINS=vivisect \
               ..
 ninja llvm-mcad MCADVivisectBroker
 ```
