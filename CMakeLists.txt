@@ -35,7 +35,7 @@ option(LLVM_MCAD_ENABLE_TCMALLOC "Enable tcmalloc in gpertools for memory profil
 
 option(LLVM_MCAD_ENABLE_PROFILER "Enable CPU profiler in gpertools" OFF)
 
-option(LLVM_MCAD_BUILD_PLUGINS "Build all MCAD plugins" OFF)
+# See plugins/CMakeLists.txt for LLVM_MCAD_ENABLE_PLUGINS option
 
 # Sanitizers
 option(LLVM_MCAD_ENABLE_ASAN "Enable address sanitizer" OFF)
@@ -122,6 +122,4 @@ target_link_libraries(llvm-mcad
 
 unset(LLVM_LINK_COMPONENTS)
 
-if (LLVM_MCAD_BUILD_PLUGINS)
-  add_subdirectory(plugins)
-endif()
+add_subdirectory(plugins)

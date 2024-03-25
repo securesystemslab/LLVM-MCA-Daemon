@@ -38,7 +38,9 @@ ninja all
 ```
 For instance, if you build `llvm-project` using the previous steps, _"/path/to/installed-llvm/lib/cmake/llvm"_ will be _"/path/to/llvm-project/.build/lib/cmake/llvm"_.
 
-Note that plugins under the `plugins` folder are not built by default. Please add `-DLLVM_MCAD_BUILD_PLUGINS=ON` if you want to build them. Here are some other CMake arguments you can tweak:
+Note that plugins under the `plugins` folder are not built by default. Please add `-DLLVM_MCAD_ENABLE_PLUGINS=all` if you want to build all of them, or give a semicolon-separated list of the choices `qemu`, `tracer`, `binja` or `vivisect` to select specifically which plugins to build. 
+
+Here are some other CMake arguments you can tweak:
  - `LLVM_MCAD_ENABLE_ASAN`. Enable the address sanitizer.
  - `LLVM_MCAD_ENABLE_TCMALLOC`. Uses tcmalloc and its heap profiler.
  - `LLVM_MCAD_ENABLE_PROFILER`. Uses CPU profiler from [gperftools](https://github.com/gperftools/gperftools).
