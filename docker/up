@@ -6,5 +6,7 @@ DOCKER_SSH_PORT=$((DOCKER_UID + 1222))
 export DOCKER_SSH_PORT
 DOCKER_HOSTNAME="$(hostname)-mcad"
 export DOCKER_HOSTNAME
+DOCKER_USER=$(id -un)
+export DOCKER_USER
 
 docker-compose --project-name "$DOCKER_USER-mcad" up -d --build
