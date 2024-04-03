@@ -26,6 +26,7 @@
 #include <mutex>
 #include <thread>
 #include <algorithm>
+#include <sstream>
 
 #include "BrokerFacade.h"
 #include "Brokers/Broker.h"
@@ -49,12 +50,14 @@ class BinjaBridge final : public Binja::Service {
     grpc::Status RequestCycleCounts(grpc::ServerContext *ctxt,
                                     const BinjaInstructions *insns,
                                     CycleCounts *ccs) {
-        if (!insns || !Running) {
-            return grpc::Status::OK;
+        if (!Running) {
+            return grpc::Status(grpc::StatusCode::UNAVAILABLE,
+                                "Previous error caused BinjaBridge shutdown.");
         }
-        if (insns->instruction_size() == 0) {
+        if (!insns || insns->instruction_size() == 0) {
             Running = false;
-            return grpc::Status::OK;
+            return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
+                                "Null or empty instructions.");
         }
 
         {
@@ -70,6 +73,19 @@ class BinjaBridge final : public Binja::Service {
         IsWaitingForWorker.store(true);
         // Block until worker is done processing the input
         IsWaitingForWorker.wait(true);
+
+        if (InstructionErrors.size() > 0) {
+            auto it = InstructionErrors.begin();
+            std::ostringstream msg;
+            msg << "Errors in instruction(s) ";
+            msg << it->first;
+            ++it;
+            for(; it != InstructionErrors.end(); ++it) {
+                    msg << ", " << it->first;
+            }
+            msg << ".";
+            return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, msg.str());
+        }
 
         for (int i = 0; i < insns->instruction_size(); i++) {
             auto* cc = ccs->add_cycle_count();
@@ -94,6 +110,13 @@ public:
     std::atomic<bool> IsWaitingForWorker = false;
     std::atomic<bool> DoneHandlingInput = true;
     DenseMap<unsigned, InstructionEntry> CountStore;
+
+    // InstructionErrors - Synchronization: 
+    // - Only ever written by MCAD worker thread (BinjaBroker class) when
+    //   IsWaitingForWorker == true
+    // - Only ever read by gRPC thread (RequestCycleCounts) when
+    //   IsWaitingForWorker == false
+    DenseMap<unsigned, llvm::Error> InstructionErrors;
 };
 
 class RawListener : public mca::HWEventListener {
@@ -162,6 +185,10 @@ class BinjaBroker : public Broker {
         Bridge.IsWaitingForWorker.notify_all();
     }
 
+    void signalInstructionError(int Index, llvm::Error Err) {
+        Bridge.InstructionErrors.insert(std::make_pair(Index, std::move(Err)));
+    }
+
     int fetch(MutableArrayRef<const MCInst *> MCIS, int Size,
               Optional<MDExchanger> MDE) override {
         return fetchRegion(MCIS, Size, MDE).first;
@@ -170,6 +197,8 @@ class BinjaBroker : public Broker {
     std::pair<int, RegionDescriptor>
     fetchRegion(MutableArrayRef<const MCInst *> MCIS, int Size = -1,
                 Optional<MDExchanger> MDE = None) override {
+
+        Bridge.InstructionErrors.clear();
         if (!Bridge.Running) {
             return std::make_pair(-1, RegionDescriptor(true));
         }
@@ -218,7 +247,8 @@ class BinjaBroker : public Broker {
     }
 
     unsigned getFeatures() const override {
-        return Broker::Feature_Metadata | Broker::Feature_Region;
+        return Broker::Feature_Metadata | Broker::Feature_Region
+               | Broker::Feature_InstructionError;
     }
 
 public:
