@@ -62,7 +62,7 @@ class BinjaBridge final : public Binja::Service {
             for (int i = 0; i < insns->instruction_size(); i++) {
                 InsnQueue.push(insns->instruction(i));
             }
-            HasHandledInput.store(false);
+            DoneHandlingInput.store(false);
         }
 
         IsWaitingForWorker.store(true);
@@ -78,7 +78,7 @@ class BinjaBridge final : public Binja::Service {
             cc->set_is_under_pressure(CountStore[i].IsUnderPressure);
         }
 
-        HasHandledInput.store(true);
+        DoneHandlingInput.store(true);
 
         return grpc::Status::OK;
     }
@@ -89,7 +89,7 @@ public:
     std::queue<BinjaInstructions::Instruction> InsnQueue;
     std::mutex QueueMutex;
     std::atomic<bool> IsWaitingForWorker = false;
-    std::atomic<bool> HasHandledInput = true;
+    std::atomic<bool> DoneHandlingInput = true;
     DenseMap<unsigned, InstructionEntry> CountStore;
 };
 
@@ -173,7 +173,7 @@ class BinjaBroker : public Broker {
                     return std::make_pair(-1, RegionDescriptor(true));
                 }
 
-                if (Bridge.HasHandledInput.load()) {
+                if (Bridge.DoneHandlingInput.load()) {
                     return std::make_pair(0, RegionDescriptor(false));
                 }
 
