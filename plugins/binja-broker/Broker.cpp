@@ -63,10 +63,12 @@ class BinjaBridge final : public Binja::Service {
                 InsnQueue.push(insns->instruction(i));
             }
             DoneHandlingInput.store(false);
+            DoneHandlingInput.notify_one();
         }
 
         IsWaitingForWorker.store(true);
-        while (IsWaitingForWorker.load()) {};
+        // Block until worker is done processing the input
+        IsWaitingForWorker.wait(true);
 
         for (int i = 0; i < insns->instruction_size(); i++) {
             auto* cc = ccs->add_cycle_count();
@@ -156,6 +158,7 @@ class BinjaBroker : public Broker {
 
     void signalWorkerComplete() {
         Bridge.IsWaitingForWorker.store(false);
+        Bridge.IsWaitingForWorker.notify_one();
     }
 
     int fetch(MutableArrayRef<const MCInst *> MCIS, int Size,
@@ -173,9 +176,8 @@ class BinjaBroker : public Broker {
                     return std::make_pair(-1, RegionDescriptor(true));
                 }
 
-                if (Bridge.DoneHandlingInput.load()) {
-                    return std::make_pair(0, RegionDescriptor(false));
-                }
+                // Block until new input is available
+                Bridge.DoneHandlingInput.wait(true);
 
                 if (Size < 0 || Size > MCIS.size()) {
                     Size = MCIS.size();
