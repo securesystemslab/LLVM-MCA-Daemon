@@ -1,5 +1,6 @@
 #ifndef LLVM_MCAD_BROKERS_BROKER_H
 #define LLVM_MCAD_BROKERS_BROKER_H
+#include "llvm/Support/Error.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
@@ -31,6 +32,11 @@ struct Broker {
   // use `fetchRegion` method instead.
   static constexpr unsigned Feature_Region = 1;
   static constexpr unsigned Feature_Metadata = (1 << 1);
+  
+  // If a broker supports "InstructionError", its signalInstructionError 
+  // implementation will be called once for each instruction that resulted
+  // in an error when ran through MCA
+  static constexpr unsigned Feature_InstructionError = (1 << 2);
 
   // Broker should own the MCInst so only return the pointer
   //
@@ -78,6 +84,8 @@ struct Broker {
   }
 
   virtual void signalWorkerComplete() {};
+
+  virtual void signalInstructionError(int Index, llvm::Error Err) {};
 
   virtual ~Broker() {}
 };

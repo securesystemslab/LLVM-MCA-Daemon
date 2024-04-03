@@ -297,6 +297,10 @@ Error MCAWorker::run() {
                                    "No Broker is set");
   }
 
+  const bool UseRegion = TheBroker->hasFeature<Broker::Feature_Region>();
+  const bool UseSignalInstructionError = 
+    TheBroker->hasFeature<Broker::Feature_InstructionError>();
+
   raw_ostream *TraceOS = nullptr;
   std::unique_ptr<ToolOutputFile> TraceTOF;
   if (TraceMCI) {
@@ -318,7 +322,6 @@ Error MCAWorker::run() {
   SmallVector<const MCInst*, DEFAULT_MAX_NUM_PROCESSED>
     TraceBuffer(MaxNumProcessedInst);
 
-  bool UseRegion = TheBroker->hasFeature<Broker::Feature_Region>();
   size_t RegionIdx = 0U;
 
   mca::MetadataRegistry *MDRegistry = TheMCA.getMetadataRegistry();
@@ -411,7 +414,11 @@ Error MCAWorker::run() {
               // And these error messages will actually overflow our python
               // harness used in the experiments :-P Thus we're temporarily
               // disabling the error message here.
-              llvm::consumeError(std::move(RemainingE));
+              if (UseSignalInstructionError) {
+                TheBroker->signalInstructionError(i, std::move(RemainingE));
+              } else {
+                llvm::consumeError(std::move(RemainingE));
+              }
               continue;
             }
           }
