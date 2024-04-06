@@ -47,8 +47,8 @@ struct InstructionEntry {
 
 class BinjaBridge final : public Binja::Service {
     grpc::Status RequestCycleCounts(grpc::ServerContext *ctxt,
-                                   const BinjaInstructions *insns,
-                                   CycleCounts *ccs) {
+                                    const BinjaInstructions *insns,
+                                    CycleCounts *ccs) {
         if (!insns || !Running) {
             return grpc::Status::OK;
         }
@@ -147,6 +147,7 @@ class BinjaBroker : public Broker {
     BinjaBridge Bridge;
     std::unique_ptr<RawListener> Listener;
     std::vector<std::unique_ptr<MCInst>> Local_MCIS;
+    const std::string ListenAddr, ListenPort;
 
     std::unique_ptr<std::jthread> ServerThread;
     std::unique_ptr<grpc::Server> server;
@@ -216,8 +217,25 @@ class BinjaBroker : public Broker {
     }
 
 public:
-    BinjaBroker(const MCSubtargetInfo &MSTI, MCContext &C, const Target &T)
-        : TheTarget(T), Ctx(C), STI(MSTI), Bridge(BinjaBridge()) {
+    struct Options {
+        StringRef ListenAddress, ListenPort;
+
+        // Initialize default values
+        Options();
+
+        // Construct from command line options
+        Options(int argc, const char *const *argv);
+    };
+
+    BinjaBroker(const Options &Opts,
+                const MCSubtargetInfo &MSTI, 
+                MCContext &C, 
+                const Target &T)
+        : ListenAddr(Opts.ListenAddress.str()), ListenPort(Opts.ListenPort.str()),
+          TheTarget(T), 
+          Ctx(C), 
+          STI(MSTI), 
+          Bridge(BinjaBridge()) {
         ServerThread = std::make_unique<std::jthread>(&BinjaBroker::serverLoop, this);
         DisAsm.reset(TheTarget.createMCDisassembler(STI, Ctx));
         Listener = std::make_unique<RawListener>(Bridge);
@@ -232,8 +250,27 @@ public:
     }
 };
 
+BinjaBroker::Options::Options() 
+    : ListenAddress("0.0.0.0"), ListenPort("50052") {}
+
+BinjaBroker::Options::Options(int argc, const char *const *argv) 
+    : BinjaBroker::Options() {
+    for (int i = 0; i < argc; ++i) {
+        StringRef Arg(argv[i]);
+
+        if (Arg.startswith("-host") && Arg.contains("=")) {
+            auto RawHost = Arg.split("=").second;
+            if (RawHost.contains(':')) {
+                std::tie(ListenAddress, ListenPort) = RawHost.split(':');
+            } else {
+                ListenAddress = RawHost;
+            }
+        }
+    }
+}
+
 void BinjaBroker::serverLoop() {
-    std::string srv_addr("0.0.0.0:50052");
+    std::string srv_addr = ListenAddr + ':' + ListenPort;
 
     grpc::ServerBuilder builder;
     builder.AddListeningPort(srv_addr, grpc::InsecureServerCredentials());
@@ -248,8 +285,10 @@ extern "C" ::llvm::mcad::BrokerPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
 mcadGetBrokerPluginInfo() {
     return {LLVM_MCAD_BROKER_PLUGIN_API_VERSION, "BinjaBroker", "v0.1",
           [](int argc, const char *const *argv, BrokerFacade &BF) {
-              auto binja_broker = std::make_unique<BinjaBroker>(
-                      BF.getSTI(), BF.getCtx(), BF.getTarget());
+              BinjaBroker::Options BrokerOpts(argc, argv);
+              auto binja_broker = std::make_unique<BinjaBroker>(BrokerOpts,
+                                                                BF.getSTI(), BF.getCtx(), 
+                                                                BF.getTarget());
               BF.registerListener(binja_broker->getListener());
               BF.setBroker(std::move(binja_broker));
           }};
