@@ -102,7 +102,7 @@ class RawListener : public mca::HWEventListener {
 public:
     RawListener(BinjaBridge &bridge) : BridgeRef(bridge), CurrentCycle(0U) {}
 
-    void onEvent(const mca::HWInstructionEvent &Event) {
+    void onEvent(const mca::HWInstructionEvent &Event) override {
         const mca::Instruction &inst = *Event.IR.getInstruction();
         const unsigned index = Event.IR.getSourceIndex();
 
@@ -121,11 +121,11 @@ public:
         }
     }
 
-    void onEvent(const mca::HWStallEvent &Event) {
+    void onEvent(const mca::HWStallEvent &Event) override {
         std::cout << "[BINJA] Stall !\n";
     }
 
-    void onEvent(const mca::HWPressureEvent &Event) {
+    void onEvent(const mca::HWPressureEvent &Event) override {
         std::cout << "[BINJA] Pressure !\n";
         for (const auto &inst : Event.AffectedInstructions) {
             const unsigned index = inst.getSourceIndex();
@@ -156,7 +156,7 @@ class BinjaBroker : public Broker {
 
     void serverLoop();
 
-    void signalWorkerComplete() {
+    void signalWorkerComplete() override {
         Bridge.IsWaitingForWorker.store(false);
         Bridge.IsWaitingForWorker.notify_one();
     }
