@@ -47,6 +47,13 @@ struct InstructionEntry {
 };
 
 class BinjaBridge final : public Binja::Service {
+
+    void shutdown() {
+        Running = false;
+        DoneHandlingInput.store(false);
+        DoneHandlingInput.notify_all();
+    }
+
     grpc::Status RequestCycleCounts(grpc::ServerContext *ctxt,
                                     const BinjaInstructions *insns,
                                     CycleCounts *ccs) {
@@ -54,10 +61,16 @@ class BinjaBridge final : public Binja::Service {
             return grpc::Status(grpc::StatusCode::UNAVAILABLE,
                                 "Previous error caused BinjaBridge shutdown.");
         }
-        if (!insns || insns->instruction_size() == 0) {
-            Running = false;
+        if (!insns) {
+            shutdown();
             return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
-                                "Null or empty instructions.");
+                                "NULL pointer passed for instructions.");
+        }
+        if(insns->instruction_size() == 0) {
+            // Sending a request with empty cycle counts indicates the plugin
+            // wants to shut down the server.
+            shutdown();
+            return grpc::Status::OK;
         }
 
         {
@@ -199,12 +212,15 @@ class BinjaBroker : public Broker {
                 Optional<MDExchanger> MDE = None) override {
 
         Bridge.InstructionErrors.clear();
+
+        // Block until new input is available, or shutdown request received
+        Bridge.DoneHandlingInput.wait(true);
+
         if (!Bridge.Running) {
+            // shutdown request received; 
+            // -1 signals to the worker it is time to shut down.
             return std::make_pair(-1, RegionDescriptor(true));
         }
-
-        // Block until new input is available
-        Bridge.DoneHandlingInput.wait(true);
 
         if (Size < 0 || Size > MCIS.size()) {
             Size = MCIS.size();
