@@ -62,9 +62,10 @@ class BinjaBridge final : public Binja::Service {
             for (int i = 0; i < insns->instruction_size(); i++) {
                 InsnQueue.push(insns->instruction(i));
             }
-            DoneHandlingInput.store(false);
-            DoneHandlingInput.notify_one();
         }
+
+        DoneHandlingInput.store(false);
+        DoneHandlingInput.notify_all();
 
         IsWaitingForWorker.store(true);
         // Block until worker is done processing the input
@@ -158,7 +159,7 @@ class BinjaBroker : public Broker {
 
     void signalWorkerComplete() override {
         Bridge.IsWaitingForWorker.store(false);
-        Bridge.IsWaitingForWorker.notify_one();
+        Bridge.IsWaitingForWorker.notify_all();
     }
 
     int fetch(MutableArrayRef<const MCInst *> MCIS, int Size,
@@ -169,49 +170,51 @@ class BinjaBroker : public Broker {
     std::pair<int, RegionDescriptor>
     fetchRegion(MutableArrayRef<const MCInst *> MCIS, int Size = -1,
                 Optional<MDExchanger> MDE = None) override {
+        if (!Bridge.Running) {
+            return std::make_pair(-1, RegionDescriptor(true));
+        }
+
+        // Block until new input is available
+        Bridge.DoneHandlingInput.wait(true);
+
+        if (Size < 0 || Size > MCIS.size()) {
+            Size = MCIS.size();
+        }
+
+        int num_insn = 0;
+
         {
-            {
-                std::lock_guard<std::mutex> Lock(Bridge.QueueMutex);
-                if (!Bridge.Running) {
-                    return std::make_pair(-1, RegionDescriptor(true));
+            std::lock_guard<std::mutex> Lock(Bridge.QueueMutex);
+
+            num_insn = Bridge.InsnQueue.size();
+            if (num_insn < Size) {
+                Size = num_insn;
+            }
+
+            unsigned i = 0;
+            while (!Bridge.InsnQueue.empty()) {
+                auto insn = Bridge.InsnQueue.front();
+                auto insn_bytes = insn.opcode();
+
+                SmallVector<uint8_t, 4> instructionBuffer{};
+                for (uint8_t c : insn_bytes) {
+                    instructionBuffer.push_back(c);
                 }
+                ArrayRef<uint8_t> InstBytes(instructionBuffer);
 
-                // Block until new input is available
-                Bridge.DoneHandlingInput.wait(true);
+                auto MCI = std::make_unique<MCInst>();
+                uint64_t DisAsmSize;
+                auto Disassembled = DisAsm->getInstruction(*MCI, DisAsmSize, InstBytes, 0, nulls());
 
-                if (Size < 0 || Size > MCIS.size()) {
-                    Size = MCIS.size();
-                }
+                MCIS[i] = MCI.get();
+                Local_MCIS.push_back(std::move(MCI));
 
-                int num_insn = Bridge.InsnQueue.size();
-                if (num_insn < Size) {
-                    Size = num_insn;
-                }
-
-                unsigned i = 0;
-                while (!Bridge.InsnQueue.empty()) {
-                    auto insn = Bridge.InsnQueue.front();
-                    auto insn_bytes = insn.opcode();
-
-                    SmallVector<uint8_t, 4> instructionBuffer{};
-                    for (uint8_t c : insn_bytes) {
-                        instructionBuffer.push_back(c);
-                    }
-                    ArrayRef<uint8_t> InstBytes(instructionBuffer);
-
-                    auto MCI = std::make_unique<MCInst>();
-                    uint64_t DisAsmSize;
-                    auto Disassembled = DisAsm->getInstruction(*MCI, DisAsmSize, InstBytes, 0, nulls());
-
-                    MCIS[i] = MCI.get();
-                    Local_MCIS.push_back(std::move(MCI));
-
-                    ++i;
-                    Bridge.InsnQueue.pop();
-                }
-                return std::make_pair(num_insn, RegionDescriptor(true));
+                ++i;
+                Bridge.InsnQueue.pop();
             }
         }
+
+        return std::make_pair(num_insn, RegionDescriptor(true));
     }
 
     unsigned getFeatures() const override {
