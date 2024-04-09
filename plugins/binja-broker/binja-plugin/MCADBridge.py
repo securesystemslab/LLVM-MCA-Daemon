@@ -2,6 +2,7 @@
 
 import logging
 import os
+import platform as py_platform
 import subprocess
 import sys
 from binaryninja import *
@@ -11,7 +12,9 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from grpcclient import GRPCClient
 from infoctx import get_info_ctx_for_function, get_info_ctx_for_annotated
 
-MCAD_BUILD_PATH = "/home/chinmay_dd/Projects/LLVM-MCA-Daemon/build"
+# TODO(andre): Add `install` target to CMakeLists.txt that installs plugin into
+# binja/plugins folder and writes the correct path to this variable.
+MCAD_BUILD_PATH = "/Users/andreroesti/Documents/mcad/LLVM-MCA-Daemon/build"
 bridge = None
 
 # Define aliases
@@ -43,15 +46,22 @@ class MCADBridge:
         if self.is_alive():
             return
 
+        mcad_exec_path = os.path.join(MCAD_BUILD_PATH, "llvm-mcad")
+        if py_platform.system() == 'Darwin':
+            mcad_plugin_filename = "libMCADBinjaBroker.dylib"
+        else:
+            mcad_plugin_filename = "libMCADBinjaBroker.so"
+        mcad_plugin_path = os.path.join(MCAD_BUILD_PATH, "plugins", "binja-broker", mcad_plugin_filename)
         args = []
-        args.append(os.path.join(MCAD_BUILD_PATH, "llvm-mcad"))
+        args.append(mcad_exec_path)
         args.append("--debug")
         args.append("-mtriple=" + self.triple)
         args.append("-mcpu=" + self.mcpu)
         args.append("--use-call-inst")
         args.append("--use-return-inst")
         args.append("--noalias=false")
-        args.append("-load-broker-plugin=" + os.path.join(MCAD_BUILD_PATH, "plugins", "binja-broker", "libMCADBinjaBroker.so"))
+        args.append("-load-broker-plugin=" + mcad_plugin_path)
+        log.log_info("Starting MCAD server with: " + " ".join(args))
         self.p = subprocess.Popen(args)
 
     def stop(self):
