@@ -41,7 +41,29 @@ To install the plugin, the easiest way is to create a symlink of the `binja-plug
 ln -s binja-plugin ~/.binaryninja/plugins/mcad
 ```
 
+On MacOS, you have to fully copy the conents:
+```
+cp -r binja-plugin "~/Library/Application Support/Binary Ninja"
+```
+
 Update variable `MCAD_BUILD_PATH` in `MCADBridge.py` to point to your build directory. For instance, `/home/chinmay_dd/Projects/LLVM-MCA-Daemon/build`. It will pick up `llvm-mcad` from there.
+
+The Python interpreter used by Binary Ninja will have to have access to the PIP packages `grpcio` and `protobuf`.
+The easiest way to set this up cleanly is with a separate Binary-Ninja Python virtual environment:
+
+```
+cd ~
+python3 -m venv binja_venv
+source binja_venv/bin/activate
+pip3 install grpcio protobuf
+```
+
+Then, in the Binary Ninja settings, under Python, set
+```
+python.binaryOverride = /path/to/binja_venv/bin/python3
+python.interpreter = /path/to/binja_venv/bin/python3
+python.virtualenv = /path/to/binja_venv/lib/python3.12/site-packages
+```
 
 ### Usage
 

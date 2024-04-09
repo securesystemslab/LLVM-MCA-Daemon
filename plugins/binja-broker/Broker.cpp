@@ -149,7 +149,7 @@ class BinjaBroker : public Broker {
     std::vector<std::unique_ptr<MCInst>> Local_MCIS;
     const std::string ListenAddr, ListenPort;
 
-    std::unique_ptr<std::jthread> ServerThread;
+    std::unique_ptr<std::thread> ServerThread;
     std::unique_ptr<grpc::Server> server;
 
     void serverLoop();
@@ -236,7 +236,7 @@ public:
           Ctx(C), 
           STI(MSTI), 
           Bridge(BinjaBridge()) {
-        ServerThread = std::make_unique<std::jthread>(&BinjaBroker::serverLoop, this);
+        ServerThread = std::make_unique<std::thread>(&BinjaBroker::serverLoop, this);
         DisAsm.reset(TheTarget.createMCDisassembler(STI, Ctx));
         Listener = std::make_unique<RawListener>(Bridge);
     }
