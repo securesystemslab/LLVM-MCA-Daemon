@@ -23,7 +23,7 @@ def get_triple_and_cpu_info(view):
         return "x86_64-unknown-linux-gnu", "skylake"
 
     elif view.arch.name == "thumb2":
-        return "arm-none-linux-gnueabi", "cortex-a17"
+        return "thumbv8", "cortex-a57"
 
     elif view.arch.name == "aarch64":
         return "aarch64-unknown-linux-gnu", "cortex-a55"
