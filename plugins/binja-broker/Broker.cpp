@@ -298,6 +298,7 @@ public:
 
     ~BinjaBroker() {
         server->Shutdown();
+        ServerThread->join();
     }
 };
 
