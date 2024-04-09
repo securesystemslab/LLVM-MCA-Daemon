@@ -185,7 +185,7 @@ class BinjaBroker : public Broker {
         Bridge.IsWaitingForWorker.notify_all();
     }
 
-    void signalInstructionError(int Index, llvm::Error Err) {
+    void signalInstructionError(int Index, llvm::Error Err) override {
         Bridge.InstructionErrors.insert(std::make_pair(Index, std::move(Err)));
     }
 
