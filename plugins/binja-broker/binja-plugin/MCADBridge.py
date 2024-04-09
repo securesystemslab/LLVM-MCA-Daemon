@@ -1,6 +1,5 @@
 # Author - chinmay_dd
 
-import logging
 import os
 import platform as py_platform
 import subprocess
@@ -32,7 +31,7 @@ def get_triple_and_cpu_info(view):
         return "aarch64-unknown-linux-gnu", "cortex-a55"
 
     else:
-        logging.error("[MCAD] Unknown architecture. Please update MCADBridge")
+        log.log_error("Unknown architecture. Please update MCADBridge.", "MCAD")
         sys.exit(0)
 
 class MCADBridge:
@@ -61,13 +60,22 @@ class MCADBridge:
         args.append("--use-return-inst")
         args.append("--noalias=false")
         args.append("-load-broker-plugin=" + mcad_plugin_path)
-        log.log_info("Starting MCAD server with: " + " ".join(args))
+
+        log.log_info("Starting: " + " ".join(args), "MCAD")
         self.p = subprocess.Popen(args)
+        log.log_info(f"MCAD server running at PID {self.p.pid}.", "MCAD")
 
     def stop(self):
-        client = GRPCClient()
-        client.request_cycle_counts(None)
-
+        if not self.p:
+            return
+        try:
+            client = GRPCClient()
+            client.request_cycle_counts(None)
+            ret = self.p.wait(1000)
+            log.log_info(f"PID {self.p.pid} exited with {ret}.", "MCAD")
+        except:
+            log.log_error(f"Graceful shutdown failed. Killing PID {self.p.pid}.", "MCAD")
+            self.p.kill()
         self.p = None
 
     def is_alive(self):
@@ -135,7 +143,7 @@ def get_for_annotated(view, function):
     global bridge
 
     if not bridge or not bridge.is_alive():
-        logging.error("[MCAD] Bridge is not initialized")
+        log.log_error("Bridge is not initialized", "MCAD")
         return
 
     info_ctx = get_info_ctx_for_annotated(function)
@@ -154,7 +162,7 @@ def get_for_function(view, function):
     global bridge
 
     if not bridge or not bridge.is_alive():
-        logging.error("[MCAD] Bridge is not initialized")
+        log.log_error("Bridge is not initialized", "MCAD")
         return
 
     info_ctx = get_info_ctx_for_function(function)
