@@ -9,4 +9,5 @@ export DOCKER_HOSTNAME
 DOCKER_USER=$(id -un)
 export DOCKER_USER
 
-docker-compose --project-name "$DOCKER_USER-mcad" up -d --build
+# [2024/04/17:JCC] We want a constant docker name for use in the PATE Binja Plugin
+docker-compose --project-name "mcad" up -d --build
