@@ -5,8 +5,11 @@ services:
       dockerfile: ./docker/Dockerfile
     volumes:
       - ../../:/work/host
-      - ${HOME}:${HOME}
+      # [2024/04/17:JCC] No need to mount home dir, its a security risk.
+      #- ${HOME}:${HOME}
     hostname: ${DOCKER_HOSTNAME}-focal
-    environment:
-      - TZ=America/Los_Angeles
-    privileged: true
+    # [2024/04/17:JCC] No need to set timezone
+    #environment:
+    #  - TZ=America/Los_Angeles
+    # [2024/04/17:JCC] No need for this, security risk.
+    #privileged: true

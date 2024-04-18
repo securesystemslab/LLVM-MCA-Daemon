@@ -27,4 +27,5 @@ RUN rm /etc/apt/apt.conf.d/docker-clean
 
 ENTRYPOINT ["llvm-mcad"]
 
+# [2024/04/17:JCC] Expose the MCAD server port.
 EXPOSE 50052

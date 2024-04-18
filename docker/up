@@ -10,4 +10,6 @@ DOCKER_USER=$(id -un)
 export DOCKER_USER
 
 # [2024/04/17:JCC] We want a constant docker name for use in the PATE Binja Plugin
-docker-compose --project-name "mcad" up -d --build
+# [2024/04/17:JCC] Don't want up, just build the container
+# [2024/04/18:JCC] If having cache issus add --pull --no-cache
+docker-compose --project-name "mcad" build
