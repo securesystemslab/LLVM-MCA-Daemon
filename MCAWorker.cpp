@@ -374,7 +374,6 @@ Error MCAWorker::run() {
         for (unsigned i = 0U, S = TraceBufferSlice.size();
              i < S; ++i) {
           const MCInst &MCI = *TraceBufferSlice[i];
-          ++NumTraceMIs;
           const auto &MCID = MCII.get(MCI.getOpcode());
           // Always ignore return instruction since it's
           // not really meaningful.
@@ -422,6 +421,9 @@ Error MCAWorker::run() {
               continue;
             }
           }
+
+          // Creating mca::Instruction was successful.
+          ++NumTraceMIs;
           if (RecycledInst) {
             if (SupportMetadata && MDIndexMap.count(i)) {
               auto MDTok = MDIndexMap.lookup(i);
