@@ -30,6 +30,12 @@ class grpc_client:
         print(instructions)
         return self.stub.RequestCycleCounts(binja_pb2.BinjaInstructions(instruction=instructions))
 
+    def send_illegal_instruction(self):
+        instructions = []
+        #instructions.append(binja_pb2.BinjaInstructions.Instruction(opcode=bytes(b'\x0b\xf0\xd5\xf9')))
+        instructions.append(binja_pb2.BinjaInstructions.Instruction(opcode=bytes(b'\x00')))
+        return self.stub.RequestCycleCounts(binja_pb2.BinjaInstructions(instruction=instructions))
+
     def send_empty(self):
         self.stub.RequestCycleCounts(binja_pb2.BinjaInstructions(instruction=[]))
 
@@ -38,4 +44,10 @@ response1 = G.send_instructions2()
 ipdb.set_trace()
 response2 = G.send_instructions()
 ipdb.set_trace()
-# ipdb.set_trace()
+try:
+    response3 = G.send_illegal_instruction()
+except grpc._channel._InactiveRpcError as e:
+    print("send_illegal_instruction() failed with:")
+    print(e)
+ipdb.set_trace()
+
