@@ -87,6 +87,8 @@ class BinjaBridge final : public Binja::Service {
         // Block until worker is done processing the input
         IsWaitingForWorker.wait(true);
 
+        grpc::Status return_status = grpc::Status::OK;
+
         if (InstructionErrors.size() > 0) {
             auto it = InstructionErrors.begin();
             std::ostringstream msg;
@@ -97,22 +99,31 @@ class BinjaBridge final : public Binja::Service {
                     msg << ", " << it->first;
             }
             msg << ".";
-            return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, msg.str());
-        }
-
-        for (int i = 0; i < insns->instruction_size(); i++) {
-            auto* cc = ccs->add_cycle_count();
-            if (!CountStore.count(i)) {
-                continue;
+            clearInstructionErrors();
+            return_status = grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, msg.str());
+        } else {
+            for (int i = 0; i < insns->instruction_size(); i++) {
+                auto* cc = ccs->add_cycle_count();
+                if (!CountStore.count(i)) {
+                    continue;
+                }
+                cc->set_ready(CountStore[i].CycleReady);
+                cc->set_executed(CountStore[i].CycleExecuted);
+                cc->set_is_under_pressure(CountStore[i].IsUnderPressure);
             }
-            cc->set_ready(CountStore[i].CycleReady);
-            cc->set_executed(CountStore[i].CycleExecuted);
-            cc->set_is_under_pressure(CountStore[i].IsUnderPressure);
         }
 
         DoneHandlingInput.store(true);
 
-        return grpc::Status::OK;
+        return return_status;
+    }
+
+    void clearInstructionErrors() {
+        while(!InstructionErrors.empty()) {
+            auto it = InstructionErrors.begin();
+            llvm::consumeError(std::move(it->second));
+            InstructionErrors.erase(it);
+        }
     }
 
 public:
@@ -210,8 +221,6 @@ class BinjaBroker : public Broker {
     std::pair<int, RegionDescriptor>
     fetchRegion(MutableArrayRef<const MCInst *> MCIS, int Size = -1,
                 Optional<MDExchanger> MDE = None) override {
-
-        Bridge.InstructionErrors.clear();
 
         // Block until new input is available, or shutdown request received
         Bridge.DoneHandlingInput.wait(true);
