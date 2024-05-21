@@ -101,6 +101,11 @@ static cl::opt<bool>
                           "model load instructions"),
                  cl::init(true));
 
+static cl::opt<unsigned>
+  CallLatency("mca-call-latency",
+              cl::desc("Number of cycles assumed for a call instruction"),
+              cl::init(100U));
+
 // TODO: Put this into a separate CL option group
 static cl::opt<bool>
   ShowTimelineView("mca-show-timeline-view",
@@ -169,6 +174,7 @@ MCAWorker::MCAWorker(const Target &T,
   SrcMgr.setOnInstFreedCallback(AddRecycledInst);
 
   MCAIB.useLoadLatency(UseLoadLatency);
+  MCAIB.setCallLatency(CallLatency);
 
   resetPipeline();
 }
