@@ -3,15 +3,15 @@
 #include "llvm/Support/Error.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
+#include "llvm/Option/Option.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInst.h"
+#include <optional>
 #include <utility>
 
+#include "MetadataRegistry.h"
+
 namespace llvm {
-namespace mca {
-class MetadataRegistry;
-}
 
 namespace mcad {
 struct MDExchanger {
@@ -49,7 +49,7 @@ struct Broker {
   // index 0.
   // Return the number of MCInst put into the buffer, or -1 if no MCInst left
   virtual int fetch(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
-                    Optional<MDExchanger> MDE = llvm::None) {
+                    std::optional<MDExchanger> MDE = std::nullopt) {
     return -1;
   }
 
@@ -79,7 +79,7 @@ struct Broker {
   // instruction of a Region will not be in the middle of MCIS)
   virtual std::pair<int, RegionDescriptor>
   fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
-              Optional<MDExchanger> MDE = llvm::None) {
+              std::optional<MDExchanger> MDE = std::nullopt) {
     return std::make_pair(-1, RegionDescriptor(true));
   }
 

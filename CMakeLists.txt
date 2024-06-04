@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 project(llvm-mcad)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 find_package(LLVM REQUIRED CONFIG)
 
@@ -77,6 +77,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(LLVM_LINK_COMPONENTS
     AllTargetsAsmParsers
+    AllTargetsMCAs
     AllTargetsDescs
     AllTargetsDisassemblers
     AllTargetsInfos
@@ -84,13 +85,12 @@ set(LLVM_LINK_COMPONENTS
     MCA
     MCParser
     Support
+    TargetParser
     )
 
 set(_MCAVIEWS_SOURCE_FILES
     MCAViews/InstructionView.cpp
     MCAViews/SummaryView.cpp
-    MCAViews/TimelineView.cpp
-    MCAViews/View.cpp
     )
 
 set(_BROKERS_SOURCE_FILES

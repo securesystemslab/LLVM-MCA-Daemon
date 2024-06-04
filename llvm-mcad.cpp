@@ -1,19 +1,19 @@
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
+#include "llvm/Option/Option.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCInstrAnalysis.h"
+#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
-#include "llvm/MC/SubtargetFeature.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/MCA/Context.h"
 #include "llvm/MCA/InstrBuilder.h"
 #include "llvm/MCA/Pipeline.h"
@@ -22,15 +22,15 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstdlib>
 #include <string>
 
@@ -38,6 +38,7 @@
 #include "Brokers/BrokerPlugin.h"
 #include "MCAWorker.h"
 #include "PipelinePrinter.h"
+#include "MetadataRegistry.h"
 
 #ifdef LLVM_MCAD_ENABLE_TCMALLOC
 #include "gperftools/heap-profiler.h"
@@ -75,6 +76,11 @@ static cl::opt<std::string>
 static cl::opt<std::string>
   MAttr("mattr", cl::desc("Additional target feature"),
         cl::cat(CoreOptionsCat));
+
+static cl::opt<unsigned>
+  CallLatency("mca-call-latency",
+              cl::desc("Number of cycles assumed for a call instruction"),
+              cl::init(100U));
 
 enum BrokerType {
   // Builtin brokers
@@ -329,8 +335,9 @@ int main(int argc, char **argv) {
             TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
   assert(MAI);
 
+  llvm::SourceMgr SM;
   auto Ctx = std::make_unique<MCContext>(TheTriple,
-                                         MAI.get(), MRI.get(), STI.get());
+                                         MAI.get(), MRI.get(), STI.get(), &SM);
   std::unique_ptr<MCObjectFileInfo> MOFI(
     TheTarget->createMCObjectFileInfo(*Ctx, /*PIC=*/false));
   Ctx->setObjectFileInfo(MOFI.get());
@@ -350,10 +357,10 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get());
+  auto IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, CallLatency);
 
   mca::Context MCA(*MRI, *STI);
-  MCA.createMetadataRegistry();
 
   mca::PipelineOptions PO(/*MicroOpQueue=*/0, /*DecoderThroughput=*/0,
                           /*DispatchWidth=*/0,
@@ -369,9 +376,9 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  mcad::MCAWorker Worker(*TheTarget, *STI,
-                         MCA, PO, IB, OF,
-                         *Ctx, *MAI, *MCII, *IP);
+  std::unique_ptr<mca::MetadataRegistry> MDR = std::make_unique<mca::MetadataRegistry>();
+  mcad::MCAWorker Worker(*TheTarget, *STI, MCA, PO, IB, OF, *Ctx, *MAI, *MCII,
+                         *IP, *MDR, SM);
 
   if(int Ret = initializeProfilers())
     return Ret;

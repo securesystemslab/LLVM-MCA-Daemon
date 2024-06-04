@@ -1,7 +1,7 @@
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
+from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, optional as _optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
@@ -9,7 +9,7 @@ class NextAction(_message.Message):
     __slots__ = ["num_instructions"]
     NUM_INSTRUCTIONS_FIELD_NUMBER: _ClassVar[int]
     num_instructions: int
-    def __init__(self, num_instructions: _Optional[int] = ...) -> None: ...
+    def __init__(self, num_instructions: _optional[int] = ...) -> None: ...
 
 class EmulatorActions(_message.Message):
     __slots__ = ["instructions"]
@@ -21,7 +21,7 @@ class EmulatorActions(_message.Message):
         vaddr: int
         size: int
         is_store: bool
-        def __init__(self, vaddr: _Optional[int] = ..., size: _Optional[int] = ..., is_store: bool = ...) -> None: ...
+        def __init__(self, vaddr: _optional[int] = ..., size: _optional[int] = ..., is_store: bool = ...) -> None: ...
     class BranchFlow(_message.Message):
         __slots__ = ["is_mispredict"]
         IS_MISPREDICT_FIELD_NUMBER: _ClassVar[int]
@@ -35,7 +35,7 @@ class EmulatorActions(_message.Message):
         opcode: bytes
         memory_access: EmulatorActions.MemoryAccess
         branch_flow: EmulatorActions.BranchFlow
-        def __init__(self, opcode: _Optional[bytes] = ..., memory_access: _Optional[_Union[EmulatorActions.MemoryAccess, _Mapping]] = ..., branch_flow: _Optional[_Union[EmulatorActions.BranchFlow, _Mapping]] = ...) -> None: ...
+        def __init__(self, opcode: _optional[bytes] = ..., memory_access: _optional[_Union[EmulatorActions.MemoryAccess, _Mapping]] = ..., branch_flow: _optional[_Union[EmulatorActions.BranchFlow, _Mapping]] = ...) -> None: ...
     INSTRUCTIONS_FIELD_NUMBER: _ClassVar[int]
     instructions: _containers.RepeatedCompositeFieldContainer[EmulatorActions.Instruction]
-    def __init__(self, instructions: _Optional[_Iterable[_Union[EmulatorActions.Instruction, _Mapping]]] = ...) -> None: ...
+    def __init__(self, instructions: _optional[_Iterable[_Union[EmulatorActions.Instruction, _Mapping]]] = ...) -> None: ...

@@ -1,22 +1,18 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/SubtargetFeature.h"
-#include "llvm/MCA/MetadataCategories.h"
-#include "llvm/MCA/MetadataRegistry.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/MCA/HardwareUnits/LSUnit.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/WithColor.h"
@@ -42,7 +38,8 @@
 #include "BrokerFacade.h"
 #include "Brokers/Broker.h"
 #include "Brokers/BrokerPlugin.h"
-#include "MDCategories.h"
+#include "MetadataCategories.h"
+#include "MetadataRegistry.h"
 #include "RegionMarker.h"
 
 #include "Serialization/mcad_generated.h"
@@ -125,7 +122,7 @@ class QemuBroker : public Broker {
   }
 
   std::mutex TBsMutex;
-  SmallVector<Optional<TranslationBlock>, 8> TBs;
+  SmallVector<std::optional<TranslationBlock>, 8> TBs;
 
   struct TBSlice {
     // TB index
@@ -437,11 +434,11 @@ public:
   }
 
   int fetch(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
-            Optional<MDExchanger> MDE = llvm::None) override;
+            std::optional<MDExchanger> MDE = std::nullopt) override;
 
   std::pair<int, RegionDescriptor>
   fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
-              Optional<MDExchanger> MDE = llvm::None) override;
+              std::optional<MDExchanger> MDE = std::nullopt) override;
 
   ~QemuBroker() {
     if(ReceiverThread) {
@@ -756,7 +753,7 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
 
 std::pair<int, Broker::RegionDescriptor>
 QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
-                        Optional<MDExchanger> MDE) {
+                        std::optional<MDExchanger> MDE) {
   static Timer TheTimer("fetchRegion", "Fetching a region", Timers);
   TimeRegion TR(TheTimer);
   using namespace qemu_broker;
@@ -885,7 +882,7 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
 }
 
 int QemuBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size,
-                      Optional<MDExchanger> MDE) {
+                      std::optional<MDExchanger> MDE) {
   return fetchRegion(MCIS, Size, MDE).first;
 }
 
@@ -902,7 +899,7 @@ QemuBroker::Options::Options(int argc, const char *const *argv)
   for (int i = 0; i < argc; ++i) {
     StringRef Arg(argv[i]);
     // Try to parse the listening address and port
-    if (Arg.startswith("-host") && Arg.contains('=')) {
+    if (Arg.starts_with("-host") && Arg.contains('=')) {
       auto RawHost = Arg.split('=').second;
       if (RawHost.contains(':'))
         // Using TCP socket.
@@ -913,7 +910,7 @@ QemuBroker::Options::Options(int argc, const char *const *argv)
     }
 
     // Try to parse the max number of accepted connection
-    if (Arg.startswith("-max-accepted-connection") &&
+    if (Arg.starts_with("-max-accepted-connection") &&
         Arg.contains('=')) {
       auto RawVal = Arg.split('=').second;
       if (RawVal.trim().getAsInteger(0, MaxNumConnections)) {
@@ -939,13 +936,13 @@ QemuBroker::Options::Options(int argc, const char *const *argv)
     }
 
     // Try to parse the memory access metadata feature flag
-    if (Arg.startswith("-disable-memory-access-md"))
+    if (Arg.starts_with("-disable-memory-access-md"))
       EnableMemoryAccessMD = false;
 
     // Try to parse the option that enables timer
     // Note that this flag is automatically appended
     // if `-enable-timer` is supplied on the `llvm-mcad` side
-    if (Arg.startswith("-enable-timer"))
+    if (Arg.starts_with("-enable-timer"))
       EnableTimer = true;
   }
 }

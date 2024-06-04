@@ -75,7 +75,7 @@ static void sendTB(int Sockt) {
   SmallVector<decltype(Bytes), 4> Insts;
   Buffer.split(Lines, '\n', -1, false);
   for (const auto &Line : Lines) {
-    if (Line.startswith("//") || Line.startswith("#"))
+    if (Line.starts_with("//") || Line.starts_with("#"))
       // Treat as comment
       continue;
     RawBytes.clear();

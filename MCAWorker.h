@@ -1,6 +1,7 @@
 #ifndef MCAD_MCAWORKER_H
 #define MCAD_MCAWORKER_H
-#include "llvm/ADT/Optional.h"
+#include "llvm/Option/Option.h"
+#include "llvm/MCA/IncrementalSourceMgr.h"
 #include "llvm/MCA/SourceMgr.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Timer.h"
@@ -24,6 +25,7 @@ class MCInstPrinter;
 class MCInstrInfo;
 namespace mca {
 class Context;
+class CustomBehaviour;
 class InstrBuilder;
 class Pipeline;
 class PipelineOptions;
@@ -54,7 +56,10 @@ class MCAWorker {
   // SummaryView will only take reference of it.
   std::function<size_t(void)> GetTraceMISize;
 
+  llvm::SourceMgr &SM;
   mca::IncrementalSourceMgr SrcMgr;
+
+  mca::CustomBehaviour *CB;
 
   std::unordered_map<const mca::InstrDesc*,
                      std::set<mca::Instruction*>> RecycledInsts;
@@ -78,16 +83,10 @@ class MCAWorker {
 public:
   MCAWorker() = delete;
 
-  MCAWorker(const Target &T,
-            const MCSubtargetInfo &STI,
-            mca::Context &MCA,
-            const mca::PipelineOptions &PO,
-            mca::InstrBuilder &IB,
-            ToolOutputFile &OF,
-            MCContext &Ctx,
-            const MCAsmInfo &MAI,
-            const MCInstrInfo &II,
-            MCInstPrinter &IP);
+  MCAWorker(const Target &T, const MCSubtargetInfo &STI, mca::Context &MCA,
+            const mca::PipelineOptions &PO, mca::InstrBuilder &IB,
+            ToolOutputFile &OF, MCContext &Ctx, const MCAsmInfo &MAI,
+            const MCInstrInfo &II, MCInstPrinter &IP, mca::MetadataRegistry &MDR, llvm::SourceMgr &SM);
 
   BrokerFacade getBrokerFacade() {
     return BrokerFacade(*this);

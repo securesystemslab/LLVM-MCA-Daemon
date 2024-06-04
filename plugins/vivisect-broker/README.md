@@ -44,7 +44,7 @@ cd CM2350-Emulator
 git checkout 3960f630a74b738e43da7c3512c5ff09ea4df441
 git apply /path/to/this/directory/cm2350.patch
 cp -r /path/to/this/repo/plugins/vivisect-broker/grpc_client /path/to/CM2350-Emulator/cm2350/
-# Optionally add grpcio and protobuf to that repo's requirements.txt to install in the virtualenv
+# optionally add grpcio and protobuf to that repo's requirements.txt to install in the virtualenv
 ```
 
 ## Usage

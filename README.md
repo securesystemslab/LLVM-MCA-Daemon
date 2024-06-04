@@ -6,7 +6,7 @@ On Ubuntu 22.04, you will need at the very least before you get started:
 ```
 sudo apt install build-essential binutils cmake ninja-build
 ```
-This project uses a special version of LLVM. Please use the following way to clone it:
+This project uses a special version of LLVM that builds on top of LLVM 13.0.0. Please use the following way to clone it:
 ```bash
 git clone -b dev-incremental-mca https://github.com/securesystemslab/llvm-project.git
 ```

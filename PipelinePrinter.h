@@ -16,9 +16,9 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H
 #define LLVM_TOOLS_LLVM_MCA_PIPELINEPRINTER_H
 
-#include "MCAViews/View.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MCA/Pipeline.h"
+#include "llvm/MCA/View.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -34,11 +34,9 @@ namespace mca {
 class PipelinePrinter {
   Pipeline &P;
   llvm::SmallVector<std::unique_ptr<View>, 8> Views;
-  View::OutputKind OutputKind;
 
 public:
-  PipelinePrinter(Pipeline &pipeline, View::OutputKind OutputKind)
-      : P(pipeline), OutputKind(OutputKind) {}
+  PipelinePrinter(Pipeline &pipeline) : P(pipeline) {}
 
   void addView(std::unique_ptr<View> V) {
     P.addEventListener(V.get());

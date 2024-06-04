@@ -87,7 +87,7 @@ static Error readSymTable(const object::ELFObjectFileBase &ELFObj,
   for (const ELFSymbolRef &Sym : ELFObj.symbols()) {
     auto Size = Sym.getSize();
     // We really don't care the error message if any of the
-    // following fail, so just convert it to Optional to drop
+    // following fail, so just convert it to optional to drop
     // the attached Error.
     auto MaybeName = llvm::expectedToOptional(Sym.getName());
     auto MaybeAddr = llvm::expectedToOptional(Sym.getAddress());
@@ -185,9 +185,9 @@ Error BinaryRegions::parseSymbolBasedRegions(const json::Object &RawManifest) {
 }
 
 static
-Optional<int64_t> parseInteger(const json::Value *Val) {
+std::optional<int64_t> parseInteger(const json::Value *Val) {
   if (!Val)
-    return llvm::None;
+    return std::nullopt;
 
   if (auto MaybeInt = Val->getAsInteger())
     return *MaybeInt;
@@ -196,7 +196,7 @@ Optional<int64_t> parseInteger(const json::Value *Val) {
     if (!MaybeStr->getAsInteger(0, Res))
       return Res;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 Error BinaryRegions::parseAddressBasedRegions(const json::Array &RawRegions) {

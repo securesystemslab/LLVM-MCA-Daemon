@@ -171,7 +171,7 @@ This format is basically doing the same thing as symbol-based format, except tha
       {
             "start": 0, /*Can be number of non-decimal number wrapped in a string*/
             "end": 0,
-            "description": "Optional textual description"
+            "description": "optional textual description"
       }
 ]
 ```

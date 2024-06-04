@@ -13,7 +13,6 @@ target_link_libraries(binja_bridge_proto
 protobuf_generate(TARGET binja_bridge_proto LANGUAGE cpp OUT_VAR proto_files)
 protobuf_generate(TARGET binja_bridge_proto LANGUAGE grpc GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc PLUGIN "protoc-gen-grpc=${grpc_cpp_plugin_location}")
 
-
 target_include_directories(binja_bridge_proto PUBLIC ${proto_include_dir})
 
 set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)

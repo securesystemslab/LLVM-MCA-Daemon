@@ -1,22 +1,18 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/SubtargetFeature.h"
-#include "llvm/MCA/MetadataCategories.h"
-#include "llvm/MCA/MetadataRegistry.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/MCA/HardwareUnits/LSUnit.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/WithColor.h"
@@ -29,6 +25,8 @@
 #include "BrokerFacade.h"
 #include "Brokers/Broker.h"
 #include "Brokers/BrokerPlugin.h"
+#include "MetadataCategories.h"
+#include "MetadataRegistry.h"
 
 #include <grpcpp/grpcpp.h>
 #include "emulator.grpc.pb.h"
@@ -78,13 +76,13 @@ class VivisectBroker : public Broker {
   void serverLoop();
 
   int fetch(MutableArrayRef<const MCInst *> MCIS, int Size,
-            Optional<MDExchanger> MDE) override {
+            std::optional<MDExchanger> MDE) override {
     return fetchRegion(MCIS, Size, MDE).first;
   }
 
   std::pair<int, RegionDescriptor>
   fetchRegion(MutableArrayRef<const MCInst *> MCIS, int Size = -1,
-              Optional<MDExchanger> MDE = llvm::None) override {
+              std::optional<MDExchanger> MDE = std::nullopt) override {
     {
         std::lock_guard<std::mutex> Lock(Service.QueueMutex);
         if (!Service.running) {
@@ -124,20 +122,20 @@ class VivisectBroker : public Broker {
                 auto MemAccess = insn.memory_access();
                 auto &Registry = MDE->MDRegistry;
                 auto &IndexMap = MDE->IndexMap;
-                auto &MemAccessCat = Registry[mca::MD_LSUnit_MemAccess];
+                auto &MemAccessCat = Registry[MD_LSUnit_MemAccess];
                 IndexMap[i] = TotalNumTraces;
-                MemAccessCat[TotalNumTraces] = std::move(mca::MDMemoryAccess{
-                    MemAccess.is_store(),
-                    MemAccess.vaddr(),
-                    MemAccess.size(),
-                });
+                // MemAccessCat[TotalNumTraces] = std::move(mca::MDMemoryAccess{
+                //     MemAccess.is_store(),
+                //     MemAccess.vaddr(),
+                //     MemAccess.size(),
+                // });
             }
 
             if (MDE && insn.has_branch_flow()) {
                 auto BranchFlow = insn.branch_flow();
                 auto &Registry = MDE->MDRegistry;
                 auto &IndexMap = MDE->IndexMap;
-                auto &BranchFlowCat = Registry[mca::MD_FrontEnd_BranchFlow];
+                auto &BranchFlowCat = Registry[MD_FrontEnd_BranchFlow];
                 IndexMap[i] = TotalNumTraces;
                 BranchFlowCat[TotalNumTraces] = BranchFlow.is_mispredict();
             }

@@ -8,6 +8,7 @@ class MCAsmInfo;
 class MCContext;
 class MCSubtargetInfo;
 class MCInstrInfo;
+class SourceMgr;
 
 namespace mca {
 class HWEventListener;
@@ -41,6 +42,8 @@ public:
   const MCInstrInfo &getInstrInfo() const;
 
   const MCSubtargetInfo &getSTI() const;
+
+  llvm::SourceMgr &getSourceMgr() const;
 };
 } // end namespace mcad
 } // end namespace llvm

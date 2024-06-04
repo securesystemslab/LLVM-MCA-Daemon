@@ -11,21 +11,16 @@ namespace mcad {
 namespace fbs {
 
 struct Metadata;
-struct MetadataBuilder;
 
 struct MemoryAccess;
 
 struct ExecTB;
-struct ExecTBBuilder;
 
 struct Inst;
-struct InstBuilder;
 
 struct TranslatedBlock;
-struct TranslatedBlockBuilder;
 
 struct Message;
-struct MessageBuilder;
 
 enum Msg {
   Msg_NONE = 0,
@@ -47,7 +42,7 @@ inline const Msg (&EnumValuesMsg())[4] {
 }
 
 inline const char * const *EnumNamesMsg() {
-  static const char * const names[5] = {
+  static const char * const names[] = {
     "NONE",
     "Metadata",
     "ExecTB",
@@ -58,7 +53,7 @@ inline const char * const *EnumNamesMsg() {
 }
 
 inline const char *EnumNameMsg(Msg e) {
-  if (flatbuffers::IsOutRange(e, Msg_NONE, Msg_TranslatedBlock)) return "";
+  if (e < Msg_NONE || e > Msg_TranslatedBlock) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesMsg()[index];
 }
@@ -67,15 +62,15 @@ template<typename T> struct MsgTraits {
   static const Msg enum_value = Msg_NONE;
 };
 
-template<> struct MsgTraits<llvm::mcad::fbs::Metadata> {
+template<> struct MsgTraits<Metadata> {
   static const Msg enum_value = Msg_Metadata;
 };
 
-template<> struct MsgTraits<llvm::mcad::fbs::ExecTB> {
+template<> struct MsgTraits<ExecTB> {
   static const Msg enum_value = Msg_ExecTB;
 };
 
-template<> struct MsgTraits<llvm::mcad::fbs::TranslatedBlock> {
+template<> struct MsgTraits<TranslatedBlock> {
   static const Msg enum_value = Msg_TranslatedBlock;
 };
 
@@ -92,17 +87,8 @@ FLATBUFFERS_MANUALLY_ALIGNED_STRUCT(8) MemoryAccess FLATBUFFERS_FINAL_CLASS {
   int16_t padding1__;  int32_t padding2__;
 
  public:
-  MemoryAccess()
-      : Index_(0),
-        padding0__(0),
-        VAddr_(0),
-        Size_(0),
-        IsStore_(0),
-        padding1__(0),
-        padding2__(0) {
-    (void)padding0__;
-    (void)padding1__;
-    (void)padding2__;
+  MemoryAccess() {
+    memset(static_cast<void *>(this), 0, sizeof(MemoryAccess));
   }
   MemoryAccess(uint32_t _Index, uint64_t _VAddr, uint8_t _Size, bool _IsStore)
       : Index_(flatbuffers::EndianScalar(_Index)),
@@ -112,6 +98,8 @@ FLATBUFFERS_MANUALLY_ALIGNED_STRUCT(8) MemoryAccess FLATBUFFERS_FINAL_CLASS {
         IsStore_(flatbuffers::EndianScalar(static_cast<uint8_t>(_IsStore))),
         padding1__(0),
         padding2__(0) {
+    (void)padding0__;
+    (void)padding1__;    (void)padding2__;
   }
   uint32_t Index() const {
     return flatbuffers::EndianScalar(Index_);
@@ -129,7 +117,6 @@ FLATBUFFERS_MANUALLY_ALIGNED_STRUCT(8) MemoryAccess FLATBUFFERS_FINAL_CLASS {
 FLATBUFFERS_STRUCT_END(MemoryAccess, 24);
 
 struct Metadata FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  typedef MetadataBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_LOADADDR = 4
   };
@@ -144,7 +131,6 @@ struct Metadata FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct MetadataBuilder {
-  typedef Metadata Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_LoadAddr(uint64_t LoadAddr) {
@@ -154,6 +140,7 @@ struct MetadataBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
+  MetadataBuilder &operator=(const MetadataBuilder &);
   flatbuffers::Offset<Metadata> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Metadata>(end);
@@ -170,7 +157,6 @@ inline flatbuffers::Offset<Metadata> CreateMetadata(
 }
 
 struct ExecTB FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  typedef ExecTBBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_INDEX = 4,
     VT_PC = 6,
@@ -182,8 +168,8 @@ struct ExecTB FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   uint64_t PC() const {
     return GetField<uint64_t>(VT_PC, 0);
   }
-  const flatbuffers::Vector<const llvm::mcad::fbs::MemoryAccess *> *MemAccesses() const {
-    return GetPointer<const flatbuffers::Vector<const llvm::mcad::fbs::MemoryAccess *> *>(VT_MEMACCESSES);
+  const flatbuffers::Vector<const MemoryAccess *> *MemAccesses() const {
+    return GetPointer<const flatbuffers::Vector<const MemoryAccess *> *>(VT_MEMACCESSES);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -196,7 +182,6 @@ struct ExecTB FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct ExecTBBuilder {
-  typedef ExecTB Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_Index(uint32_t Index) {
@@ -205,13 +190,14 @@ struct ExecTBBuilder {
   void add_PC(uint64_t PC) {
     fbb_.AddElement<uint64_t>(ExecTB::VT_PC, PC, 0);
   }
-  void add_MemAccesses(flatbuffers::Offset<flatbuffers::Vector<const llvm::mcad::fbs::MemoryAccess *>> MemAccesses) {
+  void add_MemAccesses(flatbuffers::Offset<flatbuffers::Vector<const MemoryAccess *>> MemAccesses) {
     fbb_.AddOffset(ExecTB::VT_MEMACCESSES, MemAccesses);
   }
   explicit ExecTBBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
+  ExecTBBuilder &operator=(const ExecTBBuilder &);
   flatbuffers::Offset<ExecTB> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<ExecTB>(end);
@@ -223,7 +209,7 @@ inline flatbuffers::Offset<ExecTB> CreateExecTB(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t Index = 0,
     uint64_t PC = 0,
-    flatbuffers::Offset<flatbuffers::Vector<const llvm::mcad::fbs::MemoryAccess *>> MemAccesses = 0) {
+    flatbuffers::Offset<flatbuffers::Vector<const MemoryAccess *>> MemAccesses = 0) {
   ExecTBBuilder builder_(_fbb);
   builder_.add_PC(PC);
   builder_.add_MemAccesses(MemAccesses);
@@ -235,8 +221,8 @@ inline flatbuffers::Offset<ExecTB> CreateExecTBDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t Index = 0,
     uint64_t PC = 0,
-    const std::vector<llvm::mcad::fbs::MemoryAccess> *MemAccesses = nullptr) {
-  auto MemAccesses__ = MemAccesses ? _fbb.CreateVectorOfStructs<llvm::mcad::fbs::MemoryAccess>(*MemAccesses) : 0;
+    const std::vector<MemoryAccess> *MemAccesses = nullptr) {
+  auto MemAccesses__ = MemAccesses ? _fbb.CreateVectorOfStructs<MemoryAccess>(*MemAccesses) : 0;
   return llvm::mcad::fbs::CreateExecTB(
       _fbb,
       Index,
@@ -245,7 +231,6 @@ inline flatbuffers::Offset<ExecTB> CreateExecTBDirect(
 }
 
 struct Inst FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  typedef InstBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_DATA = 4
   };
@@ -261,7 +246,6 @@ struct Inst FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct InstBuilder {
-  typedef Inst Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_Data(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> Data) {
@@ -271,6 +255,7 @@ struct InstBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
+  InstBuilder &operator=(const InstBuilder &);
   flatbuffers::Offset<Inst> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Inst>(end);
@@ -296,7 +281,6 @@ inline flatbuffers::Offset<Inst> CreateInstDirect(
 }
 
 struct TranslatedBlock FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  typedef TranslatedBlockBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_INDEX = 4,
     VT_INSTRUCTIONS = 6
@@ -304,8 +288,8 @@ struct TranslatedBlock FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   uint32_t Index() const {
     return GetField<uint32_t>(VT_INDEX, 0);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<llvm::mcad::fbs::Inst>> *Instructions() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<llvm::mcad::fbs::Inst>> *>(VT_INSTRUCTIONS);
+  const flatbuffers::Vector<flatbuffers::Offset<Inst>> *Instructions() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Inst>> *>(VT_INSTRUCTIONS);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -318,19 +302,19 @@ struct TranslatedBlock FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 };
 
 struct TranslatedBlockBuilder {
-  typedef TranslatedBlock Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
   void add_Index(uint32_t Index) {
     fbb_.AddElement<uint32_t>(TranslatedBlock::VT_INDEX, Index, 0);
   }
-  void add_Instructions(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<llvm::mcad::fbs::Inst>>> Instructions) {
+  void add_Instructions(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Inst>>> Instructions) {
     fbb_.AddOffset(TranslatedBlock::VT_INSTRUCTIONS, Instructions);
   }
   explicit TranslatedBlockBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
+  TranslatedBlockBuilder &operator=(const TranslatedBlockBuilder &);
   flatbuffers::Offset<TranslatedBlock> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<TranslatedBlock>(end);
@@ -341,7 +325,7 @@ struct TranslatedBlockBuilder {
 inline flatbuffers::Offset<TranslatedBlock> CreateTranslatedBlock(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t Index = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<llvm::mcad::fbs::Inst>>> Instructions = 0) {
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Inst>>> Instructions = 0) {
   TranslatedBlockBuilder builder_(_fbb);
   builder_.add_Instructions(Instructions);
   builder_.add_Index(Index);
@@ -351,8 +335,8 @@ inline flatbuffers::Offset<TranslatedBlock> CreateTranslatedBlock(
 inline flatbuffers::Offset<TranslatedBlock> CreateTranslatedBlockDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t Index = 0,
-    const std::vector<flatbuffers::Offset<llvm::mcad::fbs::Inst>> *Instructions = nullptr) {
-  auto Instructions__ = Instructions ? _fbb.CreateVector<flatbuffers::Offset<llvm::mcad::fbs::Inst>>(*Instructions) : 0;
+    const std::vector<flatbuffers::Offset<Inst>> *Instructions = nullptr) {
+  auto Instructions__ = Instructions ? _fbb.CreateVector<flatbuffers::Offset<Inst>>(*Instructions) : 0;
   return llvm::mcad::fbs::CreateTranslatedBlock(
       _fbb,
       Index,
@@ -360,26 +344,25 @@ inline flatbuffers::Offset<TranslatedBlock> CreateTranslatedBlockDirect(
 }
 
 struct Message FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
-  typedef MessageBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_CONTENT_TYPE = 4,
     VT_CONTENT = 6
   };
-  llvm::mcad::fbs::Msg Content_type() const {
-    return static_cast<llvm::mcad::fbs::Msg>(GetField<uint8_t>(VT_CONTENT_TYPE, 0));
+  Msg Content_type() const {
+    return static_cast<Msg>(GetField<uint8_t>(VT_CONTENT_TYPE, 0));
   }
   const void *Content() const {
     return GetPointer<const void *>(VT_CONTENT);
   }
   template<typename T> const T *Content_as() const;
-  const llvm::mcad::fbs::Metadata *Content_as_Metadata() const {
-    return Content_type() == llvm::mcad::fbs::Msg_Metadata ? static_cast<const llvm::mcad::fbs::Metadata *>(Content()) : nullptr;
+  const Metadata *Content_as_Metadata() const {
+    return Content_type() == Msg_Metadata ? static_cast<const Metadata *>(Content()) : nullptr;
   }
-  const llvm::mcad::fbs::ExecTB *Content_as_ExecTB() const {
-    return Content_type() == llvm::mcad::fbs::Msg_ExecTB ? static_cast<const llvm::mcad::fbs::ExecTB *>(Content()) : nullptr;
+  const ExecTB *Content_as_ExecTB() const {
+    return Content_type() == Msg_ExecTB ? static_cast<const ExecTB *>(Content()) : nullptr;
   }
-  const llvm::mcad::fbs::TranslatedBlock *Content_as_TranslatedBlock() const {
-    return Content_type() == llvm::mcad::fbs::Msg_TranslatedBlock ? static_cast<const llvm::mcad::fbs::TranslatedBlock *>(Content()) : nullptr;
+  const TranslatedBlock *Content_as_TranslatedBlock() const {
+    return Content_type() == Msg_TranslatedBlock ? static_cast<const TranslatedBlock *>(Content()) : nullptr;
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -390,23 +373,22 @@ struct Message FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
 };
 
-template<> inline const llvm::mcad::fbs::Metadata *Message::Content_as<llvm::mcad::fbs::Metadata>() const {
+template<> inline const Metadata *Message::Content_as<Metadata>() const {
   return Content_as_Metadata();
 }
 
-template<> inline const llvm::mcad::fbs::ExecTB *Message::Content_as<llvm::mcad::fbs::ExecTB>() const {
+template<> inline const ExecTB *Message::Content_as<ExecTB>() const {
   return Content_as_ExecTB();
 }
 
-template<> inline const llvm::mcad::fbs::TranslatedBlock *Message::Content_as<llvm::mcad::fbs::TranslatedBlock>() const {
+template<> inline const TranslatedBlock *Message::Content_as<TranslatedBlock>() const {
   return Content_as_TranslatedBlock();
 }
 
 struct MessageBuilder {
-  typedef Message Table;
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_Content_type(llvm::mcad::fbs::Msg Content_type) {
+  void add_Content_type(Msg Content_type) {
     fbb_.AddElement<uint8_t>(Message::VT_CONTENT_TYPE, static_cast<uint8_t>(Content_type), 0);
   }
   void add_Content(flatbuffers::Offset<void> Content) {
@@ -416,6 +398,7 @@ struct MessageBuilder {
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
+  MessageBuilder &operator=(const MessageBuilder &);
   flatbuffers::Offset<Message> Finish() {
     const auto end = fbb_.EndTable(start_);
     auto o = flatbuffers::Offset<Message>(end);
@@ -425,7 +408,7 @@ struct MessageBuilder {
 
 inline flatbuffers::Offset<Message> CreateMessage(
     flatbuffers::FlatBufferBuilder &_fbb,
-    llvm::mcad::fbs::Msg Content_type = llvm::mcad::fbs::Msg_NONE,
+    Msg Content_type = Msg_NONE,
     flatbuffers::Offset<void> Content = 0) {
   MessageBuilder builder_(_fbb);
   builder_.add_Content(Content);
@@ -439,18 +422,18 @@ inline bool VerifyMsg(flatbuffers::Verifier &verifier, const void *obj, Msg type
       return true;
     }
     case Msg_Metadata: {
-      auto ptr = reinterpret_cast<const llvm::mcad::fbs::Metadata *>(obj);
+      auto ptr = reinterpret_cast<const Metadata *>(obj);
       return verifier.VerifyTable(ptr);
     }
     case Msg_ExecTB: {
-      auto ptr = reinterpret_cast<const llvm::mcad::fbs::ExecTB *>(obj);
+      auto ptr = reinterpret_cast<const ExecTB *>(obj);
       return verifier.VerifyTable(ptr);
     }
     case Msg_TranslatedBlock: {
-      auto ptr = reinterpret_cast<const llvm::mcad::fbs::TranslatedBlock *>(obj);
+      auto ptr = reinterpret_cast<const TranslatedBlock *>(obj);
       return verifier.VerifyTable(ptr);
     }
-    default: return true;
+    default: return false;
   }
 }
 

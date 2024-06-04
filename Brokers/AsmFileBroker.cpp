@@ -21,9 +21,9 @@ static cl::opt<std::string>
 
 AsmFileBroker::AsmFileBroker(const Target &T, MCContext &Ctx,
                              const MCAsmInfo &MAI, const MCSubtargetInfo &STI,
-                             const MCInstrInfo &MII)
-  : SrcMgr(), CRG(T, SrcMgr, Ctx, MAI, STI, MII),
-    Regions(nullptr), CurInstIdx(0U), IsInvalid(false) {
+                             const MCInstrInfo &MII, llvm::SourceMgr &SM)
+    : SrcMgr(SM), CRG(T, SrcMgr, Ctx, MAI, STI, MII), Regions(nullptr),
+      CurInstIdx(0U), IsInvalid(false) {
   llvm::InitializeAllAsmParsers();
 
   auto ErrOrBuffer = MemoryBuffer::getFileOrSTDIN(InputFilename);
@@ -36,10 +36,9 @@ AsmFileBroker::AsmFileBroker(const Target &T, MCContext &Ctx,
 }
 
 void AsmFileBroker::Register(BrokerFacade BF) {
-  BF.setBroker(
-    std::make_unique<AsmFileBroker>(BF.getTarget(), BF.getCtx(),
-                                    BF.getAsmInfo(), BF.getSTI(),
-                                    BF.getInstrInfo()));
+  BF.setBroker(std::make_unique<AsmFileBroker>(
+      BF.getTarget(), BF.getCtx(), BF.getAsmInfo(), BF.getSTI(),
+      BF.getInstrInfo(), BF.getSourceMgr()));
 }
 
 bool AsmFileBroker::parseIfNeeded() {
@@ -77,7 +76,7 @@ const MCInst *AsmFileBroker::fetch() {
 }
 
 int AsmFileBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size,
-                         Optional<MDExchanger> MDE) {
+                         std::optional<MDExchanger> MDE) {
   assert(Size <= int(MCIS.size()));
   size_t MaxLen = Size < 0? MCIS.size() : Size;
 
@@ -99,7 +98,7 @@ int AsmFileBroker::fetch(MutableArrayRef<const MCInst*> MCIS, int Size,
 
 std::pair<int, Broker::RegionDescriptor>
 AsmFileBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
-                           Optional<MDExchanger> MDE) {
+                           std::optional<MDExchanger> MDE) {
   assert(Size <= int(MCIS.size()));
   size_t MaxLen = Size < 0? MCIS.size() : Size;
   StringRef LastRegionDescription;

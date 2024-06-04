@@ -1,23 +1,19 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/SubtargetFeature.h"
-#include "llvm/MCA/MetadataCategories.h"
-#include "llvm/MCA/MetadataRegistry.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/MCA/HardwareUnits/LSUnit.h"
 #include "llvm/MCA/HWEventListener.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/WithColor.h"
@@ -31,6 +27,8 @@
 #include "BrokerFacade.h"
 #include "Brokers/Broker.h"
 #include "Brokers/BrokerPlugin.h"
+#include "MetadataCategories.h"
+#include "MetadataRegistry.h"
 
 #include <grpcpp/grpcpp.h>
 #include "binja.grpc.pb.h"
@@ -151,7 +149,7 @@ public:
     RawListener(BinjaBridge &bridge) : BridgeRef(bridge), CurrentCycle(0U) {}
 
     void onEvent(const mca::HWInstructionEvent &Event) override {
-        const mca::Instruction &inst = *Event.IR.getInstruction();
+        const auto &inst = *Event.IR.getInstruction();
         const unsigned index = Event.IR.getSourceIndex();
 
         if (!BridgeRef.CountStore.count(index)) {
@@ -214,13 +212,13 @@ class BinjaBroker : public Broker {
     }
 
     int fetch(MutableArrayRef<const MCInst *> MCIS, int Size,
-              Optional<MDExchanger> MDE) override {
+              std::optional<MDExchanger> MDE) override {
         return fetchRegion(MCIS, Size, MDE).first;
     }
 
     std::pair<int, RegionDescriptor>
     fetchRegion(MutableArrayRef<const MCInst *> MCIS, int Size = -1,
-                Optional<MDExchanger> MDE = None) override {
+                std::optional<MDExchanger> MDE = std::nullopt) override {
 
         // Block until new input is available, or shutdown request received
         Bridge.DoneHandlingInput.wait(true);
@@ -319,7 +317,7 @@ BinjaBroker::Options::Options(int argc, const char *const *argv)
     for (int i = 0; i < argc; ++i) {
         StringRef Arg(argv[i]);
 
-        if (Arg.startswith("-host") && Arg.contains("=")) {
+        if (Arg.starts_with("-host") && Arg.contains("=")) {
             auto RawHost = Arg.split("=").second;
             if (RawHost.contains(':')) {
                 std::tie(ListenAddress, ListenPort) = RawHost.split(':');

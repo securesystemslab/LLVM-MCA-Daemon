@@ -333,7 +333,7 @@ const ::_pbi::TcParseTable<0, 1, 0, 0, 2> NextAction::_table_ = {
   }}, {{
     // optional int32 num_instructions = 1;
     {PROTOBUF_FIELD_OFFSET(NextAction, _impl_.num_instructions_), _Internal::kHasBitsOffset + 0, 0,
-    (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
+    (0 | ::_fl::kFcoptional | ::_fl::kInt32)},
   }},
   // no aux_entries
   {{
@@ -970,10 +970,10 @@ const ::_pbi::TcParseTable<2, 3, 2, 0, 2> EmulatorActions_Instruction::_table_ =
     (0 | ::_fl::kFcSingular | ::_fl::kBytes | ::_fl::kRepAString)},
     // optional .EmulatorActions.MemoryAccess memory_access = 2;
     {PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.memory_access_), _Internal::kHasBitsOffset + 0, 0,
-    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    (0 | ::_fl::kFcoptional | ::_fl::kMessage | ::_fl::kTvTable)},
     // optional .EmulatorActions.BranchFlow branch_flow = 3;
     {PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.branch_flow_), _Internal::kHasBitsOffset + 1, 1,
-    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    (0 | ::_fl::kFcoptional | ::_fl::kMessage | ::_fl::kTvTable)},
   }}, {{
     {::_pbi::TcParser::GetTable<::EmulatorActions_MemoryAccess>()},
     {::_pbi::TcParser::GetTable<::EmulatorActions_BranchFlow>()},

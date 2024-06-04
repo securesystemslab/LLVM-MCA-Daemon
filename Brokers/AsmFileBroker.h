@@ -11,7 +11,7 @@ namespace mcad {
 // A broker that simply reads from local assembly file.
 // Useful for testing.
 class AsmFileBroker : public Broker {
-  llvm::SourceMgr SrcMgr;
+  llvm::SourceMgr &SrcMgr;
   mca::AsmCodeRegionGenerator CRG;
 
   const mca::CodeRegions *Regions;
@@ -25,20 +25,20 @@ class AsmFileBroker : public Broker {
   const MCInst *fetch();
 
 public:
-  AsmFileBroker(const Target &T, MCContext &C,
-                const MCAsmInfo &A, const MCSubtargetInfo &S,
-                const MCInstrInfo &I);
+  AsmFileBroker(const Target &T, MCContext &C, const MCAsmInfo &A,
+                const MCSubtargetInfo &S, const MCInstrInfo &I,
+                llvm::SourceMgr &SM);
 
   static void Register(BrokerFacade BF);
 
   unsigned getFeatures() const override { return Broker::Feature_Region; }
 
   int fetch(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
-            Optional<MDExchanger> MDE = llvm::None) override;
+            std::optional<MDExchanger> MDE = std::nullopt) override;
 
   std::pair<int, RegionDescriptor>
   fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size = -1,
-              Optional<MDExchanger> MDE = llvm::None) override;
+              std::optional<MDExchanger> MDE = std::nullopt) override;
 };
 } // end namespace mcad
 } // end namespace llvm
