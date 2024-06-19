@@ -1,5 +1,5 @@
 diff --git a/cm2350/e200z7.py b/cm2350/e200z7.py
-index 3cc774f..246b55f 100644
+index a0b660c..6241c73 100644
 --- a/cm2350/e200z7.py
 +++ b/cm2350/e200z7.py
 @@ -26,6 +26,8 @@ import envi
@@ -10,8 +10,8 @@ index 3cc774f..246b55f 100644
 +
  # PPC registers
  import envi.archs.ppc.regs as eapr
- from .ppc_vstructs import BitFieldSPR, v_const, v_w1c, v_bits
-@@ -126,6 +128,8 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
+ from .ppc_vstructs import v_const, v_w1c, v_bits, BitFieldSPR, PpcSprCallbackWrapper
+@@ -153,6 +155,8 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
          # Initialize the core PPC emualtor
          eape.Ppc32EmbeddedEmulator.__init__(self, endian=envi.ENDIAN_MSB)
  
@@ -20,25 +20,25 @@ index 3cc774f..246b55f 100644
          # initialize the core "helper" emulator. WorkspaceEmulator to start, as
          # it provides inspection hooks and tracing which is helpful for
          # debugging. PpcWorkspaceEmulator is the base PPC WorkspaceEmulator with
-@@ -218,6 +222,7 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
-         self.shutdown()
+@@ -841,14 +845,14 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
+         self.processIO()
  
-     def shutdown(self):
-+        self.grpc_client.__del__()
-         # Call the emutime shutdown function
-         super().shutdown()
+         pc = self.getProgramCounter()
++        # do normal opcode parsing and execution
++        op, op_bytes = self._parseOpcode(pc)
++        self.grpc_client.record_instruction(op, op_bytes)
  
-@@ -762,7 +767,8 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
+         try:
+             # See if there are any exceptions that need to start being handled
+             self.mcu_intc.checkException()
  
-             # do normal opcode parsing and execution
-             pc = self.getProgramCounter()
+-            # do normal opcode parsing and execution
 -            op = self.parseOpcode(pc)
-+            op, op_bytes = self._parseOpcode(pc)
-+            self.grpc_client.record_instruction(op, op_bytes)
- 
+-
              # TODO: check MSR for FP (MSR_FP_MASK) and SPE (MSR_SPE_MASK)
              # support here?
-@@ -877,7 +883,7 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
+             self.executeOpcode(op)
+@@ -966,7 +970,7 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
          # Attempt to clear any instruction cache
          self.clearOpcache(ea, len(bytez))
  
@@ -47,7 +47,7 @@ index 3cc774f..246b55f 100644
          '''
          Combination of the WorkspaceEmulator and the standard envi.memory
          parseOpcode functions that handles translating instruction addresses
-@@ -890,8 +896,8 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
+@@ -979,8 +983,8 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
          else:
              op = self.opcache[vle].get(ea)
  
@@ -57,7 +57,7 @@ index 3cc774f..246b55f 100644
              if vle:
                  op = self._arch_vle_dis.disasm(b, off, va)
              else:
-@@ -915,7 +921,10 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
+@@ -1004,7 +1008,10 @@ class PPC_e200z7(mmio.ComplexMemoryMap, vimp_emu.WorkspaceEmulator,
          # handling information
          self._cur_instr = (op, va, va+op.size, vle)
  
@@ -69,3 +69,13 @@ index 3cc774f..246b55f 100644
  
      def _checkReadCallbacks(self, src, addr, data=None, size=0, instr=False):
          '''
+diff --git a/requirements.txt b/requirements.txt
+index 0ddd64f..d457d92 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -1,2 +1,5 @@
+ ipython>=8.0.0
+ -e git+https://github.com/atlas0fd00m/vivisect.git@envi_ppc#egg=vivisect
++grpcio
++protobuf
++lxml
