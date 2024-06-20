@@ -1,4 +1,5 @@
-FROM ubuntu:22.04
+# [2024/04/17:JCC] Force platform otherwise it does not work on Apple silicon.
+FROM --platform=linux/amd64 ubuntu:22.04
 
 RUN yes | unminimize \
     && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
@@ -25,3 +26,6 @@ ENV PATH="/work/LLVM-MCA-Daemon/build:/opt/llvm-14/bin:$PATH"
 RUN rm /etc/apt/apt.conf.d/docker-clean
 
 ENTRYPOINT ["llvm-mcad"]
+
+# [2024/04/17:JCC] Expose the MCAD server port.
+EXPOSE 50052
