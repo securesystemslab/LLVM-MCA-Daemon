@@ -38,6 +38,7 @@
 #include "BrokerFacade.h"
 #include "Brokers/Broker.h"
 #include "Brokers/BrokerPlugin.h"
+#include "CustomHWUnits/MCADLSUnit.h"
 #include "MetadataCategories.h"
 #include "MetadataRegistry.h"
 #include "RegionMarker.h"
@@ -89,7 +90,7 @@ struct TranslationBlock {
 
 // instruction index (in the TB) -> Memory access descriptor
 // The indicies are always sorted
-using MemoryAccessEntry = std::pair<unsigned, mca::MDMemoryAccess>;
+using MemoryAccessEntry = std::pair<unsigned, MDMemoryAccess>;
 using MemoryAccessChain = SmallVector<MemoryAccessEntry, 4>;
 
 class QemuBroker : public Broker {
@@ -389,7 +390,7 @@ class QemuBroker : public Broker {
         }
 
         MemAccesses->emplace_back(
-          std::make_pair(InstIdx, mca::MDMemoryAccess{IsStore, Addr, Size}));
+            std::make_pair(InstIdx, MDMemoryAccess{IsStore, Addr, Size}));
       }
     }
 
@@ -809,18 +810,17 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
   }
 
   {
-    auto setMemoryAccessMD
-      = [&,this](unsigned Idx, mca::MDMemoryAccess &&MDA) {
-        if (MDE) {
-          auto &Registry = MDE->MDRegistry;
-          auto &IndexMap = MDE->IndexMap;
-          auto &MemAccessCat = Registry[mca::MD_LSUnit_MemAccess];
-          // Simply uses trace MCInst's sequence number
-          // as index
-          IndexMap[Idx] = TotalNumTraces;
-          MemAccessCat[TotalNumTraces] = std::move(MDA);
-        }
-      };
+    auto setMemoryAccessMD = [&, this](unsigned Idx, MDMemoryAccess &&MDA) {
+      if (MDE) {
+        auto &Registry = MDE->MDRegistry;
+        auto &IndexMap = MDE->IndexMap;
+        auto &MemAccessCat = Registry[MD_LSUnit_MemAccess];
+        // Simply uses trace MCInst's sequence number
+        // as index
+        IndexMap[Idx] = TotalNumTraces;
+        MemAccessCat[TotalNumTraces] = std::move(MDA);
+      }
+    };
     auto setRegionMarkerMD = [&,this](unsigned Idx, bool IsBegin) {
       if (MDE) {
         auto &Registry = MDE->MDRegistry;

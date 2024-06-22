@@ -51,7 +51,7 @@ void SummaryView::onEvent(const HWInstructionEvent &Event) {
   if (Event.Type == HWInstructionEvent::Dispatched)
     LastInstructionIdx = Event.IR.getSourceIndex();
 
-  // Try to print region markers
+  // XXX: Print region markers
   // if (MDRegistry && Inst.getMetadataToken().has_value() && OutStream) {
   //   auto &MDR = *MDRegistry;
   //   unsigned MDTok = *Inst.getMetadataToken();

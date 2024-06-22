@@ -7,7 +7,8 @@
 #include <optional>
 
 namespace llvm {
-namespace mca {
+namespace mcad {
+
 class MetadataCategory {
   // The reason we don't use IndexedMap here
   // is because we want an easy way to recycle the space
@@ -76,6 +77,7 @@ public:
     return Success;
   }
 };
-} // end namespace mca
+
+} // end namespace mcad
 } // end namespace llvm
 #endif

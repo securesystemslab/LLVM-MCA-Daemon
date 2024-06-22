@@ -93,6 +93,11 @@ set(_MCAVIEWS_SOURCE_FILES
     MCAViews/SummaryView.cpp
     )
 
+set(_CUSTOMHW_SOURCE_FILES
+    CustomHWUnits/CustomSourceMgr.cpp
+    CustomHWUnits/MCADLSUnit.cpp
+   )
+
 set(_BROKERS_SOURCE_FILES
     Brokers/BrokerPlugin.cpp
     Brokers/RawBytesBroker.cpp
@@ -104,6 +109,7 @@ set(_BROKERS_SOURCE_FILES
 set(_SOURCE_FILES
     llvm-mcad.cpp
     ${_MCAVIEWS_SOURCE_FILES}
+    ${_CUSTOMHW_SOURCE_FILES}
     ${_BROKERS_SOURCE_FILES}
     MCAWorker.cpp
     PipelinePrinter.cpp

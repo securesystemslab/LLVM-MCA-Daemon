@@ -36,8 +36,9 @@
 #include <iostream>
 #include <unistd.h>
 
-#include "MCAWorker.h"
+#include "CustomHWUnits/MCADLSUnit.h"
 #include "MCAViews/SummaryView.h"
+#include "MCAWorker.h"
 #include "PipelinePrinter.h"
 
 using namespace llvm;
@@ -135,7 +136,8 @@ MCAWorker::MCAWorker(const Target &T, const MCSubtargetInfo &TheSTI,
                      mca::Context &MCA, const mca::PipelineOptions &PO,
                      mca::InstrBuilder &IB, ToolOutputFile &OF, MCContext &C,
                      const MCAsmInfo &AI, const MCInstrInfo &II,
-                     MCInstPrinter &IP, mca::MetadataRegistry &MDR, llvm::SourceMgr &SM)
+                     MCInstPrinter &IP, MetadataRegistry &MDR,
+                     llvm::SourceMgr &SM)
     : TheTarget(T), STI(TheSTI), MCAIB(IB), Ctx(C), MAI(AI), MCII(II), MIP(IP),
       SM(SM), TheMCA(MCA), MCAPO(PO), MCAOF(OF), CB(nullptr), NumTraceMIs(0U),
       GetTraceMISize([this] { return NumTraceMIs; }),
@@ -154,16 +156,98 @@ MCAWorker::MCAWorker(const Target &T, const MCSubtargetInfo &TheSTI,
         const mca::InstrDesc &D = I->getDesc();
         RecycledInsts[&D].insert(I);
       }),
-      Timers("MCAWorker", "Time consumption in each MCA stages") {
+      Timers("MCAWorker", "Time consumption in each MCA stages"),
+      MDRegistry(MDR) {
   MCAIB.setInstRecycleCallback(GetRecycledInst);
   SrcMgr.setOnInstFreedCallback(AddRecycledInst);
 
-  // XXX: This this
-  // MCAIB.useLoadLatency(UseLoadLatency);
-
-  // XXX: Add Listeners
-
   resetPipeline();
+}
+
+std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
+  using namespace mca;
+  const MCSchedModel &SM = STI.getSchedModel();
+  const MCRegisterInfo &MRI = TheMCA.getMCRegisterInfo();
+
+  if (!SM.isOutOfOrder())
+    return createInOrderPipeline();
+
+  // Create the hardware units defining the backend.
+  auto RCU = std::make_unique<RetireControlUnit>(SM);
+  auto PRF = std::make_unique<RegisterFile>(SM, MRI, MCAPO.RegisterFileSize);
+  auto LSU = std::make_unique<MCADLSUnit>(
+      SM, MCAPO.LoadQueueSize, MCAPO.StoreQueueSize, MCAPO.AssumeNoAlias,
+      SrcMgr, &MDRegistry);
+  auto HWS = std::make_unique<Scheduler>(SM, *LSU);
+
+  // Create the pipeline stages.
+  auto Fetch = std::make_unique<EntryStage>(SrcMgr);
+  auto Dispatch = std::make_unique<DispatchStage>(STI, MRI, MCAPO.DispatchWidth,
+                                                  *RCU, *PRF);
+  auto Execute =
+      std::make_unique<ExecuteStage>(*HWS, MCAPO.EnableBottleneckAnalysis);
+  auto Retire = std::make_unique<RetireStage>(*RCU, *PRF, *LSU);
+
+  // Pass the ownership of all the hardware units to this Context.
+  TheMCA.addHardwareUnit(std::move(RCU));
+  TheMCA.addHardwareUnit(std::move(PRF));
+  TheMCA.addHardwareUnit(std::move(LSU));
+  TheMCA.addHardwareUnit(std::move(HWS));
+
+  // Build the pipeline.
+  auto StagePipeline = std::make_unique<Pipeline>();
+  StagePipeline->appendStage(std::move(Fetch));
+  if (MCAPO.MicroOpQueueSize)
+    StagePipeline->appendStage(std::make_unique<MicroOpQueueStage>(
+        MCAPO.MicroOpQueueSize, MCAPO.DecodersThroughput));
+  StagePipeline->appendStage(std::move(Dispatch));
+  StagePipeline->appendStage(std::move(Execute));
+  StagePipeline->appendStage(std::move(Retire));
+
+  for (auto *listener : Listeners) {
+    StagePipeline->addEventListener(listener);
+  }
+
+  return StagePipeline;
+}
+
+std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
+  using namespace mca;
+  const MCSchedModel &SM = STI.getSchedModel();
+  const MCRegisterInfo &MRI = TheMCA.getMCRegisterInfo();
+
+  auto PRF = std::make_unique<RegisterFile>(SM, MRI, MCAPO.RegisterFileSize);
+  auto LSU = std::make_unique<MCADLSUnit>(
+      SM, MCAPO.LoadQueueSize, MCAPO.StoreQueueSize, MCAPO.AssumeNoAlias,
+      SrcMgr, &MDRegistry);
+
+  // Create the pipeline stages.
+  auto Entry = std::make_unique<EntryStage>(SrcMgr);
+  auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF, *CB, *LSU);
+  auto StagePipeline = std::make_unique<Pipeline>();
+
+  // Pass the ownership of all the hardware units to this Context.
+  TheMCA.addHardwareUnit(std::move(PRF));
+  TheMCA.addHardwareUnit(std::move(LSU));
+
+  // Build the pipeline.
+  StagePipeline->appendStage(std::move(Entry));
+  StagePipeline->appendStage(std::move(InOrderIssue));
+
+  for (auto *listener : Listeners) {
+    StagePipeline->addEventListener(listener);
+  }
+
+  return StagePipeline;
+}
+
+std::unique_ptr<mca::Pipeline> MCAWorker::createPipeline() {
+  const MCSchedModel &SM = STI.getSchedModel();
+  if (SM.isOutOfOrder()) {
+    return createDefaultPipeline();
+  } else {
+    return createInOrderPipeline();
+  }
 }
 
 void MCAWorker::resetPipeline() {
@@ -175,17 +259,17 @@ void MCAWorker::resetPipeline() {
 
   if(CB) { delete CB; CB = nullptr; }
   CB = new mca::CustomBehaviour(STI, SrcMgr, MCII);
-  MCAPipeline = std::move(TheMCA.createDefaultPipeline(MCAPO, SrcMgr, *CB));
+
+  MCAPipeline = std::move(createPipeline());
   assert(MCAPipeline);
 
   MCAPipelinePrinter = std::make_unique<mca::PipelinePrinter>(*MCAPipeline);
   const MCSchedModel &SM = STI.getSchedModel();
 
+  // TODO:
   // MCAPipelinePrinter->addView(
-  //   std::make_unique<mca::SummaryView>(SM, GetTraceMISize, 0U,
-  //                                      &MCAOF.os()));
-
-  // XXX: Add Listeners
+  //         std::make_unique<mca::SummaryView>(SM, GetTraceMISize, 0U,
+  //                                            &MCAOF.os()));
 }
 
 Error MCAWorker::run() {
@@ -224,8 +308,6 @@ Error MCAWorker::run() {
   bool SupportMetadata = TheBroker->hasFeature<Broker::Feature_Metadata>();
   DenseMap<unsigned, unsigned> MDIndexMap;
 
-  std::unique_ptr<mca::MetadataRegistry> MDRegistry = std::make_unique<mca::MetadataRegistry>();
-
   // The end of instruction streams in all regions
   bool EndOfStream = false;
   while (true) {
@@ -236,16 +318,15 @@ Error MCAWorker::run() {
       if (UseRegion) {
         if (SupportMetadata) {
           MDIndexMap.clear();
-          std::tie(Len, RD)
-            = TheBroker->fetchRegion(TraceBuffer, -1,
-                                     MDExchanger{*MDRegistry, MDIndexMap});
+          std::tie(Len, RD) = TheBroker->fetchRegion(
+              TraceBuffer, -1, MDExchanger{MDRegistry, MDIndexMap});
         } else
           std::tie(Len, RD) = TheBroker->fetchRegion(TraceBuffer);
       } else {
         if (SupportMetadata) {
           MDIndexMap.clear();
           Len = TheBroker->fetch(TraceBuffer, -1,
-                                 MDExchanger{*MDRegistry, MDIndexMap});
+                                 MDExchanger{MDRegistry, MDIndexMap});
         } else
           Len = TheBroker->fetch(TraceBuffer);
       }

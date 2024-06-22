@@ -13,6 +13,7 @@
 
 #include "BrokerFacade.h"
 #include "Brokers/Broker.h"
+#include "CustomHWUnits/CustomSourceMgr.h"
 
 namespace llvm {
 class Target;
@@ -57,7 +58,7 @@ class MCAWorker {
   std::function<size_t(void)> GetTraceMISize;
 
   llvm::SourceMgr &SM;
-  mca::IncrementalSourceMgr SrcMgr;
+  CustomSourceMgr SrcMgr;
 
   mca::CustomBehaviour *CB;
 
@@ -70,6 +71,8 @@ class MCAWorker {
   TimerGroup Timers;
 
   std::unique_ptr<Broker> TheBroker;
+
+  MetadataRegistry &MDRegistry;
 
   std::unique_ptr<mca::Pipeline> createDefaultPipeline();
   std::unique_ptr<mca::Pipeline> createInOrderPipeline();
@@ -86,7 +89,8 @@ public:
   MCAWorker(const Target &T, const MCSubtargetInfo &STI, mca::Context &MCA,
             const mca::PipelineOptions &PO, mca::InstrBuilder &IB,
             ToolOutputFile &OF, MCContext &Ctx, const MCAsmInfo &MAI,
-            const MCInstrInfo &II, MCInstPrinter &IP, mca::MetadataRegistry &MDR, llvm::SourceMgr &SM);
+            const MCInstrInfo &II, MCInstPrinter &IP, MetadataRegistry &MDR,
+            llvm::SourceMgr &SM);
 
   BrokerFacade getBrokerFacade() {
     return BrokerFacade(*this);
@@ -96,6 +100,7 @@ public:
 
   ~MCAWorker();
 };
+
 } // end namespace mcad
 } // end namespace llvm
 #endif

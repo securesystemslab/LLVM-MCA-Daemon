@@ -25,6 +25,7 @@
 #include "BrokerFacade.h"
 #include "Brokers/Broker.h"
 #include "Brokers/BrokerPlugin.h"
+#include "CustomHWUnits/MCADLSUnit.h"
 #include "MetadataCategories.h"
 #include "MetadataRegistry.h"
 
@@ -68,7 +69,7 @@ class VivisectBroker : public Broker {
   MCContext &Ctx;
   const MCSubtargetInfo &STI;
   EmulatorService Service;
-  uint32_t TotalNumTraces;
+  uint64_t TotalNumTraces;
 
   std::unique_ptr<std::thread> ServerThread;
   std::unique_ptr<grpc::Server> server;
@@ -124,11 +125,11 @@ class VivisectBroker : public Broker {
                 auto &IndexMap = MDE->IndexMap;
                 auto &MemAccessCat = Registry[MD_LSUnit_MemAccess];
                 IndexMap[i] = TotalNumTraces;
-                // MemAccessCat[TotalNumTraces] = std::move(mca::MDMemoryAccess{
-                //     MemAccess.is_store(),
-                //     MemAccess.vaddr(),
-                //     MemAccess.size(),
-                // });
+                MemAccessCat[TotalNumTraces] = std::move(MDMemoryAccess{
+                    MemAccess.is_store(),
+                    MemAccess.vaddr(),
+                    MemAccess.size(),
+                });
             }
 
             if (MDE && insn.has_branch_flow()) {

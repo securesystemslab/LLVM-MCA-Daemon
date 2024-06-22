@@ -376,7 +376,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::unique_ptr<mca::MetadataRegistry> MDR = std::make_unique<mca::MetadataRegistry>();
+  std::unique_ptr<MetadataRegistry> MDR = std::make_unique<MetadataRegistry>();
   mcad::MCAWorker Worker(*TheTarget, *STI, MCA, PO, IB, OF, *Ctx, *MAI, *MCII,
                          *IP, *MDR, SM);
 

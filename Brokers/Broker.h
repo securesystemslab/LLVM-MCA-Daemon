@@ -15,7 +15,7 @@ namespace llvm {
 
 namespace mcad {
 struct MDExchanger {
-  mca::MetadataRegistry &MDRegistry;
+  MetadataRegistry &MDRegistry;
   // Mapping MCInst index in the current batch
   // to index in MetadataRegistry
   DenseMap<unsigned, unsigned> &IndexMap;
