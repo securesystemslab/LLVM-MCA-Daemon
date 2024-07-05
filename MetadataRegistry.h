@@ -50,8 +50,8 @@ public:
   }
 };
 
-/// A registry that holds metadata for each mca::Instruction.
-/// Each entry is indexed by MDToken within mca::Instruction, and
+/// A registry that holds metadata for each CustomInstruction.
+/// Each entry is indexed by MDToken within CustomInstruction, and
 /// recycled upon being released.
 class MetadataRegistry {
   SmallVector<std::unique_ptr<MetadataCategory>, 2> Categories;

@@ -148,34 +148,33 @@ class VivisectBroker : public Broker {
     }
   }
 
-    unsigned getFeatures() const override {
-        return Broker::Feature_Metadata;
-    }
+  unsigned getFeatures() const override {
+    return Broker::Feature_Metadata;
+  }
 
 public:
   VivisectBroker(const MCSubtargetInfo &MSTI, MCContext &C, const Target &T)
       : TheTarget(T), Ctx(C), STI(MSTI), Service(EmulatorService()), TotalNumTraces(0U) {
-      ServerThread = std::make_unique<std::thread>(&VivisectBroker::serverLoop, this);
-      DisAsm.reset(TheTarget.createMCDisassembler(STI, Ctx));
+    ServerThread = std::make_unique<std::thread>(&VivisectBroker::serverLoop, this);
+    DisAsm.reset(TheTarget.createMCDisassembler(STI, Ctx));
   }
   ~VivisectBroker() {
-      server->Shutdown();
-      ServerThread->join();
+    server->Shutdown();
+    ServerThread->join();
   }
 };
 
 void VivisectBroker::serverLoop() {
-    std::string srv_addr("0.0.0.0:50051");
+  std::string srv_addr("0.0.0.0:50051");
 
-    grpc::ServerBuilder builder;
-    builder.AddListeningPort(srv_addr, grpc::InsecureServerCredentials());
-    builder.RegisterService(&Service);
-    server = builder.BuildAndStart();
+  grpc::ServerBuilder builder;
+  builder.AddListeningPort(srv_addr, grpc::InsecureServerCredentials());
+  builder.RegisterService(&Service);
+  server = builder.BuildAndStart();
 
-    std::cout << "Server listening on " << srv_addr << std::endl;
-    server->Wait();
+  std::cout << "Server listening on " << srv_addr << std::endl;
+  server->Wait();
 }
-
 
 extern "C" ::llvm::mcad::BrokerPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
 mcadGetBrokerPluginInfo() {
@@ -183,6 +182,6 @@ mcadGetBrokerPluginInfo() {
           [](int argc, const char *const *argv, BrokerFacade &BF) {
             // TODO: set things like target
             BF.setBroker(std::make_unique<VivisectBroker>(
-                BF.getSTI(), BF.getCtx(), BF.getTarget()));
+              BF.getSTI(), BF.getCtx(), BF.getTarget()));
           }};
 }
