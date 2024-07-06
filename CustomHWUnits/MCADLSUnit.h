@@ -9,7 +9,6 @@
 #include "llvm/MCA/Instruction.h"
 #include <set>
 
-#include "CustomHWUnits/CustomSourceMgr.h"
 #include "MetadataRegistry.h"
 
 namespace llvm {
@@ -94,24 +93,20 @@ class MCADLSUnit : public mca::LSUnit {
   DenseMap<unsigned, std::unique_ptr<CustomMemoryGroup>> CustomGroups;
   unsigned NextCustomGroupID;
 
-  CustomSourceMgr &SrcMgr;
-
   MetadataRegistry *MDRegistry;
 
 public:
-  MCADLSUnit(const MCSchedModel &SM, CustomSourceMgr &SrcMgr,
-             MetadataRegistry *MDR)
+  MCADLSUnit(const MCSchedModel &SM, MetadataRegistry *MDR)
       : LSUnit(SM, /* LQSize */ 0, /* SQSize */ 0, /* NoAlias */ false),
-        SrcMgr(SrcMgr), MDRegistry(MDR) {}
-  MCADLSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ,
-             CustomSourceMgr &SrcMgr, MetadataRegistry *MDR)
-      : LSUnit(SM, LQ, SQ, /* NoAlias */ false), SrcMgr(SrcMgr),
         MDRegistry(MDR) {}
   MCADLSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ,
-             bool AssumeNoAlias, CustomSourceMgr &SrcMgr, MetadataRegistry *MDR)
+             MetadataRegistry *MDR)
+      : LSUnit(SM, LQ, SQ, /* NoAlias */ false), MDRegistry(MDR) {}
+  MCADLSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ,
+             bool AssumeNoAlias, MetadataRegistry *MDR)
       : LSUnit(SM, LQ, SQ, AssumeNoAlias), CurrentLoadGroupID(0),
         CurrentLoadBarrierGroupID(0), CurrentStoreGroupID(0),
-        CurrentStoreBarrierGroupID(0), SrcMgr(SrcMgr), MDRegistry(MDR) {}
+        CurrentStoreBarrierGroupID(0), MDRegistry(MDR) {}
 
   Status isAvailable(const mca::InstRef &IR) const override;
 

@@ -28,6 +28,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_SUMMARYVIEW_H
 #define LLVM_TOOLS_LLVM_MCA_SUMMARYVIEW_H
 
+#include "MetadataRegistry.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCSchedule.h"
@@ -38,7 +39,6 @@ namespace llvm {
 class raw_ostream;
 
 namespace mca {
-class MetadataRegistry;
 
 /// A view that collects and prints a few performance numbers.
 class SummaryView : public View {
@@ -51,7 +51,7 @@ class SummaryView : public View {
   unsigned NumMicroOps;
 
   // Used for printing region markers (optional)
-  mca::MetadataRegistry *MDRegistry;
+  mcad::MetadataRegistry *MDRegistry;
   llvm::raw_ostream *OutStream;
   // List of begin summary strings to be paired by end-marked
   // instruciton later
@@ -93,9 +93,8 @@ class SummaryView : public View {
 
 public:
   SummaryView(const llvm::MCSchedModel &Model,
-              llvm::function_ref<size_t(void)> GetSrcSize,
-              unsigned Width,
-              mca::MetadataRegistry *MDRegistry = nullptr,
+              llvm::function_ref<size_t(void)> GetSrcSize, unsigned Width,
+              mcad::MetadataRegistry *MDRegistry = nullptr,
               llvm::raw_ostream *OutStream = nullptr);
 
   void onCycleEnd() override { ++TotalCycles; }

@@ -175,9 +175,9 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
   // Create the hardware units defining the backend.
   auto RCU = std::make_unique<RetireControlUnit>(SM);
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, MCAPO.RegisterFileSize);
-  auto LSU = std::make_unique<MCADLSUnit>(
-      SM, MCAPO.LoadQueueSize, MCAPO.StoreQueueSize, MCAPO.AssumeNoAlias,
-      SrcMgr, &MDRegistry);
+  auto LSU = std::make_unique<MCADLSUnit>(SM, MCAPO.LoadQueueSize,
+                                          MCAPO.StoreQueueSize,
+                                          MCAPO.AssumeNoAlias, &MDRegistry);
   auto HWS = std::make_unique<Scheduler>(SM, *LSU);
 
   // Create the pipeline stages.
@@ -217,9 +217,9 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
   const MCRegisterInfo &MRI = TheMCA.getMCRegisterInfo();
 
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, MCAPO.RegisterFileSize);
-  auto LSU = std::make_unique<MCADLSUnit>(
-      SM, MCAPO.LoadQueueSize, MCAPO.StoreQueueSize, MCAPO.AssumeNoAlias,
-      SrcMgr, &MDRegistry);
+  auto LSU = std::make_unique<MCADLSUnit>(SM, MCAPO.LoadQueueSize,
+                                          MCAPO.StoreQueueSize,
+                                          MCAPO.AssumeNoAlias, &MDRegistry);
 
   // Create the pipeline stages.
   auto Entry = std::make_unique<EntryStage>(SrcMgr);

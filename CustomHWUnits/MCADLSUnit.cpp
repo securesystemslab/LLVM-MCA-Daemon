@@ -55,7 +55,8 @@ std::optional<MDMemoryAccess>
 MCADLSUnit::getMemoryAccessMD(const mca::InstRef &IR) const {
   if (MDRegistry) {
     auto &Registry = (*MDRegistry)[llvm::mcad::MD_LSUnit_MemAccess];
-    unsigned MDTok = IR.getSourceIndex() + SrcMgr.getCountTillNow();
+    // unsigned MDTok = IR.getSourceIndex() + SrcMgr.getCountTillNow();
+    unsigned MDTok = *IR.getInstruction()->getIdentifier();
     return Registry.get<MDMemoryAccess>(MDTok);
   }
   return std::nullopt;

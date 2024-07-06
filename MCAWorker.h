@@ -58,7 +58,7 @@ class MCAWorker {
   std::function<size_t(void)> GetTraceMISize;
 
   llvm::SourceMgr &SM;
-  CustomSourceMgr SrcMgr;
+  mca::IncrementalSourceMgr SrcMgr;
 
   mca::CustomBehaviour *CB;
 
