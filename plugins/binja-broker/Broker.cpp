@@ -270,8 +270,7 @@ class BinjaBroker : public Broker {
     }
 
     unsigned getFeatures() const override {
-        return Broker::Feature_Metadata | Broker::Feature_Region
-               | Broker::Feature_InstructionError;
+      return Broker::Feature_Region | Broker::Feature_InstructionError;
     }
 
 public:

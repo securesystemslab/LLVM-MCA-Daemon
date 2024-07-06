@@ -38,6 +38,7 @@
 
 #include "CustomHWUnits/MCADLSUnit.h"
 #include "MCAViews/SummaryView.h"
+#include "MCAViews/TimelineView.h"
 #include "MCAWorker.h"
 #include "PipelinePrinter.h"
 
@@ -266,10 +267,12 @@ void MCAWorker::resetPipeline() {
   MCAPipelinePrinter = std::make_unique<mca::PipelinePrinter>(*MCAPipeline);
   const MCSchedModel &SM = STI.getSchedModel();
 
-  // TODO:
-  // MCAPipelinePrinter->addView(
-  //         std::make_unique<mca::SummaryView>(SM, GetTraceMISize, 0U,
-  //                                            &MCAOF.os()));
+  MCAPipelinePrinter->addView(std::make_unique<mca::SummaryView>(
+      SM, GetTraceMISize, 0U, &MDRegistry, &MCAOF.os()));
+
+  if (ShowTimelineView)
+    MCAPipelinePrinter->addView(
+        std::make_unique<mca::TimelineView>(STI, MIP, &MDRegistry, MCAOF.os()));
 }
 
 Error MCAWorker::run() {
@@ -406,7 +409,7 @@ Error MCAWorker::run() {
               auto MDTok = MDIndexMap.lookup(i);
               LLVM_DEBUG(dbgs() << "MCI " << NumTraceMIs
                                 << " has Token " << MDTok << "\n");
-              // RecycledInst->setMetadataToken(MDTok);
+              RecycledInst->setIdentifier(MDTok);
             }
             SrcMgr.addRecycledInst(RecycledInst);
           } else {
@@ -415,7 +418,7 @@ Error MCAWorker::run() {
               auto MDTok = MDIndexMap.lookup(i);
               LLVM_DEBUG(dbgs() << "MCI " << NumTraceMIs
                                 << " has Token " << MDTok << "\n");
-              // NewInst->setMetadataToken(MDTok);
+              NewInst->setIdentifier(MDTok);
             }
             SrcMgr.addInst(std::move(NewInst));
           }

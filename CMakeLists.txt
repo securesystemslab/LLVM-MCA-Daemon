@@ -91,6 +91,7 @@ set(LLVM_LINK_COMPONENTS
 set(_MCAVIEWS_SOURCE_FILES
     MCAViews/InstructionView.cpp
     MCAViews/SummaryView.cpp
+    MCAViews/TimelineView.cpp
     )
 
 set(_CUSTOMHW_SOURCE_FILES

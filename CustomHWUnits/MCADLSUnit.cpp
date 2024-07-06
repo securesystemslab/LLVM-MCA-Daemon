@@ -53,11 +53,10 @@ raw_ostream &operator<<(raw_ostream &OS, const MDMemoryAccess &MDA) {
 
 std::optional<MDMemoryAccess>
 MCADLSUnit::getMemoryAccessMD(const mca::InstRef &IR) const {
-  if (MDRegistry) {
+  auto Id = IR.getInstruction()->getIdentifier();
+  if (MDRegistry && Id.has_value()) {
     auto &Registry = (*MDRegistry)[llvm::mcad::MD_LSUnit_MemAccess];
-    // unsigned MDTok = IR.getSourceIndex() + SrcMgr.getCountTillNow();
-    unsigned MDTok = *IR.getInstruction()->getIdentifier();
-    return Registry.get<MDMemoryAccess>(MDTok);
+    return Registry.get<MDMemoryAccess>(*Id);
   }
   return std::nullopt;
 }
