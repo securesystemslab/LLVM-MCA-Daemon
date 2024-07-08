@@ -64,7 +64,7 @@ class BinjaBridge final : public Binja::Service {
             return grpc::Status(grpc::StatusCode::INVALID_ARGUMENT,
                                 "NULL pointer passed for instructions.");
         }
-        if(insns->instruction_size() == 0) {
+        if (insns->instruction_size() == 0) {
             // Sending a request with empty cycle counts indicates the plugin
             // wants to shut down the server.
             shutdown();
@@ -117,7 +117,7 @@ class BinjaBridge final : public Binja::Service {
     }
 
     void clearInstructionErrors() {
-        while(!InstructionErrors.empty()) {
+        while (!InstructionErrors.empty()) {
             auto it = InstructionErrors.begin();
             llvm::consumeError(std::move(it->second));
             InstructionErrors.erase(it);
