@@ -6,9 +6,9 @@ On Ubuntu 22.04, you will need at the very least before you get started:
 ```
 sudo apt install build-essential binutils cmake ninja-build
 ```
-This project uses a special version of LLVM that builds on top of LLVM 13.0.0. Please use the following way to clone it:
+This project uses upstream LLVM:
 ```bash
-git clone -b dev-incremental-mca https://github.com/securesystemslab/llvm-project.git
+git clone https://github.com/llvm/llvm-project.git
 ```
 To build and install it, here are some suggested CMake configurations:
 ```bash
@@ -107,6 +107,15 @@ Here are some other important command line arguments:
  - `-load-broker-plugin=<plugin library file>`. Load a Broker plugin. This option implicitly selects the **plugin** Broker kind.
  - `-broker-plugin-arg.*`. Supply addition arguments to the Broker plugin. For example, if `-broker-plugin-arg-foo=bar` is given, the plugin will receive `-foo=bar` argument when it's registering with the core component.
  - `-cache-sim-config=<config file>`. Please refer to [this document](doc/cache-simulation.md) for more details.
+
+## Testing
+
+We use LLVM's LIT testing infrastructure.
+
+```bash
+$ cd test
+$ ./my-lit.py -j 1 -v .
+```
 
 ## Design
 ### Overview
