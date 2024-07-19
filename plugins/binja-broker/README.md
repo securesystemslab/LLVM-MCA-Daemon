@@ -74,3 +74,12 @@ python.virtualenv = /path/to/binja_venv/lib/python3.12/site-packages
    Then, `Plugins/MCAD/3. Get Cycle counts for annotated` will return cycle counts for only those functions.
 5. Shut down server before closing BinaryNinja - `Plugins/MCAD/4. Stop Server`.
 
+### Experiment Ghidra Plugin
+
+We implement experimental support for using the BinjaBroker with Ghidra. 
+
+1. Install and configure [Ghidrathon](https://github.com/mandiant/ghidrathon).
+2. In `Script Manager` -> `Manage Script Directories`, add the `binja-plugin` directory.
+3. The `ghidra-script.py` script should be visible under `Scripts/Python3`. Add a convenient keybind for it (Ctrl-L), if preferred.
+4. Start the `llvm-mcad` server in the background.
+5. Ctrl-L will now annotate all instructions of the "current function" with their corresponding cycle counts fetched from llvm-mca.
