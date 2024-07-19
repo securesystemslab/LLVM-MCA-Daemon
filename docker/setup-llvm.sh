@@ -21,8 +21,9 @@ apt-get install -y \
 rm -rf /var/lib/apt/lists/*
 
 git clone https://github.com/llvm/llvm-project.git llvm
-mkdir llvm/build
-cd llvm/build
+cd llvm
+git am < /work/LLVM-MCA-Daemon/patches/add-identifier-to-mca-instruction.patch
+mkdir build && cd build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=/opt/llvm-main \
                -DCMAKE_C_COMPILER=clang-14 -DCMAKE_CXX_COMPILER=clang++-14 \
                -DLLVM_USE_LINKER=lld-14 -DLLVM_ENABLE_ASSERTIONS=ON \

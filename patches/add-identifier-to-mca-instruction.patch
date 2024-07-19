@@ -1,0 +1,36 @@
+From e23140fa561f29798dce12d9ef93d34dff8b092c Mon Sep 17 00:00:00 2001
+From: Chinmay Deshpande <cddeshpa@uci.edu>
+Date: Fri, 5 Jul 2024 16:05:25 -0700
+Subject: [PATCH] [MCA] Add identifier field to mca::Instruction
+
+---
+ llvm/include/llvm/MCA/Instruction.h | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/llvm/include/llvm/MCA/Instruction.h b/llvm/include/llvm/MCA/Instruction.h
+index e48a70164bec..4fb0a62ac7f8 100644
+--- a/llvm/include/llvm/MCA/Instruction.h
++++ b/llvm/include/llvm/MCA/Instruction.h
+@@ -643,6 +643,9 @@ class Instruction : public InstructionBase {
+   // True if this instruction has been optimized at register renaming stage.
+   bool IsEliminated;
+ 
++  // Client-dependent identifier for this instruction.
++  std::optional<uint64_t> Identifier;
++
+ public:
+   Instruction(const InstrDesc &D, const unsigned Opcode)
+       : InstructionBase(D, Opcode), Stage(IS_INVALID),
+@@ -690,6 +693,9 @@ public:
+   bool isRetired() const { return Stage == IS_RETIRED; }
+   bool isEliminated() const { return IsEliminated; }
+ 
++  std::optional<uint64_t> getIdentifier() const { return Identifier; }
++  void setIdentifier(uint64_t Id) { Identifier = Id; }
++
+   // Forces a transition from state IS_DISPATCHED to state IS_EXECUTED.
+   void forceExecuted();
+   void setEliminated() { IsEliminated = true; }
+-- 
+2.25.1
+
