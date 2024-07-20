@@ -1,11 +1,10 @@
 import grpc
 import binja_pb2
 import binja_pb2_grpc
-import random
 
 class binja_client:
-    def __init__(self):
-        self.channel = grpc.insecure_channel("localhost:50052")
+    def __init__(self, port=50052):
+        self.channel = grpc.insecure_channel("localhost:" + str(port))
         self.stub = binja_pb2_grpc.BinjaStub(self.channel)
 
     def get_instruction(self, insn_bytes):
