@@ -150,7 +150,7 @@ Currently we're only displaying the MCA result using `SummaryView`, which print 
 
 ## Development
 
-The `main` branch is configured to work with upstream LLVM. We try our best to keep it compatible, but please raise an issue if it fails to build. LLVM_COMMIT_ID.txt contains the latest commit ID that MCAD was reliably tested with.
+The `main` branch is configured to work with upstream LLVM. We try our best to keep it compatible, but please raise an issue if it fails to build. `LLVM_COMMIT_ID.txt` contains the latest commit ID that MCAD was reliably tested with.
 
 The `fse23` branch contains code that was part of the [publication](https://dl.acm.org/doi/10.1145/3611643.3616246) presented at FSE'23.
 Please cite as follows:
