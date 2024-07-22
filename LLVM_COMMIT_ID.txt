@@ -1,0 +1,15 @@
+commit 56ffbd97fda16008d02180a460211829354f1094 (upstream/main)                                                                
+Author: Tom Stellard <tstellar@redhat.com>                                                                                     
+Date:   Fri Jul 19 14:47:35 2024 -0700                                                                                         
+                                                                                                                               
+    [workflows] Avoid usage of access token in issue-write.yml (#94011)                                                        
+                                                                                                                               
+    This adds a new composite workflow that allows you to download artifacts                                                   
+    from other workflows without using an access token.                                                                        
+                                                                                                                               
+    actions/download-artifact from GitHub requires an access token in order                                                    
+    to download artifacts from a different workflow, which is why we can't                                                     
+    use it here if we want to avoid using a token.                                                                             
+                                                                                                                               
+    See                                                                                                                        
+    https://github.com/actions/download-artifact?tab=readme-ov-file#download-artifacts-from-other-workflow-runs-or-repositories

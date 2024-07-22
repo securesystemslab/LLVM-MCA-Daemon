@@ -13,6 +13,11 @@ git clone https://github.com/llvm/llvm-project.git
 To build and install it, here are some suggested CMake configurations:
 ```bash
 cd llvm-project
+# We currently rely on mca::Instruction having an `identifier` field. 
+# The patch file can be found in the `patches` directory of LLVM-MCA-Daemon. Apply it like so - 
+git am < ../LLVM-MCA-Daemon/patches/add-identifier-to-mca-instruction.patch
+# (Optional) Support for PPC e500
+git am < ../LLVM-MCA-Daemon/patches/start-mapping-e500-itenerary-model-to-new-schedule.patch
 mkdir install
 mkdir .build && cd .build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
@@ -25,7 +30,7 @@ cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
 ninja llvm-mca llvm-mc LLVMDebugInfoDWARF
 ninja install
 ```
-Note that LLVM-MCAD uses a modular design, so components related to QEMU are no longer built by default. Please checkout their prerequisites inside their folders under the `plugins` directory.
+Note that LLVM-MCAD uses a modular design, so components related to QEMU/BinaryNinja/Vivisect are not built by default. Please checkout their prerequisites inside their folders under the `plugins` directory.
 
 ## Build
 You only need one additional CMake argument: `LLVM_DIR`. This should point to LLVM's CMake subdirectory inside of the install prefix you gave above as `CMAKE_INSTALL_PREFIX`. Here is an example:
@@ -48,7 +53,7 @@ Here are some other CMake arguments you can tweak:
 
 ## Docker
 
-We also ship LLVM-MCAD with Docker. Simply run `./up` from the docker directory. Then use MCAD as so:  
+We also ship LLVM-MCAD with Docker. Simply run `./up` from the docker directory. Then use MCAD like so:  
 
 ```bash
 $ # LLVM-MCA-Daemon directory is located inside /work
@@ -114,7 +119,7 @@ We use LLVM's LIT testing infrastructure.
 
 ```bash
 $ cd test
-$ ./my-lit.py -j 1 -v .
+$ ./my-lit.py -v .
 ```
 
 ## Design
@@ -142,6 +147,33 @@ Currently we're only displaying the MCA result using `SummaryView`, which print 
  - Has any assumption on Broker plugin's execution model.
  - Manage Broker plugin's lifecycle.
    - We dont' have explicit callbacks for Broker plugin's lifecycle. Developers of Brokers are expected to manage the lifecycle on their own, and encouraged to execute tasks in an on-demand fashion (e.g. `AsmFileBroker` only parses the assembly file after the first invocation to its `fetch` method).
+
+## Development
+
+The `main` branch is configured to work with upstream LLVM. We try our best to keep it compatible, but please raise an issue if it fails to build. LLVM_COMMIT_ID.txt contains the latest commit ID that MCAD was reliably tested with.
+
+The `fse23` branch contains code that was part of the [publication](https://dl.acm.org/doi/10.1145/3611643.3616246) presented at FSE'23.
+Please cite as follows:
+```
+@inproceedings{fse2023mcad,
+author = {Hsu, Min-Yih and Hetzelt, Felicitas and Gens, David and Maitland, Michael and Franz, Michael},
+title = {A Highly Scalable, Hybrid, Cross-Platform Timing Analysis Framework Providing Accurate Differential Throughput Estimation via Instruction-Level Tracing},
+year = {2023},
+isbn = {9798400703270},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3611643.3616246},
+doi = {10.1145/3611643.3616246},
+booktitle = {Proceedings of the 31st ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering},
+pages = {821–831},
+numpages = {11},
+keywords = {combining static and dynamic analyses, differential throughput analysis, performance, throughput analysis},
+location = {San Francisco, CA, USA},
+series = {ESEC/FSE 2023}
+}
+```
+
+However, this (and the `broker-improvements`) branch contains outdated code that requires a custom LLVM available [here](https://github.com/securesystemslab/llvm-project) (branch `dev-incremental-mca`).
 
 # Acknowledgements
 This material is based upon work supported by the Defense Advanced Research Projects Agency (DARPA) and Naval Information Warfare Center Pacific (NIWC Pacific) under Contract Number N66001-20-C-4027 and 140D0423C0063. Any opinions, findings and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the DARPA, NIWC Pacific, or its Contracting Agent, the U.S. Department of the Interior, Interior Business Center, Acquisition Services Directorate, Division III.
