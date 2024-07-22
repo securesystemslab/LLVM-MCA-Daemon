@@ -90,16 +90,17 @@ class BinjaBridge final : public Binja::Service {
         grpc::Status return_status = grpc::Status::OK;
 
         if (InstructionErrors.size() > 0) {
-            auto it = InstructionErrors.begin();
             std::ostringstream msg;
             msg << "Errors in instruction(s) ";
-            msg << it->first;
+            auto it = InstructionErrors.begin();
+            msg << it->first << " (" << toString(std::move(it->second)) << ")";
             ++it;
-            for(; it != InstructionErrors.end(); ++it) {
-                    msg << ", " << it->first;
+            for (; it != InstructionErrors.end(); ++it) {
+              msg << ", " << it->first << " ("
+                  << toString(std::move(it->second)) << ")";
             }
             msg << ".";
-            clearInstructionErrors();
+            InstructionErrors.clear();
             return_status = grpc::Status(grpc::StatusCode::INVALID_ARGUMENT, msg.str());
         } else {
             for (int i = 0; i < insns->instruction_size(); i++) {
@@ -116,14 +117,6 @@ class BinjaBridge final : public Binja::Service {
         DoneHandlingInput.store(true);
 
         return return_status;
-    }
-
-    void clearInstructionErrors() {
-        while(!InstructionErrors.empty()) {
-            auto it = InstructionErrors.begin();
-            llvm::consumeError(std::move(it->second));
-            InstructionErrors.erase(it);
-        }
     }
 
 public:
@@ -170,11 +163,9 @@ public:
     }
 
     void onEvent(const mca::HWStallEvent &Event) override {
-        std::cout << "[BINJA] Stall !\n";
     }
 
     void onEvent(const mca::HWPressureEvent &Event) override {
-        std::cout << "[BINJA] Pressure !\n";
         for (const auto &inst : Event.AffectedInstructions) {
             const unsigned index = inst.getSourceIndex();
 
@@ -259,6 +250,18 @@ class BinjaBroker : public Broker {
                 auto MCI = std::make_unique<MCInst>();
                 uint64_t DisAsmSize;
                 auto Disassembled = DisAsm->getInstruction(*MCI, DisAsmSize, InstBytes, 0, nulls());
+                if (Disassembled == MCDisassembler::DecodeStatus::Fail) {
+                  signalInstructionError(
+                      i, createStringError(std::errc::invalid_argument,
+                                           "Disassembler reported Fail"));
+                  return std::make_pair(i, RegionDescriptor(true));
+                } else if (Disassembled =
+                               MCDisassembler::DecodeStatus::SoftFail) {
+                  signalInstructionError(
+                      i, createStringError(std::errc::invalid_argument,
+                                           "Disassembler reported SoftFail"));
+                  return std::make_pair(i, RegionDescriptor(true));
+                }
 
                 MCIS[i] = MCI.get();
                 Local_MCIS.push_back(std::move(MCI));
