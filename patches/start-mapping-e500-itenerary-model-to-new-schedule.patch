@@ -1,0 +1,110 @@
+From 8c5e131f27b80cc05c7b29329045fd92f773530c Mon Sep 17 00:00:00 2001
+From: Ayrton Munoz <adm@immunant.com>
+Date: Fri, 1 Dec 2023 16:15:29 -0500
+Subject: [PATCH] WIP Start mapping e500 itinerary model to new scheduling
+ model
+
+See comment on `class WriteRes` in llvm/include/llvm/Target/TargetSchedule.td
+for a starting point on how to map the old (itinerary) model to the new
+scheduling model. As far as I've seen ARMScheduleA9.td is the only cpu model
+currently doing this mapping so this work is based off of that and the existing
+info in the e500 model.
+---
+ llvm/lib/Target/PowerPC/PPCScheduleE500.td | 80 ++++++++++++++++++++++
+ 1 file changed, 80 insertions(+)
+
+diff --git a/llvm/lib/Target/PowerPC/PPCScheduleE500.td b/llvm/lib/Target/PowerPC/PPCScheduleE500.td
+index 74744dda54f7..e070130859d4 100644
+--- a/llvm/lib/Target/PowerPC/PPCScheduleE500.td
++++ b/llvm/lib/Target/PowerPC/PPCScheduleE500.td
+@@ -273,7 +273,87 @@ def PPCE500Model : SchedMachineModel {
+                        // This is overriden by OperandCycles if the
+                        // Itineraries are queried instead.
+ 
++  let MicroOpBufferSize = 14;
+   let CompleteModel = 0;
+ 
+   let Itineraries = PPCE500Itineraries;
+ }
++
++let SchedModel = PPCE500Model in {
++
++  // ********** Processor Resources **********
++  def DIS: ProcResource<2>;
++  def SU: ProcResource<2>;
++  def BU: ProcResource<1>;
++  def MU: ProcResource<1>;
++  def LSU: ProcResource<1>;
++
++  // ********** SchedWriteRes Definitions **********
++  def DIS_1C : SchedWriteRes<[DIS]> {}
++  def SU_1C : SchedWriteRes<[SU]> { }
++  def BU_1C : SchedWriteRes<[BU]> { }
++  def MU_1C : SchedWriteRes<[MU]> { }
++  def LSU_1C : SchedWriteRes<[LSU]> { }
++  def LSU_6C : SchedWriteRes<[LSU]> {
++    let Latency = 6;
++  }
++
++  // double check these SchedWriteRes choices
++  def : ItinRW<[SU_1C, DIS_1C], [IIC_IntSimple]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStSTU]>;
++
++  // using dummy values from previous entry
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_IntGeneral]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_IntISEL]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_IntCompare]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_IntDivW]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_IntMulHW]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_IntMulHWU]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_IntMulLI]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_IntRotate]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_IntShift]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_IntTrapW]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_BrB]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_BrCR]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_BrMCR]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_BrMCRX]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStDCBA]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStDCBF]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStDCBI]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStLoad]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStLoadUpd]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStLoadUpdX]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStStore]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStSTUX]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStICBI]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStLHA]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStLHAU]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStLHAUX]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStLMW]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStLWARX]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStSTWCX]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_LdStSync]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprMFSR]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprMTMSR]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprMTSR]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprTLBSYNC]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprMFCR]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprMFCRF]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprMFPMR]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprMFMSR]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprMFSPR]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprMTPMR]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprMFTB]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprMTSPR]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprMTSRIN]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_FPDGeneral]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_FPSGeneral]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_FPDivD]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_FPDivS]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_VecGeneral]>;
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_VecComplex]>;
++
++  // not included as part of the original e500 itinerary-based model
++  def : ItinRW<[LSU_6C, SU_1C, DIS_1C], [IIC_SprISYNC]>;
++
++} // SchedModel = PPCE500Model
+-- 
+2.25.1
+
