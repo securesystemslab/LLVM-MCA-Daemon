@@ -1,4 +1,4 @@
-# BinjaBroker sanity test
+# BinjaBroker sanity test with x64
 from utils import binja_client
 import argparse
 

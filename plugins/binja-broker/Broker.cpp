@@ -252,14 +252,8 @@ class BinjaBroker : public Broker {
                 auto Disassembled = DisAsm->getInstruction(*MCI, DisAsmSize, InstBytes, 0, nulls());
                 if (Disassembled == MCDisassembler::DecodeStatus::Fail) {
                   signalInstructionError(
-                      i, createStringError(std::errc::invalid_argument,
-                                           "Disassembler reported Fail"));
-                  return std::make_pair(i, RegionDescriptor(true));
-                } else if (Disassembled =
-                               MCDisassembler::DecodeStatus::SoftFail) {
-                  signalInstructionError(
-                      i, createStringError(std::errc::invalid_argument,
-                                           "Disassembler reported SoftFail"));
+                      i, std::move(createStringError(std::errc::invalid_argument,
+                                           "Disassembler reported Fail")));
                   return std::make_pair(i, RegionDescriptor(true));
                 }
 

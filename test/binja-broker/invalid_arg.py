@@ -1,4 +1,4 @@
-# Test to check if BinjaBroker can handle invalid instructions.
+# Test if BinjaBroker can handle invalid instructions
 from utils import binja_client
 import argparse
 

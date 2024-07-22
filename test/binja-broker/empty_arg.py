@@ -1,4 +1,4 @@
-# Test to check if BinjaBroker shuts down reliably on sending empty instructions list.
+# Test if BinjaBroker shuts down reliably on sending an empty instructions list
 from utils import binja_client
 import argparse
 

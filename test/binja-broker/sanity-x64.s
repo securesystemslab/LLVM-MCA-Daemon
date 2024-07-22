@@ -1,4 +1,4 @@
-# RUN: export MCAD_PORT=$(shuf -i 5000-6000 -n 1)
+# RUN: export MCAD_PORT=50054
 # RUN: llvm-mcad -mtriple=x86_64-unknown-unknown -mcpu=znver2 -load-broker-plugin=$MCAD_BIN_PATH/plugins/binja-broker/libMCADBinjaBroker.so --broker-plugin-arg-host=0.0.0.0:$MCAD_PORT --mca-output=%t-mcad | python3 %S/sanity-x64.py --port $MCAD_PORT > %t-client
 # RUN: FileCheck --input-file=%t-mcad --check-prefix=MCAD %s 
 # RUN: FileCheck --input-file=%t-client --check-prefix=CLIENT %s
