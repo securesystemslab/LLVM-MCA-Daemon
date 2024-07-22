@@ -102,7 +102,3 @@ Currently we're only displaying the MCA result using `SummaryView`, which print 
  - Has any assumption on Broker plugin's execution model.
  - Manage Broker plugin's lifecycle.
    - We dont' have explicit callbacks for Broker plugin's lifecycle. Developers of Brokers are expected to manage the lifecycle on their own, and encouraged to execute tasks in an on-demand fashion (e.g. `AsmFileBroker` only parses the assembly file after the first invocation to its `fetch` method).
-
-### Note
-
-Check out branch [broker-improvements](https://github.com/securesystemslab/LLVM-MCA-Daemon/tree/broker-improvements) for broker plugins that interface with the [Vivisect emulator](https://github.com/atlas0fd00m/vivisect) and [BinaryNinja](https://binary.ninja/).
