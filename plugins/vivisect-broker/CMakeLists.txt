@@ -4,9 +4,9 @@ add_library(vivisect_service_proto emulator.proto)
 target_compile_options(vivisect_service_proto PRIVATE "-fPIC")
 target_link_libraries(vivisect_service_proto
     PUBLIC
-        libprotobuf
-        grpc
+        grpc++_reflection
         grpc++
+        libprotobuf
 )
 
 # Compile protobuf and grpc files in vivisect_service_proto target to cpp
@@ -38,8 +38,19 @@ add_llvm_library(MCADVivisectBroker SHARED
 add_dependencies(MCADVivisectBroker 
     vivisect_service_proto)
 
+# MacOS-specific fix:
+# The mcadGetBrokerPluginInfo() function, which is defined by the individual
+# plugins, calls into functions defined in the main llvm-mcad executable into
+# which the plugin will be loaded at runtime. We cannot link against the main
+# executable; instead those calls should be resolved at runtime. We achieve this
+# on Linux using attribute(weak) in the source code; the MacOS linker requires
+# -undefied dynamic_lookup as a command line argument.
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  target_link_options(MCADVivisectBroker PUBLIC -Wl,-undefined -Wl,dynamic_lookup)
+endif()
+
 target_link_libraries(MCADVivisectBroker PUBLIC vivisect_service_proto)
 
 unset(LLVM_EXPORTED_SYMBOL_FILE)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
