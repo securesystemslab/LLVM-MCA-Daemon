@@ -74,6 +74,7 @@ class VivisectBroker : public Broker {
 
   std::unique_ptr<std::thread> ServerThread;
   std::unique_ptr<grpc::Server> server;
+  std::vector<MCInst> MCI_Pool;
 
   void serverLoop();
 
@@ -114,11 +115,15 @@ class VivisectBroker : public Broker {
             }
             ArrayRef<uint8_t> InstBytes(instructionBuffer);
 
-            auto MCI = std::make_shared<MCInst>();
+            // Create new MCInst and put it into our local pool storage.
+            // This can be freed when the worker thread is done with it.
+            MCI_Pool.emplace_back();
+            MCInst &MCI = MCI_Pool.back();
             uint64_t DisAsmSize;
-            auto Disassembled = DisAsm->getInstruction(*MCI, DisAsmSize, InstBytes, 0, nulls());
+            auto Disassembled = DisAsm->getInstruction(MCI, DisAsmSize, InstBytes, 0, nulls());
+            assert(Disassembled == MCDisassembler::DecodeStatus::Success);
 
-            MCIS[i] = MCI.get();
+            MCIS[i] = &MCI;  // return a pointer into our MCI_Pool
 
             if (MDE && insn.has_memory_access()) {
                 auto MemAccess = insn.memory_access();
@@ -147,6 +152,10 @@ class VivisectBroker : public Broker {
         }
         return std::make_pair(num_insn, RegionDescriptor(false));
     }
+  }
+
+  void signalWorkerComplete() override {
+    MCI_Pool.clear();
   }
 
     unsigned getFeatures() const override {
