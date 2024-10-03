@@ -5,3 +5,5 @@ __pycache__/
 *.pyc
 compile_commands.json
 .cache/
+.vscode/
+.venv/

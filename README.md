@@ -37,7 +37,7 @@ You only need one additional CMake argument: `LLVM_DIR`. This should point to LL
 ```bash
 mkdir .build && cd .build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-               -DLLVM_DIR=$(realpath ../install)/lib/cmake/llvm \
+               -DLLVM_DIR=$(realpath ../llvm-project/install)/lib/cmake/llvm \
                ../
 ninja all
 ```
