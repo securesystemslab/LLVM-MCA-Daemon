@@ -58,10 +58,11 @@ public:
     return true;
   }
 
-  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size, Align Alignment) {}
+  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size, Align Alignment)
+                       override {}
   void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                     uint64_t Size = 0, Align ByteAlignment = Align(1),
-                    SMLoc Loc = SMLoc()) {}
+                    SMLoc Loc = SMLoc()) override {}
   void emitGPRel32Value(const MCExpr *Value) override {}
   void BeginCOFFSymbolDef(const MCSymbol *Symbol) {}
   void EmitCOFFSymbolStorageClass(int StorageClass) {}
@@ -122,8 +123,7 @@ Expected<const CodeRegions &> AsmCodeRegionGenerator::parseCodeRegions() {
   // The following call will take care of calling Streamer.setTargetStreamer.
   MCStreamerWrapper Streamer(Ctx, Regions);
   TheTarget.createAsmTargetStreamer(Streamer, InstPrinterOStream,
-                                         InstPrinter.get(),
-                                         Opts.AsmVerbose);
+                                         InstPrinter.get());
   if (!Streamer.getTargetStreamer())
     return make_error<StringError>("cannot create target asm streamer", inconvertibleErrorCode());
 

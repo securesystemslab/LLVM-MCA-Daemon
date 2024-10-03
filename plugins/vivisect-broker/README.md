@@ -16,8 +16,8 @@ protoc --grpc_out=. --cpp_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin`
 This may require running the following if they are not already installed on your system
 
 ```
-pip install grpcio
-pip install protobuf
+sudo apt install -y protobuf-compiler python3-dev
+pip install grpcio grpcio-tools protobuf
 ```
 
 ## Build
