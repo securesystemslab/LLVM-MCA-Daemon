@@ -18,6 +18,8 @@ cd llvm-project
 git am < ../LLVM-MCA-Daemon/patches/add-identifier-to-mca-instruction.patch
 # (Optional) Support for PPC e500
 git am < ../LLVM-MCA-Daemon/patches/start-mapping-e500-itenerary-model-to-new-schedule.patch
+# Patch to make `Any` data type work across shared libraries
+git am < /work/LLVM-MCA-Daemon/patches/make-any-work-across-shared-libs.patch
 mkdir install
 mkdir .build && cd .build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
