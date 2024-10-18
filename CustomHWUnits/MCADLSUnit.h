@@ -91,7 +91,7 @@ class MCADLSUnit : public mca::LSUnit {
   unsigned CurrentStoreBarrierGroupID;
 
   DenseMap<unsigned, std::unique_ptr<CustomMemoryGroup>> CustomGroups;
-  unsigned NextCustomGroupID;
+  unsigned NextCustomGroupID = 1;
 
   MetadataRegistry *MDRegistry;
 
@@ -112,29 +112,29 @@ public:
 
   unsigned dispatch(const mca::InstRef &IR) override;
 
-  bool isValidGroupID(unsigned Index) const {
+  bool isValidGroupID(unsigned Index) const override {
     return Index && CustomGroups.contains(Index);
   }
 
-  bool isReady(const mca::InstRef &IR) const {
+  bool isReady(const mca::InstRef &IR) const override {
     unsigned GroupID = IR.getInstruction()->getLSUTokenID();
     const CustomMemoryGroup &Group = getCustomGroup(GroupID);
     return Group.isReady();
   }
 
-  bool isPending(const mca::InstRef &IR) const {
+  bool isPending(const mca::InstRef &IR) const override {
     unsigned GroupID = IR.getInstruction()->getLSUTokenID();
     const CustomMemoryGroup &Group = getCustomGroup(GroupID);
     return Group.isPending();
   }
 
-  bool isWaiting(const mca::InstRef &IR) const {
+  bool isWaiting(const mca::InstRef &IR) const override {
     unsigned GroupID = IR.getInstruction()->getLSUTokenID();
     const CustomMemoryGroup &Group = getCustomGroup(GroupID);
     return Group.isWaiting();
   }
 
-  bool hasDependentUsers(const mca::InstRef &IR) const {
+  bool hasDependentUsers(const mca::InstRef &IR) const override {
     unsigned GroupID = IR.getInstruction()->getLSUTokenID();
     const CustomMemoryGroup &Group = getCustomGroup(GroupID);
     return !Group.isExecuted() && Group.getNumSuccessors();
@@ -146,6 +146,16 @@ public:
   }
 
   CustomMemoryGroup &getCustomGroup(unsigned Index) {
+    assert(isValidGroupID(Index) && "Group doesn't exist!");
+    return *CustomGroups.find(Index)->second;
+  }
+
+  const mca::AbstractMemoryGroup &getGroup(unsigned Index) const override {
+    assert(isValidGroupID(Index) && "Group doesn't exist!");
+    return *CustomGroups.find(Index)->second;
+  }
+
+  mca::AbstractMemoryGroup &getGroup(unsigned Index) override {
     assert(isValidGroupID(Index) && "Group doesn't exist!");
     return *CustomGroups.find(Index)->second;
   }
@@ -169,6 +179,11 @@ public:
 
   void onInstructionExecuted(const mca::InstRef &IR) override;
   void onInstructionRetired(const mca::InstRef &IR) override;
+
+  void onInstructionIssued(const mca::InstRef &IR) override {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    CustomGroups[GroupID]->onInstructionIssued(IR);
+  }
 
 #ifndef NDEBUG
   void dump() const;
