@@ -261,9 +261,12 @@ void MCADLSUnit::onInstructionExecuted(const mca::InstRef &IR) {
   const mca::Instruction &IS = *IR.getInstruction();
   if (!IS.isMemOp())
     return;
-
-  LSUnitBase::onInstructionExecuted(IR);
   unsigned GroupID = IS.getLSUTokenID();
+  auto It = CustomGroups.find(GroupID);
+  assert(It != CustomGroups.end() && "Instruction not dispatched to the LS unit");
+  It->second->onInstructionExecuted(IR);
+  if (It->second->isExecuted())
+    CustomGroups.erase(It);
   if (!isValidGroupID(GroupID)) {
     if (GroupID == CurrentLoadGroupID)
       CurrentLoadGroupID = 0;
