@@ -1,16 +1,9 @@
-// The following macro is to make sure the included Any.h header does not 
-// re-define the TypeId classes; Without this, the main executable and shared 
-// library will each have their own `Any::TypeId` definition for the contained 
-// types used, and two `Any`s containing the same data type will not compare as 
-// equal.
-#define LLVM_ANY_DONT_DEFINE_TYPEID 1
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Any.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
@@ -43,11 +36,6 @@ using namespace llvm;
 using namespace mcad;
 
 #define DEBUG_TYPE "mcad-vivisect-broker"
-
-// This is to squash warnings about these types being undefined; they will be
-// defined inside the main executable and resolved at runtime.
-extern template class Any::TypeId<MDMemoryAccess>;
-extern template class Any::TypeId<bool>;
 
 class EmulatorService final : public Emulator::Service {
   grpc::Status RecordEmulatorActions(grpc::ServerContext *ctxt,
