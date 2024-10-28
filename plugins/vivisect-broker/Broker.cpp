@@ -37,6 +37,10 @@ using namespace mcad;
 
 #define DEBUG_TYPE "mcad-vivisect-broker"
 
+// Needed so the TypeID of the shared library and main executable refer to the
+// same type.
+extern template class Any::TypeId<MDMemoryAccess>;
+
 class EmulatorService final : public Emulator::Service {
   grpc::Status RecordEmulatorActions(grpc::ServerContext *ctxt,
                                      const EmulatorActions *actions,
