@@ -1,9 +1,9 @@
 name: Build and Test libc++
 on:
   push:
-  schedule:
-    # Run nightly at 08:00 UTC (aka 00:00 Pacific, aka 03:00 Eastern)
-    - cron: '0 8 * * *'
+  #schedule:
+  #  # Run nightly at 08:00 UTC (aka 00:00 Pacific, aka 03:00 Eastern)
+  #  - cron: '0 8 * * *'
 
 permissions:
   contents: read # Default everything to read-only
@@ -12,25 +12,7 @@ permissions:
 jobs:
   job1:
     runs-on: ubuntu-latest
-    #strategy:
-      #fail-fast: false
-      #matrix:
-      #  config: [
-      #    'generic-cxx03',
-      #    'generic-cxx26',
-      #    'generic-modules'
-      #  ]
-      #  cc: [  'clang-19' ]
-      #  cxx: [ 'clang++-19' ]
-      #  include:
-      #    - config: 'generic-gcc'
-      #      cc: 'gcc-14'
-      #      cxx: 'g++-14'
     steps:
       - uses: actions/checkout@v4
       - name: checkout and build
         run: ./ci/run.sh 
-        #libcxx/utils/ci/run-buildbot ${{ matrix.config }}
-        #env:
-        #  CC: ${{ matrix.cc }}
-        #  CXX: ${{ matrix.cxx }}
