@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: build LLVM
-        run: ./docker/setup-llvm.sh
       - name: install dependencies
         run: sudo ./docker/setup-deps.sh
+      - name: build LLVM
+        run: ./docker/setup-llvm.sh
       - name: build LLVM-MCA-Daemon
         run: ./docker/setup-build.sh
   
