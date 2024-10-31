@@ -4,25 +4,17 @@ set -e
 
 export DEBIAN_FRONTEND=noninteractive
 
-apt-get update
-apt-get install -y software-properties-common wget
+if [ -z "${WORKSPACE_PATH}" ]; then
+WORKSPACE_PATH=/work/LLVM-MCA-Daemon
+fi
 
-wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main"
-
-apt-get update
-apt-get install -y \
-       build-essential \
-       clang-14 \
-       cmake \
-       lld-14 \
-       git \
-       ninja-build
-rm -rf /var/lib/apt/lists/*
+# Run ./setup-deps.sh before this to install dependencies needed to build LLVM
 
 git clone https://github.com/llvm/llvm-project.git llvm
 cd llvm
-git am /work/LLVM-MCA-Daemon/patches/*.patch
+git am < ${WORKSPACE_PATH}/patches/add-identifier-to-mca-instruction.patch
+git am < ${WORKSPACE_PATH}/patches/start-mapping-e500-itenerary-model-to-new-schedule.patch
+git am < ${WORKSPACE_PATH}/patches/abstract-memory-group.patch
 mkdir build && cd build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=/opt/llvm-main \
                -DCMAKE_C_COMPILER=clang-14 -DCMAKE_CXX_COMPILER=clang++-14 \

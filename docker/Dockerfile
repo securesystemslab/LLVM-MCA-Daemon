@@ -13,11 +13,11 @@ COPY . LLVM-MCA-Daemon/
 COPY docker/setup-ssh.sh ./setup/
 RUN setup/setup-ssh.sh
 
-COPY docker/setup-llvm.sh ./setup/
-RUN setup/setup-llvm.sh
-
 COPY docker/setup-deps.sh ./setup/
 RUN setup/setup-deps.sh
+
+COPY docker/setup-llvm.sh ./setup/
+RUN setup/setup-llvm.sh
  
 COPY docker/setup-build.sh ./setup/
 RUN setup/setup-build.sh

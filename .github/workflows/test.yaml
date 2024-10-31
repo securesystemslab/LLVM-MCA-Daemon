@@ -8,11 +8,18 @@ on:
 permissions:
   contents: read # Default everything to read-only
 
+env:
+  WORKSPACE_PATH: ${{ github.workspace }}
 
 jobs:
-  job1:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: checkout and build
-        run: ./ci/run.sh 
+      - name: build LLVM
+        run: ./docker/setup-llvm.sh
+      - name: install dependencies
+        run: sudo ./docker/setup-deps.sh
+      - name: build LLVM-MCA-Daemon
+        run: ./docker/setup-build.sh
+  

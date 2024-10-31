@@ -4,8 +4,12 @@ set -e
 
 export DEBIAN_FRONTEND=noninteractive
 
-mkdir LLVM-MCA-Daemon/build
-cd LLVM-MCA-Daemon/build
+if [ -z "${WORKSPACE_PATH}" ]; then
+WORKSPACE_PATH=/work/LLVM-MCA-Daemon
+fi
+
+mkdir -p ${WORKSPACE_PATH}/build
+cd ${WORKSPACE_PATH}/build
 
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/opt/LLVM-MCA-Daemon \
                -DCMAKE_C_COMPILER=clang-14 -DCMAKE_CXX_COMPILER=clang++-14 \
