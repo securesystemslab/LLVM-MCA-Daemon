@@ -164,7 +164,7 @@ unsigned MCADLSUnit::dispatch(const mca::InstRef &IR) {
       IsLoadBarrier || !ImmediateLoadDominator ||
       CurrentLoadBarrierGroupID == ImmediateLoadDominator ||
       ImmediateLoadDominator <= CurrentStoreGroupID ||
-      getGroup(ImmediateLoadDominator).isExecuting();
+      getCustomGroup(ImmediateLoadDominator).isExecuting();
 
   if (ShouldCreateANewGroup) {
     unsigned NewGID = createCustomMemoryGroup();
@@ -272,5 +272,30 @@ void MCADLSUnit::onInstructionExecuted(const mca::InstRef &IR) {
   }
 }
 
+void MCADLSUnit::cycleEvent() {
+  for (const std::pair<unsigned, std::unique_ptr<CustomMemoryGroup>> &G : CustomGroups)
+    G.second->cycleEvent();
+}
+
+#ifndef NDEBUG
+void MCADLSUnit::dump() const {
+  dbgs() << "[LSUnit] LQ_Size = " << getLoadQueueSize() << '\n';
+  dbgs() << "[LSUnit] SQ_Size = " << getStoreQueueSize() << '\n';
+  dbgs() << "[LSUnit] NextLQSlotIdx = " << getUsedLQEntries() << '\n';
+  dbgs() << "[LSUnit] NextSQSlotIdx = " << getUsedSQEntries() << '\n';
+  dbgs() << "\n";
+  for (const auto &GroupIt : CustomGroups) {
+    const CustomMemoryGroup &Group = *GroupIt.second;
+    dbgs() << "[LSUnit] Group (" << GroupIt.first << "): "
+           << "[ #Preds = " << Group.getNumPredecessors()
+           << ", #GIssued = " << Group.getNumExecutingPredecessors()
+           << ", #GExecuted = " << Group.getNumExecutedPredecessors()
+           << ", #Inst = " << Group.getNumInstructions()
+           << ", #IIssued = " << Group.getNumExecuting()
+           << ", #IExecuted = " << Group.getNumExecuted() << '\n';
+  }
+}
+
+#endif
 } // namespace mcad
 } // namespace llvm

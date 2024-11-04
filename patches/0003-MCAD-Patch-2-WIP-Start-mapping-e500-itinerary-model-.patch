@@ -1,8 +1,8 @@
-From 8c5e131f27b80cc05c7b29329045fd92f773530c Mon Sep 17 00:00:00 2001
+From a6d7d2bd5fe34c424f6587ef8519b471f82afa7d Mon Sep 17 00:00:00 2001
 From: Ayrton Munoz <adm@immunant.com>
 Date: Fri, 1 Dec 2023 16:15:29 -0500
-Subject: [PATCH] WIP Start mapping e500 itinerary model to new scheduling
- model
+Subject: [PATCH 3/3] [MCAD Patch 2] WIP Start mapping e500 itinerary model to
+ new scheduling model
 
 See comment on `class WriteRes` in llvm/include/llvm/Target/TargetSchedule.td
 for a starting point on how to map the old (itinerary) model to the new
@@ -106,5 +106,5 @@ index 74744dda54f7..e070130859d4 100644
 +
 +} // SchedModel = PPCE500Model
 -- 
-2.25.1
+2.39.5 (Apple Git-154)
 
