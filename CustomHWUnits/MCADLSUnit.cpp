@@ -256,7 +256,8 @@ void MCADLSUnit::onInstructionExecuted(const mca::InstRef &IR) {
     return;
   unsigned GroupID = IS.getLSUTokenID();
   auto It = CustomGroups.find(GroupID);
-  assert(It != CustomGroups.end() && "Instruction not dispatched to the LS unit");
+  assert(It != CustomGroups.end() &&
+         "Instruction not dispatched to the LS unit");
   It->second->onInstructionExecuted(IR);
   if (It->second->isExecuted())
     CustomGroups.erase(It);
@@ -273,7 +274,8 @@ void MCADLSUnit::onInstructionExecuted(const mca::InstRef &IR) {
 }
 
 void MCADLSUnit::cycleEvent() {
-  for (const std::pair<unsigned, std::unique_ptr<CustomMemoryGroup>> &G : CustomGroups)
+  for (const std::pair<unsigned, std::unique_ptr<CustomMemoryGroup>> &G :
+       CustomGroups)
     G.second->cycleEvent();
 }
 

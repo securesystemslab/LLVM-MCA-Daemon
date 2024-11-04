@@ -136,7 +136,8 @@ public:
     return !Group.isExecuted() && Group.getNumSuccessors();
   }
 
-  const mca::CriticalDependency getCriticalPredecessor(unsigned GroupId) override {
+  const mca::CriticalDependency
+  getCriticalPredecessor(unsigned GroupId) override {
     const CustomMemoryGroup &Group = getCustomGroup(GroupId);
     return Group.getCriticalPredecessor();
   }
@@ -189,7 +190,6 @@ private:
     else
       return IS.getMayStore();
   }
-
 };
 
 } // namespace mcad
