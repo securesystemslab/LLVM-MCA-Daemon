@@ -22,7 +22,7 @@ RUN setup/setup-llvm.sh
 COPY docker/setup-build.sh ./setup/
 RUN setup/setup-build.sh
 
-ENV PATH="/work/LLVM-MCA-Daemon/build:/opt/llvm-14/bin:$PATH"
+ENV PATH="/work/mcad-build:/opt/llvm-14/bin:$PATH"
 RUN rm /etc/apt/apt.conf.d/docker-clean
 
 ENTRYPOINT ["llvm-mcad"]

@@ -1,0 +1,30 @@
+name: Build LLVM and LLVM-MCAD inside Docker
+on:
+  push:
+  #schedule:
+  #  # Run nightly at 08:00 UTC (aka 00:00 Pacific, aka 03:00 Eastern)
+  #  - cron: '0 8 * * *'
+
+permissions:
+  contents: read # Default everything to read-only
+
+env:
+  WORKSPACE_PATH: ${{ github.workspace }}
+
+jobs:
+  build:
+    # We need to run self-hosted because the GitHub runners run out of disk space.
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: 'LLVM-MCA-Daemon'
+      - name: setup and build inside Docker
+        run: cd LLVM-MCA-Daemon/docker && ./up
+      #- name: install dependencies
+      #  run: sudo ./docker/setup-deps.sh
+      #- name: build LLVM
+      #  run: ./docker/setup-llvm.sh
+      #- name: build LLVM-MCA-Daemon
+      #  run: ./docker/setup-build.sh
+  
