@@ -1,4 +1,3 @@
-#include "llvm/ADT/Any.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MCA/Instruction.h"
 #include "llvm/Support/Debug.h"
@@ -9,12 +8,6 @@
 #include "MetadataCategories.h"
 
 #define DEBUG_TYPE "llvm-mca"
-
-// Shared library will require a definition of llvm::Any::TypeId<bool>.
-// A definition of llvm::Any::TypeId<llvm::mcad::MDMemoryAccess> is already
-// automatically implicitly instantiated by our use in the included `Any.h` 
-// header.
-template <> char llvm::Any::TypeId<bool>::Id = 1;
 
 namespace llvm {
 namespace mcad {
