@@ -1,11 +1,14 @@
 #!/bin/bash
 
+# This script probably needs to run as sudo.
+
 set -e
 
 export DEBIAN_FRONTEND=noninteractive
 
 dpkg --add-architecture i386
 
+# General dependencies --
 apt-get update
 apt-get install -y \
        autoconf \
@@ -50,6 +53,21 @@ apt-get install -y \
        htop \
        vim \
        nano
+
+# Dependencies to build LLVM --
+apt-get update
+apt-get install -y software-properties-common wget
+wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+add-apt-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main"
+apt-get update
+apt-get install -y \
+       build-essential \
+       clang-14 \
+       cmake \
+       lld-14 \
+       git \
+       ninja-build
+
 rm -rf /var/lib/apt/lists/*
 
 rm -rf /root/.cache
