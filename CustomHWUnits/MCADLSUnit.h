@@ -65,26 +65,28 @@ inline bool operator<(const MDMemoryAccess &LHS, const MDMemoryAccess &RHS) {
 raw_ostream &operator<<(raw_ostream &OS, const MDMemoryAccess &MDA);
 #endif
 
-class CustomMemoryGroup : public mca::MemoryGroup {
-  std::multiset<MDMemoryAccess> MDMemAccesses;
-
-  CustomMemoryGroup(const CustomMemoryGroup &) = delete;
-  CustomMemoryGroup &operator=(const CustomMemoryGroup &) = delete;
-
-public:
-  CustomMemoryGroup() = default;
-  CustomMemoryGroup(CustomMemoryGroup &&) = default;
-
-  void addMemAccess(const std::optional<MDMemoryAccess> &MaybeMDA) {
-    if (MaybeMDA)
-      MDMemAccesses.insert(*MaybeMDA);
-  }
-  bool isMemAccessAlias(const MDMemoryAccess &MDA) const {
-    return MDMemAccesses.count(MDA);
-  }
-};
-
 class MCADLSUnit : public mca::LSUnit {
+
+protected:
+  class CustomMemoryGroup : public mca::LSUnit::MemoryGroup {
+    std::multiset<MDMemoryAccess> MDMemAccesses;
+
+    CustomMemoryGroup(const CustomMemoryGroup &) = delete;
+    CustomMemoryGroup &operator=(const CustomMemoryGroup &) = delete;
+
+  public:
+    CustomMemoryGroup() = default;
+    CustomMemoryGroup(CustomMemoryGroup &&) = default;
+
+    void addMemAccess(const std::optional<MDMemoryAccess> &MaybeMDA) {
+      if (MaybeMDA)
+        MDMemAccesses.insert(*MaybeMDA);
+    }
+    bool isMemAccessAlias(const MDMemoryAccess &MDA) const {
+      return MDMemAccesses.count(MDA);
+    }
+  };
+
   unsigned CurrentLoadGroupID;
   unsigned CurrentLoadBarrierGroupID;
   unsigned CurrentStoreGroupID;
@@ -110,12 +112,6 @@ public:
 
   Status isAvailable(const mca::InstRef &IR) const override;
 
-  unsigned dispatch(const mca::InstRef &IR) override;
-
-  bool isValidGroupID(unsigned Index) const override {
-    return Index && CustomGroups.contains(Index);
-  }
-
   bool isReady(const mca::InstRef &IR) const override {
     unsigned GroupID = IR.getInstruction()->getLSUTokenID();
     const CustomMemoryGroup &Group = getCustomGroup(GroupID);
@@ -140,22 +136,40 @@ public:
     return !Group.isExecuted() && Group.getNumSuccessors();
   }
 
+  const mca::CriticalDependency
+  getCriticalPredecessor(unsigned GroupId) override {
+    const CustomMemoryGroup &Group = getCustomGroup(GroupId);
+    return Group.getCriticalPredecessor();
+  }
+
+  unsigned dispatch(const mca::InstRef &IR) override;
+
+  virtual void onInstructionIssued(const mca::InstRef &IR) override {
+    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
+    CustomGroups[GroupID]->onInstructionIssued(IR);
+  }
+
+  virtual void onInstructionRetired(const mca::InstRef &IR) override;
+
+  virtual void onInstructionExecuted(const mca::InstRef &IR) override;
+
+  virtual void cycleEvent() override;
+
+#ifndef NDEBUG
+  virtual void dump() const override;
+#endif
+
+private:
+  bool isValidGroupID(unsigned Index) const {
+    return Index && CustomGroups.contains(Index);
+  }
+
   const CustomMemoryGroup &getCustomGroup(unsigned Index) const {
     assert(isValidGroupID(Index) && "Group doesn't exist!");
     return *CustomGroups.find(Index)->second;
   }
 
   CustomMemoryGroup &getCustomGroup(unsigned Index) {
-    assert(isValidGroupID(Index) && "Group doesn't exist!");
-    return *CustomGroups.find(Index)->second;
-  }
-
-  const mca::AbstractMemoryGroup &getGroup(unsigned Index) const override {
-    assert(isValidGroupID(Index) && "Group doesn't exist!");
-    return *CustomGroups.find(Index)->second;
-  }
-
-  mca::AbstractMemoryGroup &getGroup(unsigned Index) override {
     assert(isValidGroupID(Index) && "Group doesn't exist!");
     return *CustomGroups.find(Index)->second;
   }
@@ -176,18 +190,6 @@ public:
     else
       return IS.getMayStore();
   }
-
-  void onInstructionExecuted(const mca::InstRef &IR) override;
-  void onInstructionRetired(const mca::InstRef &IR) override;
-
-  void onInstructionIssued(const mca::InstRef &IR) override {
-    unsigned GroupID = IR.getInstruction()->getLSUTokenID();
-    CustomGroups[GroupID]->onInstructionIssued(IR);
-  }
-
-#ifndef NDEBUG
-  void dump() const;
-#endif
 };
 
 } // namespace mcad

@@ -22,9 +22,7 @@ rm -rf /var/lib/apt/lists/*
 
 git clone https://github.com/llvm/llvm-project.git llvm
 cd llvm
-git am < /work/LLVM-MCA-Daemon/patches/add-identifier-to-mca-instruction.patch
-git am < /work/LLVM-MCA-Daemon/patches/start-mapping-e500-itenerary-model-to-new-schedule.patch
-git am < /work/LLVM-MCA-Daemon/patches/abstract-memory-group.patch
+git am /work/LLVM-MCA-Daemon/patches/*.patch
 mkdir build && cd build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=/opt/llvm-main \
                -DCMAKE_C_COMPILER=clang-14 -DCMAKE_CXX_COMPILER=clang++-14 \

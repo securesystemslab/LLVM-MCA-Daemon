@@ -13,15 +13,9 @@ git clone https://github.com/llvm/llvm-project.git
 To build and install it, here are some suggested CMake configurations:
 ```bash
 cd llvm-project
-# We currently rely on mca::Instruction having an `identifier` field. 
-# The patch file can be found in the `patches` directory of LLVM-MCA-Daemon. Apply it like so - 
-git am < ../LLVM-MCA-Daemon/patches/add-identifier-to-mca-instruction.patch
-# (Optional) Support for PPC e500
-git am < ../LLVM-MCA-Daemon/patches/start-mapping-e500-itenerary-model-to-new-schedule.patch
-# Patch to make `MemoryGroups` and `LSUnit` subclassable
-git am < /work/LLVM-MCA-Daemon/patches/abstract-memory-group.patch
+git am /path/to/LLVM-MCA-Daemon/patches/*.patch  # Important: add custom LLVM patches
 mkdir install
-mkdir .build && cd .build
+mkdir build && cd build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
                -DCMAKE_INSTALL_PREFIX=$(realpath ../install) \
                -DBUILD_SHARED_LIBS=ON \
@@ -39,7 +33,8 @@ You only need one additional CMake argument: `LLVM_DIR`. This should point to LL
 ```bash
 mkdir .build && cd .build
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-               -DLLVM_DIR=$(realpath ../llvm-project/install)/lib/cmake/llvm \
+               -DLLVM_DIR=$(realpath ../llvm-project/install/lib/cmake/llvm) \
+               -DLLVM_MCAD_ENABLE_PLUGINS=all \
                ../
 ninja all
 ```
