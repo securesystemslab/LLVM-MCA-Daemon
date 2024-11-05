@@ -1,9 +1,9 @@
 name: Build LLVM and LLVM-MCAD inside Docker
 on:
   push:
-  #schedule:
-  #  # Run nightly at 08:00 UTC (aka 00:00 Pacific, aka 03:00 Eastern)
-  #  - cron: '0 8 * * *'
+  schedule:
+    # Run nightly at 08:00 UTC (aka 00:00 Pacific, aka 03:00 Eastern)
+    - cron: '0 8 * * *'
 
 permissions:
   contents: read # Default everything to read-only
@@ -21,6 +21,8 @@ jobs:
           path: 'LLVM-MCA-Daemon'
       - name: setup and build inside Docker
         run: cd LLVM-MCA-Daemon/docker && ./up
+        with:
+          post: docker image rm mcad_dev  # remove image after we're done to conserve space
       #- name: install dependencies
       #  run: sudo ./docker/setup-deps.sh
       #- name: build LLVM
