@@ -21,8 +21,9 @@ jobs:
           path: 'LLVM-MCA-Daemon'
       - name: setup and build inside Docker
         run: cd LLVM-MCA-Daemon/docker && ./up
-        with:
-          post: docker image rm mcad_dev  # remove image after we're done to conserve space
+      - name: clean up - delete docker image
+        if: always()  # this line is needed to make this action run even if the previous step fails
+        run: docker image rm mcad_dev  # remove image after we're done to conserve space
       #- name: install dependencies
       #  run: sudo ./docker/setup-deps.sh
       #- name: build LLVM
