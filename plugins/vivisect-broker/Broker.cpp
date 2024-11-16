@@ -40,6 +40,7 @@ using namespace mcad;
 // Needed so the TypeID of the shared library and main executable refer to the
 // same type.
 extern template class Any::TypeId<MDMemoryAccess>;
+extern template class Any::TypeId<MDInstrAddr>;
 
 class EmulatorService final : public Emulator::Service {
   grpc::Status RecordEmulatorActions(grpc::ServerContext *ctxt,
@@ -143,7 +144,7 @@ class VivisectBroker : public Broker {
               IndexMap[i] = TotalNumTraces;
 
               auto &InstrAddrCat = Registry[MD_InstrAddr];
-              InstrAddrCat[TotalNumTraces] = insn.addr();
+              InstrAddrCat[TotalNumTraces] = MDInstrAddr { insn.addr() };
 
               if (insn.has_memory_access()) {
                   auto MemAccess = insn.memory_access();

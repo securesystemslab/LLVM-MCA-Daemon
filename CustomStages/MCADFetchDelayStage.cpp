@@ -1,5 +1,11 @@
-#include <iostream>
 #include "CustomStages/MCADFetchDelayStage.h"
+#include "MetadataCategories.h"
+#include "llvm/Support/Debug.h"
+#define DEBUG_TYPE "llvm-mca"
+
+#include <iostream>
+#include <iomanip>
+#include <optional>
 
 namespace llvm {
 namespace mcad {
@@ -34,11 +40,35 @@ llvm::Error MCADFetchDelayStage::execute(llvm::mca::InstRef &IR) {
     const llvm::MCInstrDesc &MCID = MCII.get(I->getOpcode());
     bool immediatelyExecute = true;
     unsigned delayCyclesLeft = 0;
-    if(MCID.isBranch()) {
-        // delayed, will have to wait
-        delayCyclesLeft = 100;
+    std::optional<MDInstrAddr> instrAddr = getMDInstrAddrForInstr(MD, IR);
+    // Check if previous instruction was a branch, and if so if the predicted
+    // branch target matched what we ended up executing
+    if(predictedNextInstrAddr.has_value() && instrAddr.has_value()) {
+        if(previousInstrAddr.has_value()) {
+            BPU.recordTakenBranch(*previousInstrAddr, *instrAddr);
+        }
+        if(*predictedNextInstrAddr != *instrAddr) {
+            // Previous prediction was wrong; this instruction will have extra
+            // latency due to misprediction.
+            delayCyclesLeft += BPU.getMispredictionPenalty();
+            LLVM_DEBUG(dbgs() << "[MCAD FetchDelayStage] Previous branch at "); 
+            LLVM_DEBUG(dbgs().write_hex(instrAddr->addr));
+            LLVM_DEBUG(dbgs() << " mispredicted, delaying next instruction by " 
+                       << delayCyclesLeft << " cycle(s).\n");
+        } else {
+            LLVM_DEBUG(dbgs() << "[MCAD FetchDelayStage] Previous branch at ");
+            LLVM_DEBUG(dbgs().write_hex(instrAddr->addr));
+            LLVM_DEBUG(dbgs() << " predicted correctly.\n" );
+        }
+    }
+    // Update branch prediction state
+    if(MCID.isBranch() && instrAddr.has_value()) {
+        predictedNextInstrAddr = BPU.predictBranch(*instrAddr);
+    } else {
+        predictedNextInstrAddr = std::nullopt;
     }
     instrQueue.emplace_back(DelayedInstr { delayCyclesLeft, IR });
+    previousInstrAddr = instrAddr;
     // if the instruction is not delayed, execute it immediately (it will
     // have a delayCyclesLeft of 0 and be at the top of the queue)
     return forwardDueInstrs();
