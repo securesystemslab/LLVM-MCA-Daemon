@@ -37,6 +37,7 @@
 #include <unistd.h>
 
 #include "CustomHWUnits/MCADLSUnit.h"
+#include "CustomStages/MCADFetchDelayStage.h"
 #include "MCAViews/SummaryView.h"
 #include "MCAViews/TimelineView.h"
 #include "MCAWorker.h"
@@ -183,6 +184,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
 
   // Create the pipeline stages.
   auto Fetch = std::make_unique<EntryStage>(SrcMgr);
+  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII);
   auto Dispatch = std::make_unique<DispatchStage>(STI, MRI, MCAPO.DispatchWidth,
                                                   *RCU, *PRF);
   auto Execute =
@@ -198,6 +200,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
   // Build the pipeline.
   auto StagePipeline = std::make_unique<Pipeline>();
   StagePipeline->appendStage(std::move(Fetch));
+  StagePipeline->appendStage(std::move(FetchDelay));
   if (MCAPO.MicroOpQueueSize)
     StagePipeline->appendStage(std::make_unique<MicroOpQueueStage>(
         MCAPO.MicroOpQueueSize, MCAPO.DecodersThroughput));
@@ -224,6 +227,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
 
   // Create the pipeline stages.
   auto Entry = std::make_unique<EntryStage>(SrcMgr);
+  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII);
   auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF, *CB, *LSU);
   auto StagePipeline = std::make_unique<Pipeline>();
 
@@ -233,6 +237,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
 
   // Build the pipeline.
   StagePipeline->appendStage(std::move(Entry));
+  StagePipeline->appendStage(std::move(FetchDelay));
   StagePipeline->appendStage(std::move(InOrderIssue));
 
   for (auto *listener : Listeners) {
@@ -420,6 +425,9 @@ Error MCAWorker::run() {
                                 << " has Token " << MDTok << "\n");
               NewInst->setIdentifier(MDTok);
             }
+
+            // Add this instruction to be processed by the pipeline
+            // (Entry stage will consume from source manager.)
             SrcMgr.addInst(std::move(NewInst));
           }
         }

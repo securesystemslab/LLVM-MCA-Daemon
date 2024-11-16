@@ -150,7 +150,12 @@ public:
         }
 
         switch (Event.Type) {
-        case mca::HWInstructionEvent::GenericEventType::Ready: {
+        //case mca::HWInstructionEvent::GenericEventType::Dispatched: {
+        // We (ab-)use the LastGenericEventType in the FetchDelay stage to
+        // notify of an event whenever the instruction is fetch. This way, the
+        // cycle count in Binja shows the total instruction cycle count 
+        // including the fetch and dispatch cost.
+        case mca::HWInstructionEvent::GenericEventType::LastGenericEventType : {
             BridgeRef.CountStore[index].CycleReady = CurrentCycle;
         }
         case mca::HWInstructionEvent::GenericEventType::Executed: {
