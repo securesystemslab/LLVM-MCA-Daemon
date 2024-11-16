@@ -99,6 +99,10 @@ set(_CUSTOMHW_SOURCE_FILES
     CustomHWUnits/MCADLSUnit.cpp
    )
 
+set(_CUSTOM_STAGES_SOURCE_FILES
+    CustomStages/MCADFetchDelayStage.cpp
+   )
+
 set(_BROKERS_SOURCE_FILES
     Brokers/BrokerPlugin.cpp
     Brokers/RawBytesBroker.cpp
@@ -111,6 +115,7 @@ set(_SOURCE_FILES
     llvm-mcad.cpp
     ${_MCAVIEWS_SOURCE_FILES}
     ${_CUSTOMHW_SOURCE_FILES}
+    ${_CUSTOM_STAGES_SOURCE_FILES}
     ${_BROKERS_SOURCE_FILES}
     MCAWorker.cpp
     PipelinePrinter.cpp
