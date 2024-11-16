@@ -22,6 +22,7 @@ class grpc_client:
         is_store = op.opcode in STORE_INSTRS
         is_branch_ctr = op.opcode in BCTR_INSTR
         is_branch_lr = op.opcode in BLR_INSTR
+        insn_addr = op.va
 
         addr = None
         width = None
@@ -55,13 +56,13 @@ class grpc_client:
                 branch_arg = emulator_pb2.EmulatorActions.BranchFlow(
                     is_mispredict=is_mispredict)
 
-        insn_arg = emulator_pb2.EmulatorActions.Instruction(opcode=opcode)
+        insn_arg = emulator_pb2.EmulatorActions.Instruction(opcode=opcode, addr=insn_addr)
         if mem_arg is not None:
-            insn_arg = emulator_pb2.EmulatorActions.Instruction(opcode=opcode,
+            insn_arg = emulator_pb2.EmulatorActions.Instruction(opcode=opcode, addr=insn_addr,
                 memory_access=mem_arg)
 
         if branch_arg is not None:
-            insn_arg = emulator_pb2.EmulatorActions.Instruction(opcode=opcode,
+            insn_arg = emulator_pb2.EmulatorActions.Instruction(opcode=opcode, addr=insn_addr,
                 branch_flow=branch_arg)
 
         action_arg = emulator_pb2.EmulatorActions(instructions=[insn_arg])
