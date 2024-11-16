@@ -2,17 +2,26 @@
 #define LLVM_MCA_METADATACATEGORIES_H
 namespace llvm {
 namespace mcad {
+
+enum MetadataCategories {
+
 // Metadata for LSUnit
-static constexpr unsigned MD_LSUnit_MemAccess = 0;
+MD_LSUnit_MemAccess = 0,
 
 // Metadata for Branch Prediction
-static constexpr unsigned MD_FrontEnd_BranchFlow = 1;
+MD_FrontEnd_BranchFlow = 1,
+
+// Virtual address at which an instruction is located in memory
+MD_InstrAddr = 2,
 
 // Used for marking the start of custom MD Category
-static constexpr unsigned MD_LAST = MD_FrontEnd_BranchFlow;
+MD_LAST,
 
 // Metadata categories (custom)
-static constexpr unsigned MD_BinaryRegionMarkers = MD_LAST + 1;
+MD_BinaryRegionMarkers
+
+};
+
 } // end namespace mcad
 } // end namespace llvm
 #endif

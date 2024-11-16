@@ -9,7 +9,7 @@ C++-based server and a python client. To update them, edit the interface
 `emulator.proto` and rerun the following.
 
 ```
-python3 -m grpc_tools.protoc -I. --python_out=. --pyi_out=. --grpc_python_out=. emulator.proto
+python3 -m grpc_tools.protoc -I. --python_out=grpc_client --pyi_out=grpc_client --grpc_python_out=grpc_client emulator.proto
 protoc --grpc_out=. --cpp_out=. --plugin=protoc-gen-grpc=`which grpc_cpp_plugin` emulator.proto
 ```
 

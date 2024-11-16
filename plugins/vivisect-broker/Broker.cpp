@@ -128,26 +128,40 @@ class VivisectBroker : public Broker {
 
             MCIS[i] = &MCI;  // return a pointer into our MCI_Pool
 
-            if (MDE && insn.has_memory_access()) {
-                auto MemAccess = insn.memory_access();
-                auto &Registry = MDE->MDRegistry;
-                auto &IndexMap = MDE->IndexMap;
-                auto &MemAccessCat = Registry[MD_LSUnit_MemAccess];
-                IndexMap[i] = TotalNumTraces;
-                MemAccessCat[TotalNumTraces] = std::move(MDMemoryAccess{
-                    MemAccess.is_store(),
-                    MemAccess.vaddr(),
-                    MemAccess.size(),
-                });
-            }
+            // Add metadata to the fetched instruction if metadata exchanger
+            // is available
+            if (MDE) {
+              
+              // The registry stores the metadata
+              auto &Registry = MDE->MDRegistry;
 
-            if (MDE && insn.has_branch_flow()) {
-                auto BranchFlow = insn.branch_flow();
-                auto &Registry = MDE->MDRegistry;
-                auto &IndexMap = MDE->IndexMap;
-                auto &BranchFlowCat = Registry[MD_FrontEnd_BranchFlow];
-                IndexMap[i] = TotalNumTraces;
-                BranchFlowCat[TotalNumTraces] = BranchFlow.is_mispredict();
+              // The IndexMap maps instruction index (within this region) to
+              // the identifier we chose for our metadata. We chose a
+              // monotonically increasing counter as the identifier for each
+              // metadata entry.
+              auto &IndexMap = MDE->IndexMap;
+              IndexMap[i] = TotalNumTraces;
+
+              auto &InstrAddrCat = Registry[MD_InstrAddr];
+              InstrAddrCat[TotalNumTraces] = insn.addr();
+
+              if (insn.has_memory_access()) {
+                  auto MemAccess = insn.memory_access();
+                  auto &MemAccessCat = Registry[MD_LSUnit_MemAccess];
+                  MemAccessCat[TotalNumTraces] = std::move(MDMemoryAccess{
+                      MemAccess.is_store(),
+                      MemAccess.vaddr(),
+                      MemAccess.size(),
+                  });
+              }
+
+              if (insn.has_branch_flow()) {
+                  auto BranchFlow = insn.branch_flow();
+                  auto &Registry = MDE->MDRegistry;
+                  auto &BranchFlowCat = Registry[MD_FrontEnd_BranchFlow];
+                  BranchFlowCat[TotalNumTraces] = BranchFlow.is_mispredict();
+              }
+
             }
 
             ++TotalNumTraces;
