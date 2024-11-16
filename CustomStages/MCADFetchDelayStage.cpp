@@ -26,6 +26,8 @@ llvm::Error MCADFetchDelayStage::forwardDueInstrs() {
 }
 
 llvm::Error MCADFetchDelayStage::execute(llvm::mca::InstRef &IR) {
+    // We (ab-)use the LastGenericEventType to create a notification when the instruction first enters this stage.
+    // We use this elsewhere to calculate the number of cycles between when an instruction first enters the pipeline and the end of its execution.
     notifyEvent<llvm::mca::HWInstructionEvent>(llvm::mca::HWInstructionEvent(llvm::mca::HWInstructionEvent::LastGenericEventType, IR));
     const llvm::mca::Instruction *I = IR.getInstruction();
     const llvm::mca::InstrDesc &ID = I->getDesc();
