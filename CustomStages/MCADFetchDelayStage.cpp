@@ -54,7 +54,7 @@ llvm::Error MCADFetchDelayStage::execute(llvm::mca::InstRef &IR) {
             LLVM_DEBUG(dbgs() << "[MCAD FetchDelayStage] Previous branch at "); 
             LLVM_DEBUG(dbgs().write_hex(instrAddr->addr));
             LLVM_DEBUG(dbgs() << " mispredicted, delaying next instruction by " 
-                       << delayCyclesLeft << "cycle(s).\n");
+                       << delayCyclesLeft << " cycle(s).\n");
         } else {
             LLVM_DEBUG(dbgs() << "[MCAD FetchDelayStage] Previous branch at ");
             LLVM_DEBUG(dbgs().write_hex(instrAddr->addr));
