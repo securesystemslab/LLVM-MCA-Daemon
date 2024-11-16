@@ -97,6 +97,7 @@ set(_MCAVIEWS_SOURCE_FILES
 set(_CUSTOMHW_SOURCE_FILES
     CustomHWUnits/CustomSourceMgr.cpp
     CustomHWUnits/MCADLSUnit.cpp
+    CustomHWUnits/NaiveBranchPredictorUnit.cpp
    )
 
 set(_CUSTOM_STAGES_SOURCE_FILES
@@ -118,6 +119,7 @@ set(_SOURCE_FILES
     ${_CUSTOM_STAGES_SOURCE_FILES}
     ${_BROKERS_SOURCE_FILES}
     MCAWorker.cpp
+    MetadataCategories.cpp
     PipelinePrinter.cpp
     )
 

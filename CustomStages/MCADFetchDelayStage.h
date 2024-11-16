@@ -8,9 +8,12 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MCA/SourceMgr.h"
 #include "llvm/MCA/Stages/Stage.h"
+#include "CustomHWUnits/AbstractBranchPredictorUnit.h"
+#include "MetadataRegistry.h"
 
 #include <vector>
 #include <queue>
+#include <optional>
 
 namespace llvm {
 namespace mcad {
@@ -25,22 +28,29 @@ class MCADFetchDelayStage : public llvm::mca::Stage {
     const llvm::MCInstrInfo &MCII;
     std::deque<DelayedInstr> instrQueue = {};
 
+    AbstractBranchPredictorUnit &BPU;
+    MetadataRegistry &MD;
+
+    // Whenever a branch instruction is executed, we run the branch predictor 
+    // and store the predicted instruction address here.
+    // At the next instruction, we compare the predicted address to the actual
+    // address and add a penalty if there is a mismatch.
+    // Non-branch instructions set this member to nullopt.
+    std::optional<MDInstrAddr> predictedNextInstrAddr = std::nullopt;
+    
+    // Stores the address of the last executed instruction.
+    std::optional<MDInstrAddr> previousInstrAddr = std::nullopt;
+
 public:
-    MCADFetchDelayStage(const llvm::MCInstrInfo &MCII) : MCII(MCII) {}
+    MCADFetchDelayStage(const llvm::MCInstrInfo &MCII, MetadataRegistry &MD, AbstractBranchPredictorUnit &BPU) : MCII(MCII), MD(MD), BPU(BPU) {}
 
     bool hasWorkToComplete() const override;
     bool isAvailable(const llvm::mca::InstRef &IR) const override;
     llvm::Error execute(llvm::mca::InstRef &IR) override;
 
-    //llvm::Error cycleStart() override;
     llvm::Error cycleStart() override;
 
     llvm::Error forwardDueInstrs();
-
-    ///// Called after the pipeline is resumed from pausing state.
-    //virtual Error cycleResume() { return ErrorSuccess(); }
-
-    ///// Called once at the end of each cycle.
 
 };
 

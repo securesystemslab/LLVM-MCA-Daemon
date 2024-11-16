@@ -22,6 +22,21 @@ MD_BinaryRegionMarkers
 
 };
 
+struct MDInstrAddr {
+    unsigned long long addr;
+    const bool operator<(const MDInstrAddr &b) const {
+        return addr < b.addr;
+    }
+    const bool operator==(const MDInstrAddr &b) const {
+        return addr == b.addr;
+    }
+    const bool operator!=(const MDInstrAddr &b) const {
+        return addr != b.addr;
+    }
+};
+
+std::optional<MDInstrAddr> getMDInstrAddrForInstr(MetadataRegistry &MD, const llvm::mca::InstRef &IR);
+
 } // end namespace mcad
 } // end namespace llvm
 #endif

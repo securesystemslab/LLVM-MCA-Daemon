@@ -37,6 +37,7 @@
 #include <unistd.h>
 
 #include "CustomHWUnits/MCADLSUnit.h"
+#include "CustomHWUnits/NaiveBranchPredictorUnit.h"
 #include "CustomStages/MCADFetchDelayStage.h"
 #include "MCAViews/SummaryView.h"
 #include "MCAViews/TimelineView.h"
@@ -181,10 +182,11 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
                                           MCAPO.StoreQueueSize,
                                           MCAPO.AssumeNoAlias, &MDRegistry);
   auto HWS = std::make_unique<Scheduler>(SM, *LSU);
+  auto BPU = std::make_unique<NaiveBranchPredictorUnit>(100);
 
   // Create the pipeline stages.
   auto Fetch = std::make_unique<EntryStage>(SrcMgr);
-  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII);
+  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, *BPU);
   auto Dispatch = std::make_unique<DispatchStage>(STI, MRI, MCAPO.DispatchWidth,
                                                   *RCU, *PRF);
   auto Execute =
@@ -196,6 +198,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
   TheMCA.addHardwareUnit(std::move(PRF));
   TheMCA.addHardwareUnit(std::move(LSU));
   TheMCA.addHardwareUnit(std::move(HWS));
+  TheMCA.addHardwareUnit(std::move(BPU));
 
   // Build the pipeline.
   auto StagePipeline = std::make_unique<Pipeline>();
@@ -224,16 +227,18 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
   auto LSU = std::make_unique<MCADLSUnit>(SM, MCAPO.LoadQueueSize,
                                           MCAPO.StoreQueueSize,
                                           MCAPO.AssumeNoAlias, &MDRegistry);
+  auto BPU = std::make_unique<NaiveBranchPredictorUnit>(100);
 
   // Create the pipeline stages.
   auto Entry = std::make_unique<EntryStage>(SrcMgr);
-  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII);
+  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, *BPU);
   auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF, *CB, *LSU);
   auto StagePipeline = std::make_unique<Pipeline>();
 
   // Pass the ownership of all the hardware units to this Context.
   TheMCA.addHardwareUnit(std::move(PRF));
   TheMCA.addHardwareUnit(std::move(LSU));
+  TheMCA.addHardwareUnit(std::move(BPU));
 
   // Build the pipeline.
   StagePipeline->appendStage(std::move(Entry));
