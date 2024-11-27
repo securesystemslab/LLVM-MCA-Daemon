@@ -9,13 +9,15 @@ namespace mcad {
 
 class NaiveBranchPredictorUnit : public AbstractBranchPredictorUnit {
     unsigned mispredictionPenalty;
-    std::map<MDInstrAddr, MDInstrAddr> branchHistory = {};
+    std::map<MDInstrAddr, AbstractBranchPredictorUnit::BranchDirection> branchHistory = {};
 
 public:
     NaiveBranchPredictorUnit(unsigned mispredictionPenalty = 20) : mispredictionPenalty(mispredictionPenalty) {};
 
-    void recordTakenBranch(MDInstrAddr IA, MDInstrAddr destAddr) override;
-    MDInstrAddr predictBranch(MDInstrAddr IA) override;
+    void recordTakenBranch(MDInstrAddr instrAddr, BranchDirection nextInstrDirection) override;
+
+    BranchDirection predictBranch(MDInstrAddr instrAddr) override;
+
     unsigned getMispredictionPenalty() override {
         return mispredictionPenalty;
     }
