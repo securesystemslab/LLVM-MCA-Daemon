@@ -42,6 +42,7 @@ llvm::Error MCADFetchDelayStage::execute(llvm::mca::InstRef &IR) {
     unsigned delayCyclesLeft = 0;
     std::optional<MDInstrAddr> instrAddr = getMDInstrAddrForInstr(MD, IR);
     std::optional<unsigned> instrSize = MCID.getSize(); 
+    assert(MCID.getSize() > 0);
 
     // Check if previous instruction was a branch, and if so if the predicted
     // branch target matched what we ended up executing
