@@ -13,9 +13,26 @@ namespace mcad {
 class AbstractBranchPredictorUnit : public llvm::mca::HardwareUnit {
 
 public:
+
+    enum BranchDirection {TAKEN, NOT_TAKEN};
+
     ~AbstractBranchPredictorUnit() {}
-    virtual void recordTakenBranch(MDInstrAddr IA, MDInstrAddr destAddr) = 0;
-    virtual MDInstrAddr predictBranch(MDInstrAddr IA) = 0;
+    /* This method is called by the FetchDelay stage after a branch was
+     * executed to inform the branch predictor unit what path the execution
+     * took (branch taken vs. not taken).
+     * 
+     * instrAddr: address of the branch instruction itself
+     * nextInstrDirection: whether the branch was taken or not (i.e. 
+     *                     TAKEN iff. nextInstrAddr == destAddr)
+     */
+    virtual void recordTakenBranch(MDInstrAddr instrAddr, BranchDirection nextInstrDirection) = 0;
+
+    /* This method is called by the FetchDelay stage whenever it encounters
+     * a branch instruction with metadata to attempt to predict a branching 
+     * decision. A mispredict penalty will be added to the next instruction if
+     * the BPU predicts wrong. */
+    virtual BranchDirection predictBranch(MDInstrAddr instrAddr) = 0;
+
     virtual unsigned getMispredictionPenalty() = 0;
 
 };

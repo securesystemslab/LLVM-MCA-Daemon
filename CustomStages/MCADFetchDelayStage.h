@@ -6,6 +6,7 @@
 #define LLVM_MCAD_FETCH_DELAY_STAGE_H
 
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MCA/SourceMgr.h"
 #include "llvm/MCA/Stages/Stage.h"
 #include "CustomHWUnits/AbstractBranchPredictorUnit.h"
@@ -32,14 +33,16 @@ class MCADFetchDelayStage : public llvm::mca::Stage {
     MetadataRegistry &MD;
 
     // Whenever a branch instruction is executed, we run the branch predictor 
-    // and store the predicted instruction address here.
-    // At the next instruction, we compare the predicted address to the actual
-    // address and add a penalty if there is a mismatch.
+    // and store the predicted branch direction here.
+    // At the next instruction, we compare the predicted direction to the actual
+    // direction taken (fallthrough vs. branch taken) and add a penalty if 
+    // there is a mismatch.
     // Non-branch instructions set this member to nullopt.
-    std::optional<MDInstrAddr> predictedNextInstrAddr = std::nullopt;
+    std::optional<AbstractBranchPredictorUnit::BranchDirection> predictedBranchDirection = std::nullopt;
     
-    // Stores the address of the last executed instruction.
+    // Stores the address and size of the last executed instruction.
     std::optional<MDInstrAddr> previousInstrAddr = std::nullopt;
+    std::optional<unsigned> previousInstrSize = std::nullopt;
 
 public:
     MCADFetchDelayStage(const llvm::MCInstrInfo &MCII, MetadataRegistry &MD, AbstractBranchPredictorUnit &BPU) : MCII(MCII), MD(MD), BPU(BPU) {}

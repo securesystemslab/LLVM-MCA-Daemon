@@ -4,18 +4,16 @@
 namespace llvm {
 namespace mcad {
 
-void NaiveBranchPredictorUnit::recordTakenBranch(MDInstrAddr IA, MDInstrAddr destAddr) {
-    branchHistory[IA] = destAddr;
+void NaiveBranchPredictorUnit::recordTakenBranch(MDInstrAddr instrAddr, BranchDirection nextInstrDirection) {
+    branchHistory[instrAddr] = nextInstrDirection;
 }
 
-MDInstrAddr NaiveBranchPredictorUnit::predictBranch(MDInstrAddr IA) {
-    if(branchHistory.find(IA) != branchHistory.end()) {
-        return branchHistory[IA];
+AbstractBranchPredictorUnit::BranchDirection NaiveBranchPredictorUnit::predictBranch(MDInstrAddr instrAddr) {
+    if(branchHistory.find(instrAddr) != branchHistory.end()) {
+        return branchHistory[instrAddr];
     }
     // We have no history on this; predict a fall-through branch
-    // FIXME: fix this to use actual branch instruction size, which is likely
-    // larger than one byte.
-    return MDInstrAddr { IA.addr + 1 };
+    return NOT_TAKEN;
 }
 
 }

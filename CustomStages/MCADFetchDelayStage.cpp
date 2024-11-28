@@ -41,13 +41,19 @@ llvm::Error MCADFetchDelayStage::execute(llvm::mca::InstRef &IR) {
     bool immediatelyExecute = true;
     unsigned delayCyclesLeft = 0;
     std::optional<MDInstrAddr> instrAddr = getMDInstrAddrForInstr(MD, IR);
+    std::optional<unsigned> instrSize = MCID.getSize(); 
+    assert(MCID.getSize() > 0);
+
     // Check if previous instruction was a branch, and if so if the predicted
     // branch target matched what we ended up executing
-    if(predictedNextInstrAddr.has_value() && instrAddr.has_value()) {
-        if(previousInstrAddr.has_value()) {
-            BPU.recordTakenBranch(*previousInstrAddr, *instrAddr);
-        }
-        if(*predictedNextInstrAddr != *instrAddr) {
+    if(predictedBranchDirection.has_value() && instrAddr.has_value() && previousInstrAddr.has_value() && previousInstrSize.has_value()) {
+        bool fellThrough = instrAddr->addr == (previousInstrAddr->addr + *previousInstrSize); 
+        AbstractBranchPredictorUnit::BranchDirection actualBranchDirection = 
+            (fellThrough ? AbstractBranchPredictorUnit::NOT_TAKEN 
+                         : AbstractBranchPredictorUnit::TAKEN);
+        BPU.recordTakenBranch(*previousInstrAddr, actualBranchDirection);
+
+        if(actualBranchDirection != predictedBranchDirection) {
             // Previous prediction was wrong; this instruction will have extra
             // latency due to misprediction.
             delayCyclesLeft += BPU.getMispredictionPenalty();
@@ -63,12 +69,13 @@ llvm::Error MCADFetchDelayStage::execute(llvm::mca::InstRef &IR) {
     }
     // Update branch prediction state
     if(MCID.isBranch() && instrAddr.has_value()) {
-        predictedNextInstrAddr = BPU.predictBranch(*instrAddr);
+        predictedBranchDirection = BPU.predictBranch(*instrAddr);
     } else {
-        predictedNextInstrAddr = std::nullopt;
+        predictedBranchDirection = std::nullopt;
     }
     instrQueue.emplace_back(DelayedInstr { delayCyclesLeft, IR });
     previousInstrAddr = instrAddr;
+    previousInstrSize = instrSize;
     // if the instruction is not delayed, execute it immediately (it will
     // have a delayCyclesLeft of 0 and be at the top of the queue)
     return forwardDueInstrs();
