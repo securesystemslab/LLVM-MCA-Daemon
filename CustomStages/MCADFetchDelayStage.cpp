@@ -23,6 +23,13 @@ bool MCADFetchDelayStage::isAvailable(const llvm::mca::InstRef &IR) const {
 llvm::Error MCADFetchDelayStage::forwardDueInstrs() {
     while(!instrQueue.empty() && instrQueue.front().delayCyclesLeft == 0) {
         llvm::mca::InstRef IR = instrQueue.front().IR;
+        if(!checkNextStage(IR)) {
+            // Although this instruction has completed its delay cycles and is
+            // ready to be forwarded, we have to keep holding it since the next
+            // stage is not ready. Break out of the loop, because instructions
+            // must be dispatched to the next stage from this one in-order.
+            break;
+        }
         if (llvm::Error Val = moveToTheNextStage(IR)) {
             return Val;
         }
@@ -82,7 +89,10 @@ llvm::Error MCADFetchDelayStage::execute(llvm::mca::InstRef &IR) {
 }
 
 llvm::Error MCADFetchDelayStage::cycleStart() {
-    if(!instrQueue.empty()) {
+    if(!instrQueue.empty() && instrQueue.front().delayCyclesLeft > 0) {
+        // An instruction may be at the front of the instruction queue with no
+        // delay cycles left but have not been forwarded to the next stage yet
+        // if the next stage is not ready yet.
         instrQueue.front().delayCyclesLeft--;
     }
     return forwardDueInstrs();

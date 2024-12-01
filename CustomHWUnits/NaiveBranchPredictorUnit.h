@@ -8,11 +8,21 @@ namespace llvm {
 namespace mcad {
 
 class NaiveBranchPredictorUnit : public AbstractBranchPredictorUnit {
+
+    struct HistoryEntry {
+        AbstractBranchPredictorUnit::BranchDirection lastDirection;
+        unsigned lastUse;
+    };
+
     unsigned mispredictionPenalty;
-    std::map<MDInstrAddr, AbstractBranchPredictorUnit::BranchDirection> branchHistory = {};
+    unsigned historyCapacity;
+    unsigned nAccesses;
+    std::map<MDInstrAddr, struct HistoryEntry> branchHistory = {};
 
 public:
-    NaiveBranchPredictorUnit(unsigned mispredictionPenalty = 20) : mispredictionPenalty(mispredictionPenalty) {};
+    NaiveBranchPredictorUnit(unsigned mispredictionPenalty, unsigned branchHistoryTableSize)
+     : mispredictionPenalty(mispredictionPenalty),
+       historyCapacity(branchHistoryTableSize) { };
 
     void recordTakenBranch(MDInstrAddr instrAddr, BranchDirection nextInstrDirection) override;
 
