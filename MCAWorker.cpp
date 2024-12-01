@@ -104,6 +104,11 @@ static cl::opt<bool>
   ShowTimelineView("mca-show-timeline-view",
                    cl::init(false));
 
+static cl::opt<unsigned>
+  BranchMispredictionDelay("mispredict-delay",
+                           cl::desc("Delay (# cycles) added to the fetch stage of the next instruction after a branch misprediction"),
+                           cl::init(20U));
+
 void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
 }
@@ -182,7 +187,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
                                           MCAPO.StoreQueueSize,
                                           MCAPO.AssumeNoAlias, &MDRegistry);
   auto HWS = std::make_unique<Scheduler>(SM, *LSU);
-  auto BPU = std::make_unique<NaiveBranchPredictorUnit>(20);
+  auto BPU = std::make_unique<NaiveBranchPredictorUnit>(BranchMispredictionDelay);
 
   // Create the pipeline stages.
   auto Fetch = std::make_unique<EntryStage>(SrcMgr);
