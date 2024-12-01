@@ -99,6 +99,7 @@ set(_CUSTOMHW_SOURCE_FILES
     CustomHWUnits/MCADLSUnit.cpp
     CustomHWUnits/NaiveBranchPredictorUnit.cpp
     CustomHWUnits/LocalBPU.cpp
+    CustomHWUnits/IndirectBPU.cpp
    )
 
 set(_CUSTOM_STAGES_SOURCE_FILES

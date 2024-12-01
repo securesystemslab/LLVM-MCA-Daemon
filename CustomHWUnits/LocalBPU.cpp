@@ -10,7 +10,7 @@ void LocalBPU::recordTakenBranch(MDInstrAddr IA, BranchDirection nextInstrDirect
     predictorTable[idx] += isTaken;
 }
 
-BranchDirection LocalBPU::predictBranch(MDInstrAddr IA) {
+AbstractBranchPredictorUnit::BranchDirection LocalBPU::predictBranch(MDInstrAddr IA) {
     return getPrediction(IA) ? BranchDirection::TAKEN : BranchDirection::NOT_TAKEN;
 }
 
