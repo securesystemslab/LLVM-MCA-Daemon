@@ -37,6 +37,17 @@ public:
 
 };
 
+/* Similar to the AbstractBranchPredictorUnit, but it precdicts the branch
+ * target address instead of the direction.
+ */
+class AbstractIndirectBranchPredictorUnit : public llvm::mca::HardwareUnit {
+public:
+    ~AbstractIndirectBranchPredictorUnit() {}
+    virtual void recordTakenBranch(MDInstrAddr IA, MDInstrAddr destAddr) = 0;
+    virtual MDInstrAddr predictBranch(MDInstrAddr IA) = 0;
+    virtual unsigned getMispredictionPenalty() = 0;
+};
+
 }
 }
 
