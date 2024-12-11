@@ -98,6 +98,7 @@ set(_CUSTOMHW_SOURCE_FILES
     CustomHWUnits/CustomSourceMgr.cpp
     CustomHWUnits/MCADLSUnit.cpp
     CustomHWUnits/NaiveBranchPredictorUnit.cpp
+    CustomHWUnits/BranchUnit.cpp
    )
 
 set(_CUSTOM_STAGES_SOURCE_FILES
@@ -126,7 +127,7 @@ set(_SOURCE_FILES
 add_llvm_executable(llvm-mcad
   ${_SOURCE_FILES}
 
-  SUPPORT_PLUGINS
+  ${SUPPORT_PLUGINS}
   )
 export_executable_symbols(llvm-mcad)
 

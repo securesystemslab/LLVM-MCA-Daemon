@@ -38,6 +38,7 @@
 
 #include "CustomHWUnits/MCADLSUnit.h"
 #include "CustomHWUnits/NaiveBranchPredictorUnit.h"
+#include "CustomHWUnits/BranchUnit.h"
 #include "CustomStages/MCADFetchDelayStage.h"
 #include "MCAViews/SummaryView.h"
 #include "MCAViews/TimelineView.h"
@@ -103,16 +104,6 @@ static cl::opt<bool>
 static cl::opt<bool>
   ShowTimelineView("mca-show-timeline-view",
                    cl::init(false));
-
-static cl::opt<unsigned>
-  BranchMispredictionDelay("mispredict-delay",
-                           cl::desc("Delay (# cycles) added to the fetch stage of the next instruction after a branch misprediction"),
-                           cl::init(20U));
-
-static cl::opt<unsigned>
-  BranchHistoryTableSize("bht-size",
-                         cl::desc("Size of the simulated branch history table for branch prediction"),
-                         cl::init(10U));
 
 void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
@@ -192,7 +183,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
                                           MCAPO.StoreQueueSize,
                                           MCAPO.AssumeNoAlias, &MDRegistry);
   auto HWS = std::make_unique<Scheduler>(SM, *LSU);
-  auto BPU = std::make_unique<NaiveBranchPredictorUnit>(BranchMispredictionDelay, BranchHistoryTableSize);
+  auto BPU = std::make_unique<SkylakeBranchUnit>(20);
 
   // Create the pipeline stages.
   auto Fetch = std::make_unique<EntryStage>(SrcMgr);
@@ -237,7 +228,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
   auto LSU = std::make_unique<MCADLSUnit>(SM, MCAPO.LoadQueueSize,
                                           MCAPO.StoreQueueSize,
                                           MCAPO.AssumeNoAlias, &MDRegistry);
-  auto BPU = std::make_unique<NaiveBranchPredictorUnit>(BranchMispredictionDelay, BranchHistoryTableSize);
+  auto BPU = std::make_unique<SkylakeBranchUnit>(20);
 
   // Create the pipeline stages.
   auto Entry = std::make_unique<EntryStage>(SrcMgr);
