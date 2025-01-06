@@ -18,7 +18,7 @@
 #include <optional>
 #include "MetadataCategories.h"
 #include "AbstractBranchPredictorUnit.h"
-#include "BranchUnit.h"
+#include "SkylakeBranchUnit.h"
 #include <climits>
 #include <cstdint>
 #include <numeric>

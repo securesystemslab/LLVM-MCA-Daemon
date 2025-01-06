@@ -105,6 +105,16 @@ static cl::opt<bool>
   ShowTimelineView("mca-show-timeline-view",
                    cl::init(false));
 
+static cl::opt<unsigned>
+  BranchMispredictionDelay("mispredict-delay",
+                           cl::desc("Delay (# cycles) added to the fetch stage of the next instruction after a branch misprediction"),
+                           cl::init(20U));
+
+static cl::opt<unsigned>
+  BranchHistoryTableSize("bht-size",
+                         cl::desc("Size of the simulated branch history table for branch prediction"),
+                         cl::init(10U));
+
 void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
 }
