@@ -253,9 +253,10 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
   // Create the hardware units defining the backend.
   auto RCU = std::make_unique<RetireControlUnit>(SM);
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, MCAPO.RegisterFileSize);
+  auto [L1I, L1D] = buildCache();
   auto LSU = std::make_unique<MCADLSUnit>(SM, MCAPO.LoadQueueSize,
                                           MCAPO.StoreQueueSize,
-                                          MCAPO.AssumeNoAlias, &MDRegistry);
+                                          MCAPO.AssumeNoAlias, &MDRegistry, L1D);
   auto HWS = std::make_unique<Scheduler>(SM, *LSU);
   auto BPU = std::make_unique<SkylakeBranchUnit>(20);
   auto [L1I, L1D] = buildCache();
@@ -299,6 +300,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
   const MCSchedModel &SM = STI.getSchedModel();
   const MCRegisterInfo &MRI = TheMCA.getMCRegisterInfo();
 
+  auto [L1I, L1D] = buildCache();
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, MCAPO.RegisterFileSize);
   auto LSU = std::make_unique<MCADLSUnit>(SM, MCAPO.LoadQueueSize,
                                           MCAPO.StoreQueueSize,

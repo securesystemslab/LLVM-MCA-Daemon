@@ -82,6 +82,22 @@ unsigned MCADLSUnit::dispatch(const mca::InstRef &IR) {
   const mca::Instruction &IS = *IR.getInstruction();
   auto MaybeMDA = getMemoryAccessMD(IR);
 
+  // Update the cache timer
+  if (CU && MaybeMDA) {
+    uint64_t latency = 0;
+    if (isStore(IS, MaybeMDA)) {
+      latency = CU->store({MaybeMDA->Addr});
+    } else {
+      latency = CU->load({MaybeMDA->Addr});
+    }
+    // We can update the ongoing requests directly.
+    // If there are are multiple concurrent requests to the same address,
+    // it wouldn't affect the final simulation result by much.
+    // We should have a sperate tracker for L/S if we want to improve
+    // the accuaracy in the future.
+    ongoing_requests[MaybeMDA->Addr] = clock + latency;
+  }
+
   bool IsStoreBarrier = IS.isAStoreBarrier();
   bool IsLoadBarrier = IS.isALoadBarrier();
   assert((IS.getMayLoad() || IS.getMayStore()) && "Not a memory operation!");
@@ -227,6 +243,19 @@ MCADLSUnit::Status MCADLSUnit::isAvailable(const mca::InstRef &IR) const {
     return MCADLSUnit::LSU_LQUEUE_FULL;
   if (isStore(IS, MaybeMDA) && isSQFull())
     return MCADLSUnit::LSU_SQUEUE_FULL;
+
+  // Check if the memory operands are aready.
+  if (MaybeMDA && CU && ongoing_requests.count(MaybeMDA->Addr)) {
+    // FIXME: returning `LSU_LQUEUE_FULL` is a quick hack
+    if (ongoing_requests.at(MaybeMDA->Addr) > clock) {
+      LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << IR.getSourceIndex()
+                        << " is waiting for the cache at address " << *MaybeMDA << "\n");
+      return MCADLSUnit::LSU_LQUEUE_FULL;
+    }
+    LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << IR.getSourceIndex()
+                      << " is ready for the cache at address " << *MaybeMDA << "\n");
+  }
+  
   return MCADLSUnit::LSU_AVAILABLE;
 }
 
@@ -247,6 +276,11 @@ void MCADLSUnit::onInstructionRetired(const mca::InstRef &IR) {
     releaseSQSlot();
     LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << IR.getSourceIndex()
                       << " has been removed from the store queue.\n");
+  }
+
+  // Remove it from the cache latency tracker
+  if (CU && MaybeMDA) {
+    ongoing_requests.erase(MaybeMDA->Addr);
   }
 }
 
@@ -277,6 +311,9 @@ void MCADLSUnit::cycleEvent() {
   for (const std::pair<unsigned, std::unique_ptr<CustomMemoryGroup>> &G :
        CustomGroups)
     G.second->cycleEvent();
+
+  // Update the cache timer  
+  clock++;
 }
 
 #ifndef NDEBUG
