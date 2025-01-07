@@ -259,7 +259,6 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
                                           MCAPO.AssumeNoAlias, &MDRegistry, L1D);
   auto HWS = std::make_unique<Scheduler>(SM, *LSU);
   auto BPU = std::make_unique<SkylakeBranchUnit>(20);
-  auto [L1I, L1D] = buildCache();
 
   // Create the pipeline stages.
   auto Fetch = std::make_unique<EntryStage>(SrcMgr);
@@ -306,7 +305,6 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
                                           MCAPO.StoreQueueSize,
                                           MCAPO.AssumeNoAlias, &MDRegistry);
   auto BPU = std::make_unique<SkylakeBranchUnit>(20);
-  auto [L1I, L1D] = buildCache();
 
   // Create the pipeline stages.
   auto Entry = std::make_unique<EntryStage>(SrcMgr);
