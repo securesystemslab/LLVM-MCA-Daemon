@@ -1,5 +1,10 @@
 #ifndef LLVM_MCA_METADATACATEGORIES_H
 #define LLVM_MCA_METADATACATEGORIES_H
+
+
+#include "MetadataRegistry.h"
+#include "llvm/MCA/Instruction.h"
+
 namespace llvm {
 namespace mcad {
 
@@ -24,6 +29,7 @@ MD_BinaryRegionMarkers
 
 struct MDInstrAddr {
     unsigned long long addr;
+
     const bool operator<(const MDInstrAddr &b) const {
         return addr < b.addr;
     }
