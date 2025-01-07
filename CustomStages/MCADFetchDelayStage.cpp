@@ -51,6 +51,11 @@ llvm::Error MCADFetchDelayStage::execute(llvm::mca::InstRef &IR) {
     std::optional<unsigned> instrSize = MCID.getSize(); 
     assert(MCID.getSize() > 0);
 
+    // fetch instruction from the cache
+    if(CU.has_value()) {
+        delayCyclesLeft += CU->load(*instrAddr);
+    }
+
     // Check if previous instruction was a branch, and if so if the predicted
     // branch target matched what we ended up executing
     if(predictedBranchDirection.has_value() && instrAddr.has_value() && previousInstrAddr.has_value() && previousInstrSize.has_value()) {

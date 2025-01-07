@@ -9,7 +9,7 @@
 namespace llvm {
 namespace mcad {
 
-class Cache {
+class CacheUnit {
 private:
   /// Size of the cache in number of bytes.
   unsigned size = 2048;
@@ -25,18 +25,19 @@ private:
   unsigned latency = 2;
 
   std::vector<std::vector<MDInstrAddr>> table;
-  std::unique_ptr<Cache> nextLevelCache;
+  std::shared_ptr<CacheUnit> nextLevelCache;
 
 protected:
     // A protected constructor to allow for the creation of a memory object.
-    Cache() = default;
+    CacheUnit() = default;
 
 public:
-  Cache(unsigned size, unsigned numWays, std::unique_ptr<Cache> nextLevelCache)
+  CacheUnit(unsigned size, unsigned numWays, std::shared_ptr<CacheUnit> nextLevelCache, unsigned latency)
       : size(size), numWays(numWays), numLines(size / lineSize),
         numSets(numLines / numWays),
         table(numSets, std::vector<MDInstrAddr>(numWays)),
-        nextLevelCache(std::move(nextLevelCache)) {
+        nextLevelCache(nextLevelCache),
+        latency(latency) {
             assert(size % lineSize == 0);
             assert(nextLevelCache != nullptr);
         };
@@ -77,6 +78,9 @@ public:
         return &way;
       }
     }
+
+    // The address is not in the cache.
+    return nullptr;
   }
 
   /// Find an entry to evict and returns the evicted cacheline.
@@ -108,9 +112,9 @@ public:
 };
 
 /// A simple memory object that simulates a memory with a fixed load/store latency.
-class Memory : public Cache {
+class MemoryUnit : public CacheUnit {
 public:
-  Memory(unsigned latency) : Cache(), latency(latency) {}
+  MemoryUnit(unsigned latency) : CacheUnit(), latency(latency) {}
 
   unsigned load(MDInstrAddr IA) override { return latency; }
   unsigned store(MDInstrAddr IA) override { return latency; }
