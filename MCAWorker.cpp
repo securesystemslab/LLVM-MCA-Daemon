@@ -115,6 +115,70 @@ static cl::opt<unsigned>
                          cl::desc("Size of the simulated branch history table for branch prediction"),
                          cl::init(10U));
 
+static cl::opt<bool>
+  EnableCache("enable-cache",
+                          cl::desc("Simuate the memory cache hierachy"),
+                          cl::init(true));
+
+static cl::opt<unsigned>
+  NumWays("num-ways",
+          cl::desc("Number of ways for all the caches"),
+          cl::init(4U));
+
+static cl::opt<unsigned>
+  L1ISize("l1i-size",
+          cl::desc("Size of the L1 Instruction cache"),
+          cl::init(64 * 1024U));
+
+static cl::opt<unsigned>
+  L1DSize("l1d-size",
+          cl::desc("Size of the L1 Data cache"),
+          cl::init(64 * 1024U));
+
+static cl::opt<unsigned>
+  L1Latency("l1-latency",
+          cl::desc("Latency for accessing the L3 cache"),
+          cl::init(3U));
+
+static cl::opt<unsigned>
+  L2Size("l2-size",
+          cl::desc("Size of the L2 cache"),
+          cl::init(512 * 1024U));
+
+static cl::opt<unsigned>
+  L2Latency("l2-latency",
+          cl::desc("Latency for accessing the L3 cache"),
+          cl::init(10U));
+
+static cl::opt<unsigned>
+  L3Size("l3-size",
+          cl::desc("Size of the L3 cache"),
+          cl::init(4 * 1024 * 1024U));
+
+static cl::opt<unsigned>
+  L3Latency("l3-latency",
+          cl::desc("Latency for accessing the L3 cache"),
+          cl::init(30U));
+
+static cl::opt<unsigned>
+  MemoryLatency("memory-latency",
+          cl::desc("Latency for accessing the main memory"),
+          cl::init(300U));
+
+namespace {
+std::tuple<std::optional<CacheUnit>, std::optional<CacheUnit>> buildCache() {
+  if (!EnableCache)
+    return std::make_tuple(std::nullopt, std::nullopt);
+
+  auto Memory = std::make_shared<MemoryUnit>(MemoryLatency);
+  auto L3 = std::make_shared<CacheUnit>(L3Size, NumWays, Memory, L3Latency);
+  auto L2 = std::make_shared<CacheUnit>(L2Size, NumWays, L3, L2Latency);
+  CacheUnit L1D(L1DSize, NumWays, L2, L1Latency);
+  CacheUnit L1I(L1ISize, NumWays, L2, L1Latency);
+  return std::make_tuple(L1I, L1D);
+}
+} // anonymous namespace
+
 void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
 }
@@ -189,15 +253,16 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
   // Create the hardware units defining the backend.
   auto RCU = std::make_unique<RetireControlUnit>(SM);
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, MCAPO.RegisterFileSize);
+  auto [L1I, L1D] = buildCache();
   auto LSU = std::make_unique<MCADLSUnit>(SM, MCAPO.LoadQueueSize,
                                           MCAPO.StoreQueueSize,
-                                          MCAPO.AssumeNoAlias, &MDRegistry);
+                                          MCAPO.AssumeNoAlias, &MDRegistry, L1D);
   auto HWS = std::make_unique<Scheduler>(SM, *LSU);
   auto BPU = std::make_unique<SkylakeBranchUnit>(20);
 
   // Create the pipeline stages.
   auto Fetch = std::make_unique<EntryStage>(SrcMgr);
-  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, *BPU);
+  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, *BPU, L1I);
   auto Dispatch = std::make_unique<DispatchStage>(STI, MRI, MCAPO.DispatchWidth,
                                                   *RCU, *PRF);
   auto Execute =
@@ -234,6 +299,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
   const MCSchedModel &SM = STI.getSchedModel();
   const MCRegisterInfo &MRI = TheMCA.getMCRegisterInfo();
 
+  auto [L1I, L1D] = buildCache();
   auto PRF = std::make_unique<RegisterFile>(SM, MRI, MCAPO.RegisterFileSize);
   auto LSU = std::make_unique<MCADLSUnit>(SM, MCAPO.LoadQueueSize,
                                           MCAPO.StoreQueueSize,
@@ -242,7 +308,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
 
   // Create the pipeline stages.
   auto Entry = std::make_unique<EntryStage>(SrcMgr);
-  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, *BPU);
+  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, *BPU, L1I);
   auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF, *CB, *LSU);
   auto StagePipeline = std::make_unique<Pipeline>();
 

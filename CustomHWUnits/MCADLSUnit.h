@@ -8,7 +8,9 @@
 #include "llvm/MCA/HardwareUnits/LSUnit.h"
 #include "llvm/MCA/Instruction.h"
 #include <set>
+#include <optional>
 
+#include "Cache.h"
 #include "MetadataRegistry.h"
 
 namespace llvm {
@@ -97,18 +99,24 @@ protected:
 
   MetadataRegistry *MDRegistry;
 
+  /// The memory cache hierachy unit.
+  std::optional<CacheUnit> CU;
+  /// Timer to keep track of the memory access latency.
+  uint64_t clock = 0;
+  /// Map from the ongoing memory request address to the time it will be done.
+  std::unordered_map<uint64_t, uint64_t> ongoing_requests;
+
 public:
   MCADLSUnit(const MCSchedModel &SM, MetadataRegistry *MDR)
-      : LSUnit(SM, /* LQSize */ 0, /* SQSize */ 0, /* NoAlias */ false),
-        MDRegistry(MDR) {}
+      : MCADLSUnit(SM, /* LQSize */ 0, /* SQSize */ 0, /* NoAlias */ false, MDR) {}
   MCADLSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ,
              MetadataRegistry *MDR)
-      : LSUnit(SM, LQ, SQ, /* NoAlias */ false), MDRegistry(MDR) {}
+      : MCADLSUnit(SM, LQ, SQ, /* NoAlias */ false, MDR) {}
   MCADLSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ,
-             bool AssumeNoAlias, MetadataRegistry *MDR)
+             bool AssumeNoAlias, MetadataRegistry *MDR, std::optional<CacheUnit> CU = std::nullopt)
       : LSUnit(SM, LQ, SQ, AssumeNoAlias), CurrentLoadGroupID(0),
         CurrentLoadBarrierGroupID(0), CurrentStoreGroupID(0),
-        CurrentStoreBarrierGroupID(0), MDRegistry(MDR) {}
+        CurrentStoreBarrierGroupID(0), MDRegistry(MDR), CU(std::move(CU)) {}
 
   Status isAvailable(const mca::InstRef &IR) const override;
 

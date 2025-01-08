@@ -10,6 +10,7 @@
 #include "llvm/MCA/SourceMgr.h"
 #include "llvm/MCA/Stages/Stage.h"
 #include "CustomHWUnits/AbstractBranchPredictorUnit.h"
+#include "CustomHWUnits/Cache.h"
 #include "MetadataRegistry.h"
 
 #include <vector>
@@ -39,13 +40,19 @@ class MCADFetchDelayStage : public llvm::mca::Stage {
     // there is a mismatch.
     // Non-branch instructions set this member to nullopt.
     std::optional<AbstractBranchPredictorUnit::BranchDirection> predictedBranchDirection = std::nullopt;
+
+    // The memory cache unit.
+    std::optional<CacheUnit> CU = std::nullopt;
     
     // Stores the address and size of the last executed instruction.
     std::optional<MDInstrAddr> previousInstrAddr = std::nullopt;
     std::optional<unsigned> previousInstrSize = std::nullopt;
 
 public:
-    MCADFetchDelayStage(const llvm::MCInstrInfo &MCII, MetadataRegistry &MD, AbstractBranchPredictorUnit &BPU) : MCII(MCII), MD(MD), BPU(BPU) {}
+    MCADFetchDelayStage(const llvm::MCInstrInfo &MCII, MetadataRegistry &MD,
+                        AbstractBranchPredictorUnit &BPU,
+                        std::optional<CacheUnit> CU = std::nullopt)
+        : MCII(MCII), MD(MD), BPU(BPU), CU(std::move(CU)) {}
 
     bool hasWorkToComplete() const override;
     bool isAvailable(const llvm::mca::InstRef &IR) const override;
