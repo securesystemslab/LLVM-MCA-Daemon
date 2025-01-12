@@ -144,7 +144,7 @@ class VivisectBroker : public Broker {
               IndexMap[i] = TotalNumTraces;
 
               auto &InstrAddrCat = Registry[MD_InstrAddr];
-              InstrAddrCat[TotalNumTraces] = MDInstrAddr { insn.addr() };
+              InstrAddrCat[TotalNumTraces] = MDInstrAddr { insn.addr(), insn.size() };
 
               if (insn.has_memory_access()) {
                   auto MemAccess = insn.memory_access();
