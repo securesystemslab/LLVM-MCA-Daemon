@@ -30,7 +30,7 @@ class MCADFetchDelayStage : public llvm::mca::Stage {
     const llvm::MCInstrInfo &MCII;
     std::deque<DelayedInstr> instrQueue = {};
 
-    AbstractBranchPredictorUnit &BPU;
+    AbstractBranchPredictorUnit *BPU;
     MetadataRegistry &MD;
 
     // Whenever a branch instruction is executed, we run the branch predictor 
@@ -50,7 +50,7 @@ class MCADFetchDelayStage : public llvm::mca::Stage {
 
 public:
     MCADFetchDelayStage(const llvm::MCInstrInfo &MCII, MetadataRegistry &MD,
-                        AbstractBranchPredictorUnit &BPU,
+                        AbstractBranchPredictorUnit *BPU,
                         std::optional<CacheUnit> CU = std::nullopt)
         : MCII(MCII), MD(MD), BPU(BPU), CU(std::move(CU)) {}
 
@@ -61,6 +61,9 @@ public:
     llvm::Error cycleStart() override;
 
     llvm::Error forwardDueInstrs();
+
+    bool enableInstructionCacheModeling = true;
+    bool enableBranchPredictorModeling = true;
 
 };
 

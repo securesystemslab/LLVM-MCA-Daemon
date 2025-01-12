@@ -50,6 +50,11 @@ using namespace mcad;
 
 #define DEBUG_TYPE "mcad-qemu-broker"
 
+// Needed so the TypeID of the shared library and main executable refer to the
+// same type.
+extern template class Any::TypeId<MDMemoryAccess>;
+extern template class Any::TypeId<MDInstrAddr>;
+
 namespace {
 using RawInstTy = SmallVector<uint8_t, 4>;
 raw_ostream &operator<<(raw_ostream &OS, const RawInstTy &RawInst) {
@@ -71,6 +76,10 @@ struct TranslationBlock {
   // instruction is disassembled into multiple MCInst), this maps from the
   // RawInsts index to MCInsts index.
   DenseMap<unsigned, unsigned> SkewIndicies;
+  // Virtual addresses of the disassembled instructions in MCInst
+  SmallVector<uint64_t, 8> MCInstAddrs;
+  // Sizes of the disassembled MCInsts
+  SmallVector<unsigned, 8> MCInstSizes;
 
   // The start address of this TB
   uint64_t VAddr;
@@ -736,6 +745,8 @@ void QemuBroker::disassemble(TranslationBlock &TB) {
         DisAsmSize = 1;
 
       TB.MCInsts.emplace_back(std::move(MCI));
+      TB.MCInstAddrs.emplace_back(VAddr + Index);
+      TB.MCInstSizes.emplace_back(DisAsmSize);
       ++NumMCInsts;
       TB.VAddrOffsets.emplace_back(VAddr + Index - StartVAddr);
       Index += DisAsmSize;
@@ -810,30 +821,27 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
   }
 
   {
-    auto setMemoryAccessMD = [&, this](unsigned Idx, MDMemoryAccess &&MDA) {
+    auto setMemoryAccessMD = [&, this](unsigned InstIdx, MDMemoryAccess &&MDA) {
       if (MDE) {
         auto &Registry = MDE->MDRegistry;
         auto &IndexMap = MDE->IndexMap;
         auto &MemAccessCat = Registry[MD_LSUnit_MemAccess];
         // Simply uses trace MCInst's sequence number
         // as index
-        IndexMap[Idx] = TotalNumTraces;
-        MemAccessCat[TotalNumTraces] = std::move(MDA);
+        MemAccessCat[IndexMap[InstIdx]] = std::move(MDA);
       }
     };
-    auto setRegionMarkerMD = [&,this](unsigned Idx, bool IsBegin) {
+    auto setRegionMarkerMD = [&,this](unsigned InstIdx, bool IsBegin) {
       if (MDE) {
         auto &Registry = MDE->MDRegistry;
         auto &IndexMap = MDE->IndexMap;
         auto &MarkerCat = Registry[mcad::MD_BinaryRegionMarkers];
-
-        IndexMap[Idx] = TotalNumTraces;
         RegionMarker Val
           = IsBegin? RegionMarker::getBegin() : RegionMarker::getEnd();
-        if (auto MaybeVal = MarkerCat.get<mcad::RegionMarker>(TotalNumTraces))
-          MarkerCat[TotalNumTraces] = std::move(Val | *MaybeVal);
+        if (auto MaybeVal = MarkerCat.get<mcad::RegionMarker>(IndexMap[InstIdx]))
+          MarkerCat[IndexMap[InstIdx]] = std::move(Val | *MaybeVal);
         else
-          MarkerCat[TotalNumTraces] = std::move(Val);
+          MarkerCat[IndexMap[InstIdx]] = std::move(Val);
       }
     };
 
@@ -842,6 +850,8 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
       size_t TBIdx = Slice.Index;
       const auto &CurTB = TBs[TBIdx];
       const auto &MCInsts = CurTB->MCInsts;
+      const auto &MCInstAddrs = CurTB->MCInstAddrs;
+      const auto &MCInstSizes = CurTB->MCInstSizes;
       auto *MAs = Slice.MemoryAccesses;
       size_t MAIdx = 0U, NumMAs = 0U;
       if (MAs)
@@ -850,21 +860,38 @@ QemuBroker::fetchRegion(MutableArrayRef<const MCInst*> MCIS, int Size,
       size_t i, End = std::min(MCInsts.size(), size_t(Slice.EndIdx));
       assert(TotalSize >= Size);
       for (i = Slice.BeginIdx; i != End && Size > 0; ++i, --Size) {
+        int InstIdx = TotalSize - Size;
+        // Add the instruction itself to MCIS, which is the input argument from
+        // which the caller will read the received instructions
         const auto *MCI = MCInsts[i].get();
-        MCIS[TotalSize - Size] = MCI;
+        MCIS[InstIdx] = MCI;
+
+        // Add metadata to the returned instructionsusing the "exchanger"
+        // All metadata in their respective categories must be indexed by the same
+        // index, since there is only one IndexMap in the Metadata exchanger.
+        // We simply use trace MCInst's sequence number
+        // as index
+        unsigned MetadataIdx = TotalNumTraces;
+        auto &Registry = MDE->MDRegistry;
+        auto &IndexMap = MDE->IndexMap;
+        IndexMap[InstIdx] = MetadataIdx;
+
+        // Instruction address and size metadata
+        auto &InstrAddrCat = Registry[MD_InstrAddr];
+        InstrAddrCat[MetadataIdx] = MDInstrAddr { MCInstAddrs[i], MCInstSizes[i] };
 
         // Memory access metadata
         if (MAs && MAIdx != NumMAs) {
           if ((*MAs)[MAIdx].first == i)
-            setMemoryAccessMD(TotalSize - Size,
+            setMemoryAccessMD(InstIdx,
                               std::move((*MAs)[MAIdx++].second));
         }
 
         // Region markers
         if (CurTB->BeginMarks.test(i))
-          setRegionMarkerMD(TotalSize - Size, /*IsBegin=*/true);
+          setRegionMarkerMD(InstIdx, /*IsBegin=*/true);
         if (CurTB->EndMarks.test(i))
-          setRegionMarkerMD(TotalSize - Size, /*IsBegin=*/false);
+          setRegionMarkerMD(InstIdx, /*IsBegin=*/false);
 
         ++TotalNumTraces;
       }
