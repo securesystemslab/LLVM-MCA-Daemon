@@ -67,11 +67,13 @@ llvm::Error MCADFetchDelayStage::execute(llvm::mca::InstRef &IR) {
                 (fellThrough ? AbstractBranchPredictorUnit::NOT_TAKEN 
                             : AbstractBranchPredictorUnit::TAKEN);
             BPU->recordTakenBranch(*previousInstrAddr, actualBranchDirection);
-
+            
+            stats.numBranches.inc();
             if(actualBranchDirection != predictedBranchDirection) {
                 // Previous prediction was wrong; this instruction will have extra
                 // latency due to misprediction.
                 delayCyclesLeft += BPU->getMispredictionPenalty();
+                stats.numMispredictions.inc();
                 LLVM_DEBUG(dbgs() << "[MCAD FetchDelayStage] Previous branch at "); 
                 LLVM_DEBUG(dbgs().write_hex(instrAddr->addr));
                 LLVM_DEBUG(dbgs() << " mispredicted, delaying next instruction by " 

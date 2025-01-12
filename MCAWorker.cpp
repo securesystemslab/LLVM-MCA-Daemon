@@ -211,6 +211,8 @@ std::unique_ptr<AbstractBranchPredictorUnit> buildBranchPredictor() {
 
 } // anonymous namespace
 
+MCADFetchDelayStage::Statistics *FetchDelayStats = nullptr; // TODO: ugly; move this elsewhere using hardware events
+
 void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
 }
@@ -295,6 +297,7 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
   // Create the pipeline stages.
   auto Fetch = std::make_unique<EntryStage>(SrcMgr);
   auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, BPU.get(), L1I);
+  FetchDelayStats = &FetchDelay->stats; // TODO: ugly; move this elsewhere using hardware events
   auto Dispatch = std::make_unique<DispatchStage>(STI, MRI, MCAPO.DispatchWidth,
                                                   *RCU, *PRF);
   auto Execute =
@@ -610,6 +613,10 @@ void MCAWorker::printMCA(StringRef RegionDescription) {
        << RegionDescription << " ===\n";
 
   MCAPipelinePrinter->printReport(OS);
+  if(FetchDelayStats) {
+    OS << "Branch Instructions: " << FetchDelayStats->numBranches.count << (FetchDelayStats->numBranches.overflowed ? " (overflowed)" : "") << "\n";
+    OS << "Branch Mispredictions: " << FetchDelayStats->numMispredictions.count << (FetchDelayStats->numMispredictions.overflowed ? " (overflowed)" : "") << "\n";
+  }
 }
 
 MCAWorker::~MCAWorker() {
