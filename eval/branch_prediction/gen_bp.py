@@ -4,7 +4,7 @@ import random
 import sys
 from textwrap import dedent
 
-it=10
+it=10_000
 assert it < 2**64
 n_randbits=2048 #4096
 assert n_randbits % 2 == 0  # Required assumption for efficient divisions/shifts
@@ -16,9 +16,9 @@ else:
     randbits = 0
 
 print(f"""
-.globl	main
+.globl	_start
 	.p2align	4, 0x90
-main:
+_start:
     xorq    %r8, %r8
     xorq    %r9, %r9
 	xorq	%rax, %rax  # outer loop induction variable
@@ -54,7 +54,11 @@ loop_foot:
 	jmp	    loop_head
 loop_end:
 	xorl	%eax, %eax
-	retq
+
+    // the following performs the exit system call with a 0 exit code
+    movl    $60, %eax
+    xorl    %ebx, %ebx
+    syscall
 
 .data
 randomness:
