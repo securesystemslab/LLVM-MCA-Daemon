@@ -12,7 +12,7 @@ bp_random.S: gen_bp.py
 	./gen_bp.py 1 > $@
 
 bp_%: bp_%.S
-	gcc -no-pie -O0 -o $@ $<
+	gcc -no-pie -nostdlib -O0 -o $@ $<
 
 .PHONY: eval
 eval: bp_random.perf bp_deterministic.perf
