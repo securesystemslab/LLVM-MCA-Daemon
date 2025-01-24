@@ -4,408 +4,395 @@
 #include "emulator.pb.h"
 
 #include <algorithm>
-#include "google/protobuf/io/coded_stream.h"
-#include "google/protobuf/extension_set.h"
-#include "google/protobuf/wire_format_lite.h"
-#include "google/protobuf/descriptor.h"
-#include "google/protobuf/generated_message_reflection.h"
-#include "google/protobuf/reflection_ops.h"
-#include "google/protobuf/wire_format.h"
-#include "google/protobuf/generated_message_tctable_impl.h"
+
+#include <google/protobuf/io/coded_stream.h>
+#include <google/protobuf/extension_set.h>
+#include <google/protobuf/wire_format_lite.h>
+#include <google/protobuf/descriptor.h>
+#include <google/protobuf/generated_message_reflection.h>
+#include <google/protobuf/reflection_ops.h>
+#include <google/protobuf/wire_format.h>
 // @@protoc_insertion_point(includes)
+#include <google/protobuf/port_def.inc>
+extern PROTOBUF_INTERNAL_EXPORT_emulator_2eproto ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_EmulatorActions_BranchFlow_emulator_2eproto;
+extern PROTOBUF_INTERNAL_EXPORT_emulator_2eproto ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<2> scc_info_EmulatorActions_Instruction_emulator_2eproto;
+extern PROTOBUF_INTERNAL_EXPORT_emulator_2eproto ::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_EmulatorActions_MemoryAccess_emulator_2eproto;
+class NextActionDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<NextAction> _instance;
+} _NextAction_default_instance_;
+class EmulatorActions_MemoryAccessDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<EmulatorActions_MemoryAccess> _instance;
+} _EmulatorActions_MemoryAccess_default_instance_;
+class EmulatorActions_BranchFlowDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<EmulatorActions_BranchFlow> _instance;
+} _EmulatorActions_BranchFlow_default_instance_;
+class EmulatorActions_InstructionDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<EmulatorActions_Instruction> _instance;
+} _EmulatorActions_Instruction_default_instance_;
+class EmulatorActionsDefaultTypeInternal {
+ public:
+  ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<EmulatorActions> _instance;
+} _EmulatorActions_default_instance_;
+static void InitDefaultsscc_info_EmulatorActions_emulator_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-// Must be included last.
-#include "google/protobuf/port_def.inc"
-PROTOBUF_PRAGMA_INIT_SEG
-namespace _pb = ::google::protobuf;
-namespace _pbi = ::google::protobuf::internal;
-namespace _fl = ::google::protobuf::internal::field_layout;
-
-inline constexpr NextAction::Impl_::Impl_(
-    ::_pbi::ConstantInitialized) noexcept
-      : _cached_size_{0},
-        num_instructions_{0} {}
-
-template <typename>
-PROTOBUF_CONSTEXPR NextAction::NextAction(::_pbi::ConstantInitialized)
-    : _impl_(::_pbi::ConstantInitialized()) {}
-struct NextActionDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR NextActionDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
-  ~NextActionDefaultTypeInternal() {}
-  union {
-    NextAction _instance;
-  };
-};
-
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
-    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NextActionDefaultTypeInternal _NextAction_default_instance_;
-
-inline constexpr EmulatorActions_MemoryAccess::Impl_::Impl_(
-    ::_pbi::ConstantInitialized) noexcept
-      : vaddr_{::uint64_t{0u}},
-        size_{0u},
-        is_store_{false},
-        _cached_size_{0} {}
-
-template <typename>
-PROTOBUF_CONSTEXPR EmulatorActions_MemoryAccess::EmulatorActions_MemoryAccess(::_pbi::ConstantInitialized)
-    : _impl_(::_pbi::ConstantInitialized()) {}
-struct EmulatorActions_MemoryAccessDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR EmulatorActions_MemoryAccessDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
-  ~EmulatorActions_MemoryAccessDefaultTypeInternal() {}
-  union {
-    EmulatorActions_MemoryAccess _instance;
-  };
-};
-
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
-    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 EmulatorActions_MemoryAccessDefaultTypeInternal _EmulatorActions_MemoryAccess_default_instance_;
-
-inline constexpr EmulatorActions_BranchFlow::Impl_::Impl_(
-    ::_pbi::ConstantInitialized) noexcept
-      : is_mispredict_{false},
-        _cached_size_{0} {}
-
-template <typename>
-PROTOBUF_CONSTEXPR EmulatorActions_BranchFlow::EmulatorActions_BranchFlow(::_pbi::ConstantInitialized)
-    : _impl_(::_pbi::ConstantInitialized()) {}
-struct EmulatorActions_BranchFlowDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR EmulatorActions_BranchFlowDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
-  ~EmulatorActions_BranchFlowDefaultTypeInternal() {}
-  union {
-    EmulatorActions_BranchFlow _instance;
-  };
-};
-
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
-    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 EmulatorActions_BranchFlowDefaultTypeInternal _EmulatorActions_BranchFlow_default_instance_;
-
-inline constexpr EmulatorActions_Instruction::Impl_::Impl_(
-    ::_pbi::ConstantInitialized) noexcept
-      : _cached_size_{0},
-        opcode_(
-            &::google::protobuf::internal::fixed_address_empty_string,
-            ::_pbi::ConstantInitialized()),
-        memory_access_{nullptr},
-        branch_flow_{nullptr},
-        addr_{::uint64_t{0u}} {}
-
-template <typename>
-PROTOBUF_CONSTEXPR EmulatorActions_Instruction::EmulatorActions_Instruction(::_pbi::ConstantInitialized)
-    : _impl_(::_pbi::ConstantInitialized()) {}
-struct EmulatorActions_InstructionDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR EmulatorActions_InstructionDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
-  ~EmulatorActions_InstructionDefaultTypeInternal() {}
-  union {
-    EmulatorActions_Instruction _instance;
-  };
-};
-
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
-    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 EmulatorActions_InstructionDefaultTypeInternal _EmulatorActions_Instruction_default_instance_;
-
-inline constexpr EmulatorActions::Impl_::Impl_(
-    ::_pbi::ConstantInitialized) noexcept
-      : instructions_{},
-        _cached_size_{0} {}
-
-template <typename>
-PROTOBUF_CONSTEXPR EmulatorActions::EmulatorActions(::_pbi::ConstantInitialized)
-    : _impl_(::_pbi::ConstantInitialized()) {}
-struct EmulatorActionsDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR EmulatorActionsDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
-  ~EmulatorActionsDefaultTypeInternal() {}
-  union {
-    EmulatorActions _instance;
-  };
-};
-
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
-    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 EmulatorActionsDefaultTypeInternal _EmulatorActions_default_instance_;
-static ::_pb::Metadata file_level_metadata_emulator_2eproto[5];
-static constexpr const ::_pb::EnumDescriptor**
-    file_level_enum_descriptors_emulator_2eproto = nullptr;
-static constexpr const ::_pb::ServiceDescriptor**
-    file_level_service_descriptors_emulator_2eproto = nullptr;
-const ::uint32_t TableStruct_emulator_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(
-    protodesc_cold) = {
-    PROTOBUF_FIELD_OFFSET(::NextAction, _impl_._has_bits_),
-    PROTOBUF_FIELD_OFFSET(::NextAction, _internal_metadata_),
-    ~0u,  // no _extensions_
-    ~0u,  // no _oneof_case_
-    ~0u,  // no _weak_field_map_
-    ~0u,  // no _inlined_string_donated_
-    ~0u,  // no _split_
-    ~0u,  // no sizeof(Split)
-    PROTOBUF_FIELD_OFFSET(::NextAction, _impl_.num_instructions_),
-    0,
-    ~0u,  // no _has_bits_
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions_MemoryAccess, _internal_metadata_),
-    ~0u,  // no _extensions_
-    ~0u,  // no _oneof_case_
-    ~0u,  // no _weak_field_map_
-    ~0u,  // no _inlined_string_donated_
-    ~0u,  // no _split_
-    ~0u,  // no sizeof(Split)
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions_MemoryAccess, _impl_.vaddr_),
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions_MemoryAccess, _impl_.size_),
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions_MemoryAccess, _impl_.is_store_),
-    ~0u,  // no _has_bits_
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions_BranchFlow, _internal_metadata_),
-    ~0u,  // no _extensions_
-    ~0u,  // no _oneof_case_
-    ~0u,  // no _weak_field_map_
-    ~0u,  // no _inlined_string_donated_
-    ~0u,  // no _split_
-    ~0u,  // no sizeof(Split)
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions_BranchFlow, _impl_.is_mispredict_),
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, _impl_._has_bits_),
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, _internal_metadata_),
-    ~0u,  // no _extensions_
-    ~0u,  // no _oneof_case_
-    ~0u,  // no _weak_field_map_
-    ~0u,  // no _inlined_string_donated_
-    ~0u,  // no _split_
-    ~0u,  // no sizeof(Split)
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, _impl_.opcode_),
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, _impl_.addr_),
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, _impl_.memory_access_),
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, _impl_.branch_flow_),
-    ~0u,
-    ~0u,
-    0,
-    1,
-    ~0u,  // no _has_bits_
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions, _internal_metadata_),
-    ~0u,  // no _extensions_
-    ~0u,  // no _oneof_case_
-    ~0u,  // no _weak_field_map_
-    ~0u,  // no _inlined_string_donated_
-    ~0u,  // no _split_
-    ~0u,  // no sizeof(Split)
-    PROTOBUF_FIELD_OFFSET(::EmulatorActions, _impl_.instructions_),
-};
-
-static const ::_pbi::MigrationSchema
-    schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
-        {0, 9, -1, sizeof(::NextAction)},
-        {10, -1, -1, sizeof(::EmulatorActions_MemoryAccess)},
-        {21, -1, -1, sizeof(::EmulatorActions_BranchFlow)},
-        {30, 42, -1, sizeof(::EmulatorActions_Instruction)},
-        {46, -1, -1, sizeof(::EmulatorActions)},
-};
-
-static const ::_pb::Message* const file_default_instances[] = {
-    &::_NextAction_default_instance_._instance,
-    &::_EmulatorActions_MemoryAccess_default_instance_._instance,
-    &::_EmulatorActions_BranchFlow_default_instance_._instance,
-    &::_EmulatorActions_Instruction_default_instance_._instance,
-    &::_EmulatorActions_default_instance_._instance,
-};
-const char descriptor_table_protodef_emulator_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
-    "\n\016emulator.proto\"@\n\nNextAction\022\035\n\020num_in"
-    "structions\030\001 \001(\005H\000\210\001\001B\023\n\021_num_instructio"
-    "ns\"\353\002\n\017EmulatorActions\0222\n\014instructions\030\001"
-    " \003(\0132\034.EmulatorActions.Instruction\032=\n\014Me"
-    "moryAccess\022\r\n\005vaddr\030\001 \001(\004\022\014\n\004size\030\002 \001(\r\022"
-    "\020\n\010is_store\030\003 \001(\010\032#\n\nBranchFlow\022\025\n\ris_mi"
-    "spredict\030\001 \001(\010\032\277\001\n\013Instruction\022\016\n\006opcode"
-    "\030\001 \001(\014\022\014\n\004addr\030\002 \001(\004\0229\n\rmemory_access\030\003 "
-    "\001(\0132\035.EmulatorActions.MemoryAccessH\000\210\001\001\022"
-    "5\n\013branch_flow\030\004 \001(\0132\033.EmulatorActions.B"
-    "ranchFlowH\001\210\001\001B\020\n\016_memory_accessB\016\n\014_bra"
-    "nch_flow2B\n\010Emulator\0226\n\025RecordEmulatorAc"
-    "tions\022\020.EmulatorActions\032\013.NextActionb\006pr"
-    "oto3"
-};
-static ::absl::once_flag descriptor_table_emulator_2eproto_once;
-const ::_pbi::DescriptorTable descriptor_table_emulator_2eproto = {
-    false,
-    false,
-    524,
-    descriptor_table_protodef_emulator_2eproto,
-    "emulator.proto",
-    &descriptor_table_emulator_2eproto_once,
-    nullptr,
-    0,
-    5,
-    schemas,
-    file_default_instances,
-    TableStruct_emulator_2eproto::offsets,
-    file_level_metadata_emulator_2eproto,
-    file_level_enum_descriptors_emulator_2eproto,
-    file_level_service_descriptors_emulator_2eproto,
-};
-
-// This function exists to be marked as weak.
-// It can significantly speed up compilation by breaking up LLVM's SCC
-// in the .pb.cc translation units. Large translation units see a
-// reduction of more than 35% of walltime for optimized builds. Without
-// the weak attribute all the messages in the file, including all the
-// vtables and everything they use become part of the same SCC through
-// a cycle like:
-// GetMetadata -> descriptor table -> default instances ->
-//   vtables -> GetMetadata
-// By adding a weak function here we break the connection from the
-// individual vtables back into the descriptor table.
-PROTOBUF_ATTRIBUTE_WEAK const ::_pbi::DescriptorTable* descriptor_table_emulator_2eproto_getter() {
-  return &descriptor_table_emulator_2eproto;
+  {
+    void* ptr = &::_EmulatorActions_default_instance_;
+    new (ptr) ::EmulatorActions();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::EmulatorActions::InitAsDefaultInstance();
 }
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<1> scc_info_EmulatorActions_emulator_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 1, 0, InitDefaultsscc_info_EmulatorActions_emulator_2eproto}, {
+      &scc_info_EmulatorActions_Instruction_emulator_2eproto.base,}};
+
+static void InitDefaultsscc_info_EmulatorActions_BranchFlow_emulator_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::_EmulatorActions_BranchFlow_default_instance_;
+    new (ptr) ::EmulatorActions_BranchFlow();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::EmulatorActions_BranchFlow::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_EmulatorActions_BranchFlow_emulator_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, 0, InitDefaultsscc_info_EmulatorActions_BranchFlow_emulator_2eproto}, {}};
+
+static void InitDefaultsscc_info_EmulatorActions_Instruction_emulator_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::_EmulatorActions_Instruction_default_instance_;
+    new (ptr) ::EmulatorActions_Instruction();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::EmulatorActions_Instruction::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<2> scc_info_EmulatorActions_Instruction_emulator_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 2, 0, InitDefaultsscc_info_EmulatorActions_Instruction_emulator_2eproto}, {
+      &scc_info_EmulatorActions_MemoryAccess_emulator_2eproto.base,
+      &scc_info_EmulatorActions_BranchFlow_emulator_2eproto.base,}};
+
+static void InitDefaultsscc_info_EmulatorActions_MemoryAccess_emulator_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::_EmulatorActions_MemoryAccess_default_instance_;
+    new (ptr) ::EmulatorActions_MemoryAccess();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::EmulatorActions_MemoryAccess::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_EmulatorActions_MemoryAccess_emulator_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, 0, InitDefaultsscc_info_EmulatorActions_MemoryAccess_emulator_2eproto}, {}};
+
+static void InitDefaultsscc_info_NextAction_emulator_2eproto() {
+  GOOGLE_PROTOBUF_VERIFY_VERSION;
+
+  {
+    void* ptr = &::_NextAction_default_instance_;
+    new (ptr) ::NextAction();
+    ::PROTOBUF_NAMESPACE_ID::internal::OnShutdownDestroyMessage(ptr);
+  }
+  ::NextAction::InitAsDefaultInstance();
+}
+
+::PROTOBUF_NAMESPACE_ID::internal::SCCInfo<0> scc_info_NextAction_emulator_2eproto =
+    {{ATOMIC_VAR_INIT(::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase::kUninitialized), 0, 0, InitDefaultsscc_info_NextAction_emulator_2eproto}, {}};
+
+static ::PROTOBUF_NAMESPACE_ID::Metadata file_level_metadata_emulator_2eproto[5];
+static constexpr ::PROTOBUF_NAMESPACE_ID::EnumDescriptor const** file_level_enum_descriptors_emulator_2eproto = nullptr;
+static constexpr ::PROTOBUF_NAMESPACE_ID::ServiceDescriptor const** file_level_service_descriptors_emulator_2eproto = nullptr;
+
+const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_emulator_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
+  PROTOBUF_FIELD_OFFSET(::NextAction, _has_bits_),
+  PROTOBUF_FIELD_OFFSET(::NextAction, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  PROTOBUF_FIELD_OFFSET(::NextAction, num_instructions_),
+  0,
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions_MemoryAccess, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions_MemoryAccess, vaddr_),
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions_MemoryAccess, size_),
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions_MemoryAccess, is_store_),
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions_BranchFlow, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions_BranchFlow, is_mispredict_),
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, _has_bits_),
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, opcode_),
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, addr_),
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, size_),
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, memory_access_),
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, branch_flow_),
+  ~0u,
+  ~0u,
+  ~0u,
+  0,
+  1,
+  ~0u,  // no _has_bits_
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions, _internal_metadata_),
+  ~0u,  // no _extensions_
+  ~0u,  // no _oneof_case_
+  ~0u,  // no _weak_field_map_
+  PROTOBUF_FIELD_OFFSET(::EmulatorActions, instructions_),
+};
+static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
+  { 0, 6, sizeof(::NextAction)},
+  { 7, -1, sizeof(::EmulatorActions_MemoryAccess)},
+  { 15, -1, sizeof(::EmulatorActions_BranchFlow)},
+  { 21, 31, sizeof(::EmulatorActions_Instruction)},
+  { 36, -1, sizeof(::EmulatorActions)},
+};
+
+static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::_NextAction_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::_EmulatorActions_MemoryAccess_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::_EmulatorActions_BranchFlow_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::_EmulatorActions_Instruction_default_instance_),
+  reinterpret_cast<const ::PROTOBUF_NAMESPACE_ID::Message*>(&::_EmulatorActions_default_instance_),
+};
+
+const char descriptor_table_protodef_emulator_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
+  "\n\016emulator.proto\"@\n\nNextAction\022\035\n\020num_in"
+  "structions\030\001 \001(\005H\000\210\001\001B\023\n\021_num_instructio"
+  "ns\"\371\002\n\017EmulatorActions\0222\n\014instructions\030\001"
+  " \003(\0132\034.EmulatorActions.Instruction\032=\n\014Me"
+  "moryAccess\022\r\n\005vaddr\030\001 \001(\004\022\014\n\004size\030\002 \001(\r\022"
+  "\020\n\010is_store\030\003 \001(\010\032#\n\nBranchFlow\022\025\n\ris_mi"
+  "spredict\030\001 \001(\010\032\315\001\n\013Instruction\022\016\n\006opcode"
+  "\030\001 \001(\014\022\014\n\004addr\030\002 \001(\004\022\014\n\004size\030\003 \001(\004\0229\n\rme"
+  "mory_access\030\004 \001(\0132\035.EmulatorActions.Memo"
+  "ryAccessH\000\210\001\001\0225\n\013branch_flow\030\005 \001(\0132\033.Emu"
+  "latorActions.BranchFlowH\001\210\001\001B\020\n\016_memory_"
+  "accessB\016\n\014_branch_flow2B\n\010Emulator\0226\n\025Re"
+  "cordEmulatorActions\022\020.EmulatorActions\032\013."
+  "NextActionb\006proto3"
+  ;
+static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_emulator_2eproto_deps[1] = {
+};
+static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_emulator_2eproto_sccs[5] = {
+  &scc_info_EmulatorActions_emulator_2eproto.base,
+  &scc_info_EmulatorActions_BranchFlow_emulator_2eproto.base,
+  &scc_info_EmulatorActions_Instruction_emulator_2eproto.base,
+  &scc_info_EmulatorActions_MemoryAccess_emulator_2eproto.base,
+  &scc_info_NextAction_emulator_2eproto.base,
+};
+static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_emulator_2eproto_once;
+const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_emulator_2eproto = {
+  false, false, descriptor_table_protodef_emulator_2eproto, "emulator.proto", 538,
+  &descriptor_table_emulator_2eproto_once, descriptor_table_emulator_2eproto_sccs, descriptor_table_emulator_2eproto_deps, 5, 0,
+  schemas, file_default_instances, TableStruct_emulator_2eproto::offsets,
+  file_level_metadata_emulator_2eproto, 5, file_level_enum_descriptors_emulator_2eproto, file_level_service_descriptors_emulator_2eproto,
+};
+
 // Force running AddDescriptors() at dynamic initialization time.
-PROTOBUF_ATTRIBUTE_INIT_PRIORITY2
-static ::_pbi::AddDescriptorsRunner dynamic_init_dummy_emulator_2eproto(&descriptor_table_emulator_2eproto);
+static bool dynamic_init_dummy_emulator_2eproto = (static_cast<void>(::PROTOBUF_NAMESPACE_ID::internal::AddDescriptors(&descriptor_table_emulator_2eproto)), true);
+
 // ===================================================================
 
+void NextAction::InitAsDefaultInstance() {
+}
 class NextAction::_Internal {
  public:
-  using HasBits = decltype(std::declval<NextAction>()._impl_._has_bits_);
-  static constexpr ::int32_t kHasBitsOffset =
-    8 * PROTOBUF_FIELD_OFFSET(NextAction, _impl_._has_bits_);
+  using HasBits = decltype(std::declval<NextAction>()._has_bits_);
   static void set_has_num_instructions(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
   }
 };
 
-NextAction::NextAction(::google::protobuf::Arena* arena)
-    : ::google::protobuf::Message(arena) {
-  SharedCtor(arena);
+NextAction::NextAction(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena) {
+  SharedCtor();
+  RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:NextAction)
 }
-NextAction::NextAction(
-    ::google::protobuf::Arena* arena, const NextAction& from)
-    : NextAction(arena) {
-  MergeFrom(from);
+NextAction::NextAction(const NextAction& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message(),
+      _has_bits_(from._has_bits_) {
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  num_instructions_ = from.num_instructions_;
+  // @@protoc_insertion_point(copy_constructor:NextAction)
 }
-inline PROTOBUF_NDEBUG_INLINE NextAction::Impl_::Impl_(
-    ::google::protobuf::internal::InternalVisibility visibility,
-    ::google::protobuf::Arena* arena)
-      : _cached_size_{0} {}
 
-inline void NextAction::SharedCtor(::_pb::Arena* arena) {
-  new (&_impl_) Impl_(internal_visibility(), arena);
-  _impl_.num_instructions_ = {};
+void NextAction::SharedCtor() {
+  num_instructions_ = 0;
 }
+
 NextAction::~NextAction() {
   // @@protoc_insertion_point(destructor:NextAction)
-  _internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   SharedDtor();
-}
-inline void NextAction::SharedDtor() {
-  ABSL_DCHECK(GetArena() == nullptr);
-  _impl_.~Impl_();
+  _internal_metadata_.Delete<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-PROTOBUF_NOINLINE void NextAction::Clear() {
+void NextAction::SharedDtor() {
+  GOOGLE_DCHECK(GetArena() == nullptr);
+}
+
+void NextAction::ArenaDtor(void* object) {
+  NextAction* _this = reinterpret_cast< NextAction* >(object);
+  (void)_this;
+}
+void NextAction::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+}
+void NextAction::SetCachedSize(int size) const {
+  _cached_size_.Set(size);
+}
+const NextAction& NextAction::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_NextAction_emulator_2eproto.base);
+  return *internal_default_instance();
+}
+
+
+void NextAction::Clear() {
 // @@protoc_insertion_point(message_clear_start:NextAction)
-  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  ::uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.num_instructions_ = 0;
-  _impl_._has_bits_.Clear();
-  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
+  num_instructions_ = 0;
+  _has_bits_.Clear();
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* NextAction::_InternalParse(
-    const char* ptr, ::_pbi::ParseContext* ctx) {
-  ptr = ::_pbi::TcParser::ParseLoop(this, ptr, ctx, &_table_.header);
+const char* NextAction::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  _Internal::HasBits has_bits{};
+  ::PROTOBUF_NAMESPACE_ID::Arena* arena = GetArena(); (void)arena;
+  while (!ctx->Done(&ptr)) {
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
+    switch (tag >> 3) {
+      // int32 num_instructions = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+          _Internal::set_has_num_instructions(&has_bits);
+          num_instructions_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag,
+            _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+            ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
+    }  // switch
+  }  // while
+success:
+  _has_bits_.Or(has_bits);
   return ptr;
+failure:
+  ptr = nullptr;
+  goto success;
+#undef CHK_
 }
 
-
-PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<0, 1, 0, 0, 2> NextAction::_table_ = {
-  {
-    PROTOBUF_FIELD_OFFSET(NextAction, _impl_._has_bits_),
-    0, // no _extensions_
-    1, 0,  // max_field_number, fast_idx_mask
-    offsetof(decltype(_table_), field_lookup_table),
-    4294967294,  // skipmap
-    offsetof(decltype(_table_), field_entries),
-    1,  // num_field_entries
-    0,  // num_aux_entries
-    offsetof(decltype(_table_), field_names),  // no aux_entries
-    &_NextAction_default_instance_._instance,
-    ::_pbi::TcParser::GenericFallback,  // fallback
-  }, {{
-    // optional int32 num_instructions = 1;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(NextAction, _impl_.num_instructions_), 0>(),
-     {8, 0, 0, PROTOBUF_FIELD_OFFSET(NextAction, _impl_.num_instructions_)}},
-  }}, {{
-    65535, 65535
-  }}, {{
-    // optional int32 num_instructions = 1;
-    {PROTOBUF_FIELD_OFFSET(NextAction, _impl_.num_instructions_), _Internal::kHasBitsOffset + 0, 0,
-    (0 | ::_fl::kFcOptional | ::_fl::kInt32)},
-  }},
-  // no aux_entries
-  {{
-  }},
-};
-
-::uint8_t* NextAction::_InternalSerialize(
-    ::uint8_t* target,
-    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+::PROTOBUF_NAMESPACE_ID::uint8* NextAction::_InternalSerialize(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:NextAction)
-  ::uint32_t cached_has_bits = 0;
-  (void)cached_has_bits;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
 
-  cached_has_bits = _impl_._has_bits_[0];
-  // optional int32 num_instructions = 1;
-  if (cached_has_bits & 0x00000001u) {
-    target = ::google::protobuf::internal::WireFormatLite::
-        WriteInt32ToArrayWithField<1>(
-            stream, this->_internal_num_instructions(), target);
+  // int32 num_instructions = 1;
+  if (_internal_has_num_instructions()) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteInt32ToArray(1, this->_internal_num_instructions(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target =
-        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-            _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
   // @@protoc_insertion_point(serialize_to_array_end:NextAction)
   return target;
 }
 
-::size_t NextAction::ByteSizeLong() const {
+size_t NextAction::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:NextAction)
-  ::size_t total_size = 0;
+  size_t total_size = 0;
 
-  ::uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // optional int32 num_instructions = 1;
-  cached_has_bits = _impl_._has_bits_[0];
+  // int32 num_instructions = 1;
+  cached_has_bits = _has_bits_[0];
   if (cached_has_bits & 0x00000001u) {
-    total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
         this->_internal_num_instructions());
   }
 
-  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
+        _internal_metadata_, total_size, &_cached_size_);
+  }
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
 }
 
-const ::google::protobuf::Message::ClassData NextAction::_class_data_ = {
-    NextAction::MergeImpl,
-    nullptr,  // OnDemandRegisterArenaDtor
-};
-const ::google::protobuf::Message::ClassData* NextAction::GetClassData() const {
-  return &_class_data_;
+void NextAction::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:NextAction)
+  GOOGLE_DCHECK_NE(&from, this);
+  const NextAction* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<NextAction>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:NextAction)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:NextAction)
+    MergeFrom(*source);
+  }
 }
 
-void NextAction::MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg) {
-  auto* const _this = static_cast<NextAction*>(&to_msg);
-  auto& from = static_cast<const NextAction&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:NextAction)
-  ABSL_DCHECK_NE(&from, _this);
-  ::uint32_t cached_has_bits = 0;
+void NextAction::MergeFrom(const NextAction& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:NextAction)
+  GOOGLE_DCHECK_NE(&from, this);
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
-    _this->_internal_set_num_instructions(from._internal_num_instructions());
+  if (from._internal_has_num_instructions()) {
+    _internal_set_num_instructions(from._internal_num_instructions());
   }
-  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void NextAction::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:NextAction)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
 }
 
 void NextAction::CopyFrom(const NextAction& from) {
@@ -415,219 +402,245 @@ void NextAction::CopyFrom(const NextAction& from) {
   MergeFrom(from);
 }
 
-PROTOBUF_NOINLINE bool NextAction::IsInitialized() const {
+bool NextAction::IsInitialized() const {
   return true;
 }
 
-::_pbi::CachedSize* NextAction::AccessCachedSize() const {
-  return &_impl_._cached_size_;
-}
-void NextAction::InternalSwap(NextAction* PROTOBUF_RESTRICT other) {
+void NextAction::InternalSwap(NextAction* other) {
   using std::swap;
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
-        swap(_impl_.num_instructions_, other->_impl_.num_instructions_);
+  _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
+  swap(_has_bits_[0], other->_has_bits_[0]);
+  swap(num_instructions_, other->num_instructions_);
 }
 
-::google::protobuf::Metadata NextAction::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_emulator_2eproto_getter, &descriptor_table_emulator_2eproto_once,
-      file_level_metadata_emulator_2eproto[0]);
+::PROTOBUF_NAMESPACE_ID::Metadata NextAction::GetMetadata() const {
+  return GetMetadataStatic();
 }
+
+
 // ===================================================================
 
+void EmulatorActions_MemoryAccess::InitAsDefaultInstance() {
+}
 class EmulatorActions_MemoryAccess::_Internal {
  public:
 };
 
-EmulatorActions_MemoryAccess::EmulatorActions_MemoryAccess(::google::protobuf::Arena* arena)
-    : ::google::protobuf::Message(arena) {
-  SharedCtor(arena);
+EmulatorActions_MemoryAccess::EmulatorActions_MemoryAccess(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena) {
+  SharedCtor();
+  RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:EmulatorActions.MemoryAccess)
 }
-EmulatorActions_MemoryAccess::EmulatorActions_MemoryAccess(
-    ::google::protobuf::Arena* arena, const EmulatorActions_MemoryAccess& from)
-    : EmulatorActions_MemoryAccess(arena) {
-  MergeFrom(from);
+EmulatorActions_MemoryAccess::EmulatorActions_MemoryAccess(const EmulatorActions_MemoryAccess& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  ::memcpy(&vaddr_, &from.vaddr_,
+    static_cast<size_t>(reinterpret_cast<char*>(&is_store_) -
+    reinterpret_cast<char*>(&vaddr_)) + sizeof(is_store_));
+  // @@protoc_insertion_point(copy_constructor:EmulatorActions.MemoryAccess)
 }
-inline PROTOBUF_NDEBUG_INLINE EmulatorActions_MemoryAccess::Impl_::Impl_(
-    ::google::protobuf::internal::InternalVisibility visibility,
-    ::google::protobuf::Arena* arena)
-      : _cached_size_{0} {}
 
-inline void EmulatorActions_MemoryAccess::SharedCtor(::_pb::Arena* arena) {
-  new (&_impl_) Impl_(internal_visibility(), arena);
-  ::memset(reinterpret_cast<char *>(&_impl_) +
-               offsetof(Impl_, vaddr_),
-           0,
-           offsetof(Impl_, is_store_) -
-               offsetof(Impl_, vaddr_) +
-               sizeof(Impl_::is_store_));
+void EmulatorActions_MemoryAccess::SharedCtor() {
+  ::memset(&vaddr_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&is_store_) -
+      reinterpret_cast<char*>(&vaddr_)) + sizeof(is_store_));
 }
+
 EmulatorActions_MemoryAccess::~EmulatorActions_MemoryAccess() {
   // @@protoc_insertion_point(destructor:EmulatorActions.MemoryAccess)
-  _internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   SharedDtor();
-}
-inline void EmulatorActions_MemoryAccess::SharedDtor() {
-  ABSL_DCHECK(GetArena() == nullptr);
-  _impl_.~Impl_();
+  _internal_metadata_.Delete<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-PROTOBUF_NOINLINE void EmulatorActions_MemoryAccess::Clear() {
+void EmulatorActions_MemoryAccess::SharedDtor() {
+  GOOGLE_DCHECK(GetArena() == nullptr);
+}
+
+void EmulatorActions_MemoryAccess::ArenaDtor(void* object) {
+  EmulatorActions_MemoryAccess* _this = reinterpret_cast< EmulatorActions_MemoryAccess* >(object);
+  (void)_this;
+}
+void EmulatorActions_MemoryAccess::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+}
+void EmulatorActions_MemoryAccess::SetCachedSize(int size) const {
+  _cached_size_.Set(size);
+}
+const EmulatorActions_MemoryAccess& EmulatorActions_MemoryAccess::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_EmulatorActions_MemoryAccess_emulator_2eproto.base);
+  return *internal_default_instance();
+}
+
+
+void EmulatorActions_MemoryAccess::Clear() {
 // @@protoc_insertion_point(message_clear_start:EmulatorActions.MemoryAccess)
-  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  ::uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  ::memset(&_impl_.vaddr_, 0, static_cast<::size_t>(
-      reinterpret_cast<char*>(&_impl_.is_store_) -
-      reinterpret_cast<char*>(&_impl_.vaddr_)) + sizeof(_impl_.is_store_));
-  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
+  ::memset(&vaddr_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&is_store_) -
+      reinterpret_cast<char*>(&vaddr_)) + sizeof(is_store_));
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* EmulatorActions_MemoryAccess::_InternalParse(
-    const char* ptr, ::_pbi::ParseContext* ctx) {
-  ptr = ::_pbi::TcParser::ParseLoop(this, ptr, ctx, &_table_.header);
+const char* EmulatorActions_MemoryAccess::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  ::PROTOBUF_NAMESPACE_ID::Arena* arena = GetArena(); (void)arena;
+  while (!ctx->Done(&ptr)) {
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
+    switch (tag >> 3) {
+      // uint64 vaddr = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+          vaddr_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // uint32 size = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
+          size_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // bool is_store = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
+          is_store_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag,
+            _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+            ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
+    }  // switch
+  }  // while
+success:
   return ptr;
+failure:
+  ptr = nullptr;
+  goto success;
+#undef CHK_
 }
 
-
-PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 3, 0, 0, 2> EmulatorActions_MemoryAccess::_table_ = {
-  {
-    0,  // no _has_bits_
-    0, // no _extensions_
-    3, 24,  // max_field_number, fast_idx_mask
-    offsetof(decltype(_table_), field_lookup_table),
-    4294967288,  // skipmap
-    offsetof(decltype(_table_), field_entries),
-    3,  // num_field_entries
-    0,  // num_aux_entries
-    offsetof(decltype(_table_), field_names),  // no aux_entries
-    &_EmulatorActions_MemoryAccess_default_instance_._instance,
-    ::_pbi::TcParser::GenericFallback,  // fallback
-  }, {{
-    {::_pbi::TcParser::MiniParse, {}},
-    // uint64 vaddr = 1;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(EmulatorActions_MemoryAccess, _impl_.vaddr_), 63>(),
-     {8, 63, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_MemoryAccess, _impl_.vaddr_)}},
-    // uint32 size = 2;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(EmulatorActions_MemoryAccess, _impl_.size_), 63>(),
-     {16, 63, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_MemoryAccess, _impl_.size_)}},
-    // bool is_store = 3;
-    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(EmulatorActions_MemoryAccess, _impl_.is_store_), 63>(),
-     {24, 63, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_MemoryAccess, _impl_.is_store_)}},
-  }}, {{
-    65535, 65535
-  }}, {{
-    // uint64 vaddr = 1;
-    {PROTOBUF_FIELD_OFFSET(EmulatorActions_MemoryAccess, _impl_.vaddr_), 0, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
-    // uint32 size = 2;
-    {PROTOBUF_FIELD_OFFSET(EmulatorActions_MemoryAccess, _impl_.size_), 0, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kUInt32)},
-    // bool is_store = 3;
-    {PROTOBUF_FIELD_OFFSET(EmulatorActions_MemoryAccess, _impl_.is_store_), 0, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kBool)},
-  }},
-  // no aux_entries
-  {{
-  }},
-};
-
-::uint8_t* EmulatorActions_MemoryAccess::_InternalSerialize(
-    ::uint8_t* target,
-    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+::PROTOBUF_NAMESPACE_ID::uint8* EmulatorActions_MemoryAccess::_InternalSerialize(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:EmulatorActions.MemoryAccess)
-  ::uint32_t cached_has_bits = 0;
-  (void)cached_has_bits;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
 
   // uint64 vaddr = 1;
-  if (this->_internal_vaddr() != 0) {
+  if (this->vaddr() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
-        1, this->_internal_vaddr(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(1, this->_internal_vaddr(), target);
   }
 
   // uint32 size = 2;
-  if (this->_internal_size() != 0) {
+  if (this->size() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
-        2, this->_internal_size(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt32ToArray(2, this->_internal_size(), target);
   }
 
   // bool is_store = 3;
-  if (this->_internal_is_store() != 0) {
+  if (this->is_store() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteBoolToArray(
-        3, this->_internal_is_store(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteBoolToArray(3, this->_internal_is_store(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target =
-        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-            _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
   // @@protoc_insertion_point(serialize_to_array_end:EmulatorActions.MemoryAccess)
   return target;
 }
 
-::size_t EmulatorActions_MemoryAccess::ByteSizeLong() const {
+size_t EmulatorActions_MemoryAccess::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:EmulatorActions.MemoryAccess)
-  ::size_t total_size = 0;
+  size_t total_size = 0;
 
-  ::uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // uint64 vaddr = 1;
-  if (this->_internal_vaddr() != 0) {
-    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
+  if (this->vaddr() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
         this->_internal_vaddr());
   }
 
   // uint32 size = 2;
-  if (this->_internal_size() != 0) {
-    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
+  if (this->size() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt32Size(
         this->_internal_size());
   }
 
   // bool is_store = 3;
-  if (this->_internal_is_store() != 0) {
-    total_size += 2;
+  if (this->is_store() != 0) {
+    total_size += 1 + 1;
   }
 
-  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
+        _internal_metadata_, total_size, &_cached_size_);
+  }
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
 }
 
-const ::google::protobuf::Message::ClassData EmulatorActions_MemoryAccess::_class_data_ = {
-    EmulatorActions_MemoryAccess::MergeImpl,
-    nullptr,  // OnDemandRegisterArenaDtor
-};
-const ::google::protobuf::Message::ClassData* EmulatorActions_MemoryAccess::GetClassData() const {
-  return &_class_data_;
+void EmulatorActions_MemoryAccess::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:EmulatorActions.MemoryAccess)
+  GOOGLE_DCHECK_NE(&from, this);
+  const EmulatorActions_MemoryAccess* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<EmulatorActions_MemoryAccess>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:EmulatorActions.MemoryAccess)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:EmulatorActions.MemoryAccess)
+    MergeFrom(*source);
+  }
 }
 
-void EmulatorActions_MemoryAccess::MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg) {
-  auto* const _this = static_cast<EmulatorActions_MemoryAccess*>(&to_msg);
-  auto& from = static_cast<const EmulatorActions_MemoryAccess&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:EmulatorActions.MemoryAccess)
-  ABSL_DCHECK_NE(&from, _this);
-  ::uint32_t cached_has_bits = 0;
+void EmulatorActions_MemoryAccess::MergeFrom(const EmulatorActions_MemoryAccess& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:EmulatorActions.MemoryAccess)
+  GOOGLE_DCHECK_NE(&from, this);
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from._internal_vaddr() != 0) {
-    _this->_internal_set_vaddr(from._internal_vaddr());
+  if (from.vaddr() != 0) {
+    _internal_set_vaddr(from._internal_vaddr());
   }
-  if (from._internal_size() != 0) {
-    _this->_internal_set_size(from._internal_size());
+  if (from.size() != 0) {
+    _internal_set_size(from._internal_size());
   }
-  if (from._internal_is_store() != 0) {
-    _this->_internal_set_is_store(from._internal_is_store());
+  if (from.is_store() != 0) {
+    _internal_set_is_store(from._internal_is_store());
   }
-  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void EmulatorActions_MemoryAccess::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:EmulatorActions.MemoryAccess)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
 }
 
 void EmulatorActions_MemoryAccess::CopyFrom(const EmulatorActions_MemoryAccess& from) {
@@ -637,171 +650,197 @@ void EmulatorActions_MemoryAccess::CopyFrom(const EmulatorActions_MemoryAccess& 
   MergeFrom(from);
 }
 
-PROTOBUF_NOINLINE bool EmulatorActions_MemoryAccess::IsInitialized() const {
+bool EmulatorActions_MemoryAccess::IsInitialized() const {
   return true;
 }
 
-::_pbi::CachedSize* EmulatorActions_MemoryAccess::AccessCachedSize() const {
-  return &_impl_._cached_size_;
-}
-void EmulatorActions_MemoryAccess::InternalSwap(EmulatorActions_MemoryAccess* PROTOBUF_RESTRICT other) {
+void EmulatorActions_MemoryAccess::InternalSwap(EmulatorActions_MemoryAccess* other) {
   using std::swap;
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(EmulatorActions_MemoryAccess, _impl_.is_store_)
-      + sizeof(EmulatorActions_MemoryAccess::_impl_.is_store_)
-      - PROTOBUF_FIELD_OFFSET(EmulatorActions_MemoryAccess, _impl_.vaddr_)>(
-          reinterpret_cast<char*>(&_impl_.vaddr_),
-          reinterpret_cast<char*>(&other->_impl_.vaddr_));
+  _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(EmulatorActions_MemoryAccess, is_store_)
+      + sizeof(EmulatorActions_MemoryAccess::is_store_)
+      - PROTOBUF_FIELD_OFFSET(EmulatorActions_MemoryAccess, vaddr_)>(
+          reinterpret_cast<char*>(&vaddr_),
+          reinterpret_cast<char*>(&other->vaddr_));
 }
 
-::google::protobuf::Metadata EmulatorActions_MemoryAccess::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_emulator_2eproto_getter, &descriptor_table_emulator_2eproto_once,
-      file_level_metadata_emulator_2eproto[1]);
+::PROTOBUF_NAMESPACE_ID::Metadata EmulatorActions_MemoryAccess::GetMetadata() const {
+  return GetMetadataStatic();
 }
+
+
 // ===================================================================
 
+void EmulatorActions_BranchFlow::InitAsDefaultInstance() {
+}
 class EmulatorActions_BranchFlow::_Internal {
  public:
 };
 
-EmulatorActions_BranchFlow::EmulatorActions_BranchFlow(::google::protobuf::Arena* arena)
-    : ::google::protobuf::Message(arena) {
-  SharedCtor(arena);
+EmulatorActions_BranchFlow::EmulatorActions_BranchFlow(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena) {
+  SharedCtor();
+  RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:EmulatorActions.BranchFlow)
 }
-EmulatorActions_BranchFlow::EmulatorActions_BranchFlow(
-    ::google::protobuf::Arena* arena, const EmulatorActions_BranchFlow& from)
-    : EmulatorActions_BranchFlow(arena) {
-  MergeFrom(from);
+EmulatorActions_BranchFlow::EmulatorActions_BranchFlow(const EmulatorActions_BranchFlow& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message() {
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  is_mispredict_ = from.is_mispredict_;
+  // @@protoc_insertion_point(copy_constructor:EmulatorActions.BranchFlow)
 }
-inline PROTOBUF_NDEBUG_INLINE EmulatorActions_BranchFlow::Impl_::Impl_(
-    ::google::protobuf::internal::InternalVisibility visibility,
-    ::google::protobuf::Arena* arena)
-      : _cached_size_{0} {}
 
-inline void EmulatorActions_BranchFlow::SharedCtor(::_pb::Arena* arena) {
-  new (&_impl_) Impl_(internal_visibility(), arena);
-  _impl_.is_mispredict_ = {};
+void EmulatorActions_BranchFlow::SharedCtor() {
+  is_mispredict_ = false;
 }
+
 EmulatorActions_BranchFlow::~EmulatorActions_BranchFlow() {
   // @@protoc_insertion_point(destructor:EmulatorActions.BranchFlow)
-  _internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   SharedDtor();
-}
-inline void EmulatorActions_BranchFlow::SharedDtor() {
-  ABSL_DCHECK(GetArena() == nullptr);
-  _impl_.~Impl_();
+  _internal_metadata_.Delete<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-PROTOBUF_NOINLINE void EmulatorActions_BranchFlow::Clear() {
+void EmulatorActions_BranchFlow::SharedDtor() {
+  GOOGLE_DCHECK(GetArena() == nullptr);
+}
+
+void EmulatorActions_BranchFlow::ArenaDtor(void* object) {
+  EmulatorActions_BranchFlow* _this = reinterpret_cast< EmulatorActions_BranchFlow* >(object);
+  (void)_this;
+}
+void EmulatorActions_BranchFlow::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+}
+void EmulatorActions_BranchFlow::SetCachedSize(int size) const {
+  _cached_size_.Set(size);
+}
+const EmulatorActions_BranchFlow& EmulatorActions_BranchFlow::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_EmulatorActions_BranchFlow_emulator_2eproto.base);
+  return *internal_default_instance();
+}
+
+
+void EmulatorActions_BranchFlow::Clear() {
 // @@protoc_insertion_point(message_clear_start:EmulatorActions.BranchFlow)
-  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  ::uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.is_mispredict_ = false;
-  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
+  is_mispredict_ = false;
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* EmulatorActions_BranchFlow::_InternalParse(
-    const char* ptr, ::_pbi::ParseContext* ctx) {
-  ptr = ::_pbi::TcParser::ParseLoop(this, ptr, ctx, &_table_.header);
+const char* EmulatorActions_BranchFlow::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  ::PROTOBUF_NAMESPACE_ID::Arena* arena = GetArena(); (void)arena;
+  while (!ctx->Done(&ptr)) {
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
+    switch (tag >> 3) {
+      // bool is_mispredict = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 8)) {
+          is_mispredict_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag,
+            _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+            ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
+    }  // switch
+  }  // while
+success:
   return ptr;
+failure:
+  ptr = nullptr;
+  goto success;
+#undef CHK_
 }
 
-
-PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<0, 1, 0, 0, 2> EmulatorActions_BranchFlow::_table_ = {
-  {
-    0,  // no _has_bits_
-    0, // no _extensions_
-    1, 0,  // max_field_number, fast_idx_mask
-    offsetof(decltype(_table_), field_lookup_table),
-    4294967294,  // skipmap
-    offsetof(decltype(_table_), field_entries),
-    1,  // num_field_entries
-    0,  // num_aux_entries
-    offsetof(decltype(_table_), field_names),  // no aux_entries
-    &_EmulatorActions_BranchFlow_default_instance_._instance,
-    ::_pbi::TcParser::GenericFallback,  // fallback
-  }, {{
-    // bool is_mispredict = 1;
-    {::_pbi::TcParser::SingularVarintNoZag1<bool, offsetof(EmulatorActions_BranchFlow, _impl_.is_mispredict_), 63>(),
-     {8, 63, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_BranchFlow, _impl_.is_mispredict_)}},
-  }}, {{
-    65535, 65535
-  }}, {{
-    // bool is_mispredict = 1;
-    {PROTOBUF_FIELD_OFFSET(EmulatorActions_BranchFlow, _impl_.is_mispredict_), 0, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kBool)},
-  }},
-  // no aux_entries
-  {{
-  }},
-};
-
-::uint8_t* EmulatorActions_BranchFlow::_InternalSerialize(
-    ::uint8_t* target,
-    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+::PROTOBUF_NAMESPACE_ID::uint8* EmulatorActions_BranchFlow::_InternalSerialize(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:EmulatorActions.BranchFlow)
-  ::uint32_t cached_has_bits = 0;
-  (void)cached_has_bits;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
 
   // bool is_mispredict = 1;
-  if (this->_internal_is_mispredict() != 0) {
+  if (this->is_mispredict() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteBoolToArray(
-        1, this->_internal_is_mispredict(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteBoolToArray(1, this->_internal_is_mispredict(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target =
-        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-            _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
   // @@protoc_insertion_point(serialize_to_array_end:EmulatorActions.BranchFlow)
   return target;
 }
 
-::size_t EmulatorActions_BranchFlow::ByteSizeLong() const {
+size_t EmulatorActions_BranchFlow::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:EmulatorActions.BranchFlow)
-  ::size_t total_size = 0;
+  size_t total_size = 0;
 
-  ::uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // bool is_mispredict = 1;
-  if (this->_internal_is_mispredict() != 0) {
-    total_size += 2;
+  if (this->is_mispredict() != 0) {
+    total_size += 1 + 1;
   }
 
-  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
+        _internal_metadata_, total_size, &_cached_size_);
+  }
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
 }
 
-const ::google::protobuf::Message::ClassData EmulatorActions_BranchFlow::_class_data_ = {
-    EmulatorActions_BranchFlow::MergeImpl,
-    nullptr,  // OnDemandRegisterArenaDtor
-};
-const ::google::protobuf::Message::ClassData* EmulatorActions_BranchFlow::GetClassData() const {
-  return &_class_data_;
+void EmulatorActions_BranchFlow::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:EmulatorActions.BranchFlow)
+  GOOGLE_DCHECK_NE(&from, this);
+  const EmulatorActions_BranchFlow* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<EmulatorActions_BranchFlow>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:EmulatorActions.BranchFlow)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:EmulatorActions.BranchFlow)
+    MergeFrom(*source);
+  }
 }
 
-void EmulatorActions_BranchFlow::MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg) {
-  auto* const _this = static_cast<EmulatorActions_BranchFlow*>(&to_msg);
-  auto& from = static_cast<const EmulatorActions_BranchFlow&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:EmulatorActions.BranchFlow)
-  ABSL_DCHECK_NE(&from, _this);
-  ::uint32_t cached_has_bits = 0;
+void EmulatorActions_BranchFlow::MergeFrom(const EmulatorActions_BranchFlow& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:EmulatorActions.BranchFlow)
+  GOOGLE_DCHECK_NE(&from, this);
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from._internal_is_mispredict() != 0) {
-    _this->_internal_set_is_mispredict(from._internal_is_mispredict());
+  if (from.is_mispredict() != 0) {
+    _internal_set_is_mispredict(from._internal_is_mispredict());
   }
-  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
+}
+
+void EmulatorActions_BranchFlow::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:EmulatorActions.BranchFlow)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
 }
 
 void EmulatorActions_BranchFlow::CopyFrom(const EmulatorActions_BranchFlow& from) {
@@ -811,31 +850,32 @@ void EmulatorActions_BranchFlow::CopyFrom(const EmulatorActions_BranchFlow& from
   MergeFrom(from);
 }
 
-PROTOBUF_NOINLINE bool EmulatorActions_BranchFlow::IsInitialized() const {
+bool EmulatorActions_BranchFlow::IsInitialized() const {
   return true;
 }
 
-::_pbi::CachedSize* EmulatorActions_BranchFlow::AccessCachedSize() const {
-  return &_impl_._cached_size_;
-}
-void EmulatorActions_BranchFlow::InternalSwap(EmulatorActions_BranchFlow* PROTOBUF_RESTRICT other) {
+void EmulatorActions_BranchFlow::InternalSwap(EmulatorActions_BranchFlow* other) {
   using std::swap;
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-        swap(_impl_.is_mispredict_, other->_impl_.is_mispredict_);
+  _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
+  swap(is_mispredict_, other->is_mispredict_);
 }
 
-::google::protobuf::Metadata EmulatorActions_BranchFlow::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_emulator_2eproto_getter, &descriptor_table_emulator_2eproto_once,
-      file_level_metadata_emulator_2eproto[2]);
+::PROTOBUF_NAMESPACE_ID::Metadata EmulatorActions_BranchFlow::GetMetadata() const {
+  return GetMetadataStatic();
 }
+
+
 // ===================================================================
 
+void EmulatorActions_Instruction::InitAsDefaultInstance() {
+  ::_EmulatorActions_Instruction_default_instance_._instance.get_mutable()->memory_access_ = const_cast< ::EmulatorActions_MemoryAccess*>(
+      ::EmulatorActions_MemoryAccess::internal_default_instance());
+  ::_EmulatorActions_Instruction_default_instance_._instance.get_mutable()->branch_flow_ = const_cast< ::EmulatorActions_BranchFlow*>(
+      ::EmulatorActions_BranchFlow::internal_default_instance());
+}
 class EmulatorActions_Instruction::_Internal {
  public:
-  using HasBits = decltype(std::declval<EmulatorActions_Instruction>()._impl_._has_bits_);
-  static constexpr ::int32_t kHasBitsOffset =
-    8 * PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_._has_bits_);
+  using HasBits = decltype(std::declval<EmulatorActions_Instruction>()._has_bits_);
   static const ::EmulatorActions_MemoryAccess& memory_access(const EmulatorActions_Instruction* msg);
   static void set_has_memory_access(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
@@ -846,268 +886,328 @@ class EmulatorActions_Instruction::_Internal {
   }
 };
 
-const ::EmulatorActions_MemoryAccess& EmulatorActions_Instruction::_Internal::memory_access(const EmulatorActions_Instruction* msg) {
-  return *msg->_impl_.memory_access_;
+const ::EmulatorActions_MemoryAccess&
+EmulatorActions_Instruction::_Internal::memory_access(const EmulatorActions_Instruction* msg) {
+  return *msg->memory_access_;
 }
-const ::EmulatorActions_BranchFlow& EmulatorActions_Instruction::_Internal::branch_flow(const EmulatorActions_Instruction* msg) {
-  return *msg->_impl_.branch_flow_;
+const ::EmulatorActions_BranchFlow&
+EmulatorActions_Instruction::_Internal::branch_flow(const EmulatorActions_Instruction* msg) {
+  return *msg->branch_flow_;
 }
-EmulatorActions_Instruction::EmulatorActions_Instruction(::google::protobuf::Arena* arena)
-    : ::google::protobuf::Message(arena) {
-  SharedCtor(arena);
+EmulatorActions_Instruction::EmulatorActions_Instruction(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena) {
+  SharedCtor();
+  RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:EmulatorActions.Instruction)
 }
-inline PROTOBUF_NDEBUG_INLINE EmulatorActions_Instruction::Impl_::Impl_(
-    ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
-    const Impl_& from)
-      : _has_bits_{from._has_bits_},
-        _cached_size_{0},
-        opcode_(arena, from.opcode_) {}
-
-EmulatorActions_Instruction::EmulatorActions_Instruction(
-    ::google::protobuf::Arena* arena,
-    const EmulatorActions_Instruction& from)
-    : ::google::protobuf::Message(arena) {
-  EmulatorActions_Instruction* const _this = this;
-  (void)_this;
-  _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
-      from._internal_metadata_);
-  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_);
-  ::uint32_t cached_has_bits = _impl_._has_bits_[0];
-  _impl_.memory_access_ = (cached_has_bits & 0x00000001u)
-                ? CreateMaybeMessage<::EmulatorActions_MemoryAccess>(arena, *from._impl_.memory_access_)
-                : nullptr;
-  _impl_.branch_flow_ = (cached_has_bits & 0x00000002u)
-                ? CreateMaybeMessage<::EmulatorActions_BranchFlow>(arena, *from._impl_.branch_flow_)
-                : nullptr;
-  _impl_.addr_ = from._impl_.addr_;
-
+EmulatorActions_Instruction::EmulatorActions_Instruction(const EmulatorActions_Instruction& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message(),
+      _has_bits_(from._has_bits_) {
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  opcode_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (!from._internal_opcode().empty()) {
+    opcode_.Set(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), from._internal_opcode(),
+      GetArena());
+  }
+  if (from._internal_has_memory_access()) {
+    memory_access_ = new ::EmulatorActions_MemoryAccess(*from.memory_access_);
+  } else {
+    memory_access_ = nullptr;
+  }
+  if (from._internal_has_branch_flow()) {
+    branch_flow_ = new ::EmulatorActions_BranchFlow(*from.branch_flow_);
+  } else {
+    branch_flow_ = nullptr;
+  }
+  ::memcpy(&addr_, &from.addr_,
+    static_cast<size_t>(reinterpret_cast<char*>(&size_) -
+    reinterpret_cast<char*>(&addr_)) + sizeof(size_));
   // @@protoc_insertion_point(copy_constructor:EmulatorActions.Instruction)
 }
-inline PROTOBUF_NDEBUG_INLINE EmulatorActions_Instruction::Impl_::Impl_(
-    ::google::protobuf::internal::InternalVisibility visibility,
-    ::google::protobuf::Arena* arena)
-      : _cached_size_{0},
-        opcode_(arena) {}
 
-inline void EmulatorActions_Instruction::SharedCtor(::_pb::Arena* arena) {
-  new (&_impl_) Impl_(internal_visibility(), arena);
-  ::memset(reinterpret_cast<char *>(&_impl_) +
-               offsetof(Impl_, memory_access_),
-           0,
-           offsetof(Impl_, addr_) -
-               offsetof(Impl_, memory_access_) +
-               sizeof(Impl_::addr_));
+void EmulatorActions_Instruction::SharedCtor() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_EmulatorActions_Instruction_emulator_2eproto.base);
+  opcode_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  ::memset(&memory_access_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&size_) -
+      reinterpret_cast<char*>(&memory_access_)) + sizeof(size_));
 }
+
 EmulatorActions_Instruction::~EmulatorActions_Instruction() {
   // @@protoc_insertion_point(destructor:EmulatorActions.Instruction)
-  _internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   SharedDtor();
-}
-inline void EmulatorActions_Instruction::SharedDtor() {
-  ABSL_DCHECK(GetArena() == nullptr);
-  _impl_.opcode_.Destroy();
-  delete _impl_.memory_access_;
-  delete _impl_.branch_flow_;
-  _impl_.~Impl_();
+  _internal_metadata_.Delete<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-PROTOBUF_NOINLINE void EmulatorActions_Instruction::Clear() {
+void EmulatorActions_Instruction::SharedDtor() {
+  GOOGLE_DCHECK(GetArena() == nullptr);
+  opcode_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
+  if (this != internal_default_instance()) delete memory_access_;
+  if (this != internal_default_instance()) delete branch_flow_;
+}
+
+void EmulatorActions_Instruction::ArenaDtor(void* object) {
+  EmulatorActions_Instruction* _this = reinterpret_cast< EmulatorActions_Instruction* >(object);
+  (void)_this;
+}
+void EmulatorActions_Instruction::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+}
+void EmulatorActions_Instruction::SetCachedSize(int size) const {
+  _cached_size_.Set(size);
+}
+const EmulatorActions_Instruction& EmulatorActions_Instruction::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_EmulatorActions_Instruction_emulator_2eproto.base);
+  return *internal_default_instance();
+}
+
+
+void EmulatorActions_Instruction::Clear() {
 // @@protoc_insertion_point(message_clear_start:EmulatorActions.Instruction)
-  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  ::uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.opcode_.ClearToEmpty();
-  cached_has_bits = _impl_._has_bits_[0];
+  opcode_.ClearToEmpty(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+  cached_has_bits = _has_bits_[0];
   if (cached_has_bits & 0x00000003u) {
     if (cached_has_bits & 0x00000001u) {
-      ABSL_DCHECK(_impl_.memory_access_ != nullptr);
-      _impl_.memory_access_->Clear();
+      if (GetArena() == nullptr && memory_access_ != nullptr) {
+        delete memory_access_;
+      }
+      memory_access_ = nullptr;
     }
     if (cached_has_bits & 0x00000002u) {
-      ABSL_DCHECK(_impl_.branch_flow_ != nullptr);
-      _impl_.branch_flow_->Clear();
+      if (GetArena() == nullptr && branch_flow_ != nullptr) {
+        delete branch_flow_;
+      }
+      branch_flow_ = nullptr;
     }
   }
-  _impl_.addr_ = ::uint64_t{0u};
-  _impl_._has_bits_.Clear();
-  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
+  ::memset(&addr_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&size_) -
+      reinterpret_cast<char*>(&addr_)) + sizeof(size_));
+  _has_bits_.Clear();
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* EmulatorActions_Instruction::_InternalParse(
-    const char* ptr, ::_pbi::ParseContext* ctx) {
-  ptr = ::_pbi::TcParser::ParseLoop(this, ptr, ctx, &_table_.header);
+const char* EmulatorActions_Instruction::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  _Internal::HasBits has_bits{};
+  ::PROTOBUF_NAMESPACE_ID::Arena* arena = GetArena(); (void)arena;
+  while (!ctx->Done(&ptr)) {
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
+    switch (tag >> 3) {
+      // bytes opcode = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
+          auto str = _internal_mutable_opcode();
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::InlineGreedyStringParser(str, ptr, ctx);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // uint64 addr = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
+          addr_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // uint64 size = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 24)) {
+          size_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // .EmulatorActions.MemoryAccess memory_access = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
+          ptr = ctx->ParseMessage(_internal_mutable_memory_access(), ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // .EmulatorActions.BranchFlow branch_flow = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 42)) {
+          ptr = ctx->ParseMessage(_internal_mutable_branch_flow(), ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag,
+            _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+            ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
+    }  // switch
+  }  // while
+success:
+  _has_bits_.Or(has_bits);
   return ptr;
+failure:
+  ptr = nullptr;
+  goto success;
+#undef CHK_
 }
 
-
-PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 4, 2, 0, 2> EmulatorActions_Instruction::_table_ = {
-  {
-    PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_._has_bits_),
-    0, // no _extensions_
-    4, 24,  // max_field_number, fast_idx_mask
-    offsetof(decltype(_table_), field_lookup_table),
-    4294967280,  // skipmap
-    offsetof(decltype(_table_), field_entries),
-    4,  // num_field_entries
-    2,  // num_aux_entries
-    offsetof(decltype(_table_), aux_entries),
-    &_EmulatorActions_Instruction_default_instance_._instance,
-    ::_pbi::TcParser::GenericFallback,  // fallback
-  }, {{
-    // optional .EmulatorActions.BranchFlow branch_flow = 4;
-    {::_pbi::TcParser::FastMtS1,
-     {34, 1, 1, PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.branch_flow_)}},
-    // bytes opcode = 1;
-    {::_pbi::TcParser::FastBS1,
-     {10, 63, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.opcode_)}},
-    // uint64 addr = 2;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(EmulatorActions_Instruction, _impl_.addr_), 63>(),
-     {16, 63, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.addr_)}},
-    // optional .EmulatorActions.MemoryAccess memory_access = 3;
-    {::_pbi::TcParser::FastMtS1,
-     {26, 0, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.memory_access_)}},
-  }}, {{
-    65535, 65535
-  }}, {{
-    // bytes opcode = 1;
-    {PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.opcode_), -1, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kBytes | ::_fl::kRepAString)},
-    // uint64 addr = 2;
-    {PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.addr_), -1, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
-    // optional .EmulatorActions.MemoryAccess memory_access = 3;
-    {PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.memory_access_), _Internal::kHasBitsOffset + 0, 0,
-    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
-    // optional .EmulatorActions.BranchFlow branch_flow = 4;
-    {PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.branch_flow_), _Internal::kHasBitsOffset + 1, 1,
-    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
-  }}, {{
-    {::_pbi::TcParser::GetTable<::EmulatorActions_MemoryAccess>()},
-    {::_pbi::TcParser::GetTable<::EmulatorActions_BranchFlow>()},
-  }}, {{
-  }},
-};
-
-::uint8_t* EmulatorActions_Instruction::_InternalSerialize(
-    ::uint8_t* target,
-    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+::PROTOBUF_NAMESPACE_ID::uint8* EmulatorActions_Instruction::_InternalSerialize(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:EmulatorActions.Instruction)
-  ::uint32_t cached_has_bits = 0;
-  (void)cached_has_bits;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
 
   // bytes opcode = 1;
-  if (!this->_internal_opcode().empty()) {
-    const std::string& _s = this->_internal_opcode();
-    target = stream->WriteBytesMaybeAliased(1, _s, target);
+  if (this->opcode().size() > 0) {
+    target = stream->WriteBytesMaybeAliased(
+        1, this->_internal_opcode(), target);
   }
 
   // uint64 addr = 2;
-  if (this->_internal_addr() != 0) {
+  if (this->addr() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
-        2, this->_internal_addr(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(2, this->_internal_addr(), target);
   }
 
-  cached_has_bits = _impl_._has_bits_[0];
-  // optional .EmulatorActions.MemoryAccess memory_access = 3;
-  if (cached_has_bits & 0x00000001u) {
-    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
-        3, _Internal::memory_access(this),
-        _Internal::memory_access(this).GetCachedSize(), target, stream);
+  // uint64 size = 3;
+  if (this->size() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(3, this->_internal_size(), target);
   }
 
-  // optional .EmulatorActions.BranchFlow branch_flow = 4;
-  if (cached_has_bits & 0x00000002u) {
-    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
-        4, _Internal::branch_flow(this),
-        _Internal::branch_flow(this).GetCachedSize(), target, stream);
+  // .EmulatorActions.MemoryAccess memory_access = 4;
+  if (_internal_has_memory_access()) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(
+        4, _Internal::memory_access(this), target, stream);
+  }
+
+  // .EmulatorActions.BranchFlow branch_flow = 5;
+  if (_internal_has_branch_flow()) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(
+        5, _Internal::branch_flow(this), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target =
-        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-            _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
   // @@protoc_insertion_point(serialize_to_array_end:EmulatorActions.Instruction)
   return target;
 }
 
-::size_t EmulatorActions_Instruction::ByteSizeLong() const {
+size_t EmulatorActions_Instruction::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:EmulatorActions.Instruction)
-  ::size_t total_size = 0;
+  size_t total_size = 0;
 
-  ::uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // bytes opcode = 1;
-  if (!this->_internal_opcode().empty()) {
-    total_size += 1 + ::google::protobuf::internal::WireFormatLite::BytesSize(
-                                    this->_internal_opcode());
+  if (this->opcode().size() > 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
+        this->_internal_opcode());
   }
 
-  cached_has_bits = _impl_._has_bits_[0];
+  cached_has_bits = _has_bits_[0];
   if (cached_has_bits & 0x00000003u) {
-    // optional .EmulatorActions.MemoryAccess memory_access = 3;
+    // .EmulatorActions.MemoryAccess memory_access = 4;
     if (cached_has_bits & 0x00000001u) {
-      total_size +=
-          1 + ::google::protobuf::internal::WireFormatLite::MessageSize(*_impl_.memory_access_);
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *memory_access_);
     }
 
-    // optional .EmulatorActions.BranchFlow branch_flow = 4;
+    // .EmulatorActions.BranchFlow branch_flow = 5;
     if (cached_has_bits & 0x00000002u) {
-      total_size +=
-          1 + ::google::protobuf::internal::WireFormatLite::MessageSize(*_impl_.branch_flow_);
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+          *branch_flow_);
     }
 
   }
   // uint64 addr = 2;
-  if (this->_internal_addr() != 0) {
-    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
+  if (this->addr() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
         this->_internal_addr());
   }
 
-  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+  // uint64 size = 3;
+  if (this->size() != 0) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
+        this->_internal_size());
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
+        _internal_metadata_, total_size, &_cached_size_);
+  }
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
 }
 
-const ::google::protobuf::Message::ClassData EmulatorActions_Instruction::_class_data_ = {
-    EmulatorActions_Instruction::MergeImpl,
-    nullptr,  // OnDemandRegisterArenaDtor
-};
-const ::google::protobuf::Message::ClassData* EmulatorActions_Instruction::GetClassData() const {
-  return &_class_data_;
+void EmulatorActions_Instruction::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:EmulatorActions.Instruction)
+  GOOGLE_DCHECK_NE(&from, this);
+  const EmulatorActions_Instruction* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<EmulatorActions_Instruction>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:EmulatorActions.Instruction)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:EmulatorActions.Instruction)
+    MergeFrom(*source);
+  }
 }
 
-void EmulatorActions_Instruction::MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg) {
-  auto* const _this = static_cast<EmulatorActions_Instruction*>(&to_msg);
-  auto& from = static_cast<const EmulatorActions_Instruction&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:EmulatorActions.Instruction)
-  ABSL_DCHECK_NE(&from, _this);
-  ::uint32_t cached_has_bits = 0;
+void EmulatorActions_Instruction::MergeFrom(const EmulatorActions_Instruction& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:EmulatorActions.Instruction)
+  GOOGLE_DCHECK_NE(&from, this);
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (!from._internal_opcode().empty()) {
-    _this->_internal_set_opcode(from._internal_opcode());
+  if (from.opcode().size() > 0) {
+    _internal_set_opcode(from._internal_opcode());
   }
-  cached_has_bits = from._impl_._has_bits_[0];
+  cached_has_bits = from._has_bits_[0];
   if (cached_has_bits & 0x00000003u) {
     if (cached_has_bits & 0x00000001u) {
-      _this->_internal_mutable_memory_access()->::EmulatorActions_MemoryAccess::MergeFrom(
-          from._internal_memory_access());
+      _internal_mutable_memory_access()->::EmulatorActions_MemoryAccess::MergeFrom(from._internal_memory_access());
     }
     if (cached_has_bits & 0x00000002u) {
-      _this->_internal_mutable_branch_flow()->::EmulatorActions_BranchFlow::MergeFrom(
-          from._internal_branch_flow());
+      _internal_mutable_branch_flow()->::EmulatorActions_BranchFlow::MergeFrom(from._internal_branch_flow());
     }
   }
-  if (from._internal_addr() != 0) {
-    _this->_internal_set_addr(from._internal_addr());
+  if (from.addr() != 0) {
+    _internal_set_addr(from._internal_addr());
   }
-  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
+  if (from.size() != 0) {
+    _internal_set_size(from._internal_size());
+  }
+}
+
+void EmulatorActions_Instruction::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:EmulatorActions.Instruction)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
 }
 
 void EmulatorActions_Instruction::CopyFrom(const EmulatorActions_Instruction& from) {
@@ -1117,189 +1217,207 @@ void EmulatorActions_Instruction::CopyFrom(const EmulatorActions_Instruction& fr
   MergeFrom(from);
 }
 
-PROTOBUF_NOINLINE bool EmulatorActions_Instruction::IsInitialized() const {
+bool EmulatorActions_Instruction::IsInitialized() const {
   return true;
 }
 
-::_pbi::CachedSize* EmulatorActions_Instruction::AccessCachedSize() const {
-  return &_impl_._cached_size_;
-}
-void EmulatorActions_Instruction::InternalSwap(EmulatorActions_Instruction* PROTOBUF_RESTRICT other) {
+void EmulatorActions_Instruction::InternalSwap(EmulatorActions_Instruction* other) {
   using std::swap;
-  auto* arena = GetArena();
-  ABSL_DCHECK_EQ(arena, other->GetArena());
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
-  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.opcode_, &other->_impl_.opcode_, arena);
-  ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.addr_)
-      + sizeof(EmulatorActions_Instruction::_impl_.addr_)
-      - PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.memory_access_)>(
-          reinterpret_cast<char*>(&_impl_.memory_access_),
-          reinterpret_cast<char*>(&other->_impl_.memory_access_));
+  _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
+  swap(_has_bits_[0], other->_has_bits_[0]);
+  opcode_.Swap(&other->opcode_, &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArena());
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, size_)
+      + sizeof(EmulatorActions_Instruction::size_)
+      - PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, memory_access_)>(
+          reinterpret_cast<char*>(&memory_access_),
+          reinterpret_cast<char*>(&other->memory_access_));
 }
 
-::google::protobuf::Metadata EmulatorActions_Instruction::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_emulator_2eproto_getter, &descriptor_table_emulator_2eproto_once,
-      file_level_metadata_emulator_2eproto[3]);
+::PROTOBUF_NAMESPACE_ID::Metadata EmulatorActions_Instruction::GetMetadata() const {
+  return GetMetadataStatic();
 }
+
+
 // ===================================================================
 
+void EmulatorActions::InitAsDefaultInstance() {
+}
 class EmulatorActions::_Internal {
  public:
 };
 
-EmulatorActions::EmulatorActions(::google::protobuf::Arena* arena)
-    : ::google::protobuf::Message(arena) {
-  SharedCtor(arena);
+EmulatorActions::EmulatorActions(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::Message(arena),
+  instructions_(arena) {
+  SharedCtor();
+  RegisterArenaDtor(arena);
   // @@protoc_insertion_point(arena_constructor:EmulatorActions)
 }
-inline PROTOBUF_NDEBUG_INLINE EmulatorActions::Impl_::Impl_(
-    ::google::protobuf::internal::InternalVisibility visibility, ::google::protobuf::Arena* arena,
-    const Impl_& from)
-      : instructions_{visibility, arena, from.instructions_},
-        _cached_size_{0} {}
-
-EmulatorActions::EmulatorActions(
-    ::google::protobuf::Arena* arena,
-    const EmulatorActions& from)
-    : ::google::protobuf::Message(arena) {
-  EmulatorActions* const _this = this;
-  (void)_this;
-  _internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(
-      from._internal_metadata_);
-  new (&_impl_) Impl_(internal_visibility(), arena, from._impl_);
-
+EmulatorActions::EmulatorActions(const EmulatorActions& from)
+  : ::PROTOBUF_NAMESPACE_ID::Message(),
+      instructions_(from.instructions_) {
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
   // @@protoc_insertion_point(copy_constructor:EmulatorActions)
 }
-inline PROTOBUF_NDEBUG_INLINE EmulatorActions::Impl_::Impl_(
-    ::google::protobuf::internal::InternalVisibility visibility,
-    ::google::protobuf::Arena* arena)
-      : instructions_{visibility, arena},
-        _cached_size_{0} {}
 
-inline void EmulatorActions::SharedCtor(::_pb::Arena* arena) {
-  new (&_impl_) Impl_(internal_visibility(), arena);
+void EmulatorActions::SharedCtor() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_EmulatorActions_emulator_2eproto.base);
 }
+
 EmulatorActions::~EmulatorActions() {
   // @@protoc_insertion_point(destructor:EmulatorActions)
-  _internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   SharedDtor();
-}
-inline void EmulatorActions::SharedDtor() {
-  ABSL_DCHECK(GetArena() == nullptr);
-  _impl_.~Impl_();
+  _internal_metadata_.Delete<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-PROTOBUF_NOINLINE void EmulatorActions::Clear() {
+void EmulatorActions::SharedDtor() {
+  GOOGLE_DCHECK(GetArena() == nullptr);
+}
+
+void EmulatorActions::ArenaDtor(void* object) {
+  EmulatorActions* _this = reinterpret_cast< EmulatorActions* >(object);
+  (void)_this;
+}
+void EmulatorActions::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+}
+void EmulatorActions::SetCachedSize(int size) const {
+  _cached_size_.Set(size);
+}
+const EmulatorActions& EmulatorActions::default_instance() {
+  ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&::scc_info_EmulatorActions_emulator_2eproto.base);
+  return *internal_default_instance();
+}
+
+
+void EmulatorActions::Clear() {
 // @@protoc_insertion_point(message_clear_start:EmulatorActions)
-  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  ::uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.instructions_.Clear();
-  _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
+  instructions_.Clear();
+  _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* EmulatorActions::_InternalParse(
-    const char* ptr, ::_pbi::ParseContext* ctx) {
-  ptr = ::_pbi::TcParser::ParseLoop(this, ptr, ctx, &_table_.header);
+const char* EmulatorActions::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  ::PROTOBUF_NAMESPACE_ID::Arena* arena = GetArena(); (void)arena;
+  while (!ctx->Done(&ptr)) {
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    CHK_(ptr);
+    switch (tag >> 3) {
+      // repeated .EmulatorActions.Instruction instructions = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 10)) {
+          ptr -= 1;
+          do {
+            ptr += 1;
+            ptr = ctx->ParseMessage(_internal_add_instructions(), ptr);
+            CHK_(ptr);
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<10>(ptr));
+        } else goto handle_unusual;
+        continue;
+      default: {
+      handle_unusual:
+        if ((tag & 7) == 4 || tag == 0) {
+          ctx->SetLastTag(tag);
+          goto success;
+        }
+        ptr = UnknownFieldParse(tag,
+            _internal_metadata_.mutable_unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(),
+            ptr, ctx);
+        CHK_(ptr != nullptr);
+        continue;
+      }
+    }  // switch
+  }  // while
+success:
   return ptr;
+failure:
+  ptr = nullptr;
+  goto success;
+#undef CHK_
 }
 
-
-PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<0, 1, 1, 0, 2> EmulatorActions::_table_ = {
-  {
-    0,  // no _has_bits_
-    0, // no _extensions_
-    1, 0,  // max_field_number, fast_idx_mask
-    offsetof(decltype(_table_), field_lookup_table),
-    4294967294,  // skipmap
-    offsetof(decltype(_table_), field_entries),
-    1,  // num_field_entries
-    1,  // num_aux_entries
-    offsetof(decltype(_table_), aux_entries),
-    &_EmulatorActions_default_instance_._instance,
-    ::_pbi::TcParser::GenericFallback,  // fallback
-  }, {{
-    // repeated .EmulatorActions.Instruction instructions = 1;
-    {::_pbi::TcParser::FastMtR1,
-     {10, 63, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions, _impl_.instructions_)}},
-  }}, {{
-    65535, 65535
-  }}, {{
-    // repeated .EmulatorActions.Instruction instructions = 1;
-    {PROTOBUF_FIELD_OFFSET(EmulatorActions, _impl_.instructions_), 0, 0,
-    (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
-  }}, {{
-    {::_pbi::TcParser::GetTable<::EmulatorActions_Instruction>()},
-  }}, {{
-  }},
-};
-
-::uint8_t* EmulatorActions::_InternalSerialize(
-    ::uint8_t* target,
-    ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+::PROTOBUF_NAMESPACE_ID::uint8* EmulatorActions::_InternalSerialize(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:EmulatorActions)
-  ::uint32_t cached_has_bits = 0;
-  (void)cached_has_bits;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
 
   // repeated .EmulatorActions.Instruction instructions = 1;
-  for (unsigned i = 0,
-      n = static_cast<unsigned>(this->_internal_instructions_size()); i < n; i++) {
-    const auto& repfield = this->_internal_instructions().Get(i);
-    target = ::google::protobuf::internal::WireFormatLite::
-        InternalWriteMessage(1, repfield, repfield.GetCachedSize(), target, stream);
+  for (unsigned int i = 0,
+      n = static_cast<unsigned int>(this->_internal_instructions_size()); i < n; i++) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(1, this->_internal_instructions(i), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
-    target =
-        ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
-            _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance), target, stream);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
+        _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
   // @@protoc_insertion_point(serialize_to_array_end:EmulatorActions)
   return target;
 }
 
-::size_t EmulatorActions::ByteSizeLong() const {
+size_t EmulatorActions::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:EmulatorActions)
-  ::size_t total_size = 0;
+  size_t total_size = 0;
 
-  ::uint32_t cached_has_bits = 0;
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // repeated .EmulatorActions.Instruction instructions = 1;
   total_size += 1UL * this->_internal_instructions_size();
-  for (const auto& msg : this->_internal_instructions()) {
+  for (const auto& msg : this->instructions_) {
     total_size +=
-      ::google::protobuf::internal::WireFormatLite::MessageSize(msg);
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
   }
-  return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
+        _internal_metadata_, total_size, &_cached_size_);
+  }
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
 }
 
-const ::google::protobuf::Message::ClassData EmulatorActions::_class_data_ = {
-    EmulatorActions::MergeImpl,
-    nullptr,  // OnDemandRegisterArenaDtor
-};
-const ::google::protobuf::Message::ClassData* EmulatorActions::GetClassData() const {
-  return &_class_data_;
+void EmulatorActions::MergeFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_merge_from_start:EmulatorActions)
+  GOOGLE_DCHECK_NE(&from, this);
+  const EmulatorActions* source =
+      ::PROTOBUF_NAMESPACE_ID::DynamicCastToGenerated<EmulatorActions>(
+          &from);
+  if (source == nullptr) {
+  // @@protoc_insertion_point(generalized_merge_from_cast_fail:EmulatorActions)
+    ::PROTOBUF_NAMESPACE_ID::internal::ReflectionOps::Merge(from, this);
+  } else {
+  // @@protoc_insertion_point(generalized_merge_from_cast_success:EmulatorActions)
+    MergeFrom(*source);
+  }
 }
 
-void EmulatorActions::MergeImpl(::google::protobuf::Message& to_msg, const ::google::protobuf::Message& from_msg) {
-  auto* const _this = static_cast<EmulatorActions*>(&to_msg);
-  auto& from = static_cast<const EmulatorActions&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:EmulatorActions)
-  ABSL_DCHECK_NE(&from, _this);
-  ::uint32_t cached_has_bits = 0;
+void EmulatorActions::MergeFrom(const EmulatorActions& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:EmulatorActions)
+  GOOGLE_DCHECK_NE(&from, this);
+  _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
-  _this->_internal_mutable_instructions()->MergeFrom(
-      from._internal_instructions());
-  _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
+  instructions_.MergeFrom(from.instructions_);
+}
+
+void EmulatorActions::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
+// @@protoc_insertion_point(generalized_copy_from_start:EmulatorActions)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
 }
 
 void EmulatorActions::CopyFrom(const EmulatorActions& from) {
@@ -1309,28 +1427,39 @@ void EmulatorActions::CopyFrom(const EmulatorActions& from) {
   MergeFrom(from);
 }
 
-PROTOBUF_NOINLINE bool EmulatorActions::IsInitialized() const {
+bool EmulatorActions::IsInitialized() const {
   return true;
 }
 
-::_pbi::CachedSize* EmulatorActions::AccessCachedSize() const {
-  return &_impl_._cached_size_;
-}
-void EmulatorActions::InternalSwap(EmulatorActions* PROTOBUF_RESTRICT other) {
+void EmulatorActions::InternalSwap(EmulatorActions* other) {
   using std::swap;
-  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  _impl_.instructions_.InternalSwap(&other->_impl_.instructions_);
+  _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
+  instructions_.InternalSwap(&other->instructions_);
 }
 
-::google::protobuf::Metadata EmulatorActions::GetMetadata() const {
-  return ::_pbi::AssignDescriptors(
-      &descriptor_table_emulator_2eproto_getter, &descriptor_table_emulator_2eproto_once,
-      file_level_metadata_emulator_2eproto[4]);
+::PROTOBUF_NAMESPACE_ID::Metadata EmulatorActions::GetMetadata() const {
+  return GetMetadataStatic();
 }
+
+
 // @@protoc_insertion_point(namespace_scope)
-namespace google {
-namespace protobuf {
-}  // namespace protobuf
-}  // namespace google
+PROTOBUF_NAMESPACE_OPEN
+template<> PROTOBUF_NOINLINE ::NextAction* Arena::CreateMaybeMessage< ::NextAction >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::NextAction >(arena);
+}
+template<> PROTOBUF_NOINLINE ::EmulatorActions_MemoryAccess* Arena::CreateMaybeMessage< ::EmulatorActions_MemoryAccess >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::EmulatorActions_MemoryAccess >(arena);
+}
+template<> PROTOBUF_NOINLINE ::EmulatorActions_BranchFlow* Arena::CreateMaybeMessage< ::EmulatorActions_BranchFlow >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::EmulatorActions_BranchFlow >(arena);
+}
+template<> PROTOBUF_NOINLINE ::EmulatorActions_Instruction* Arena::CreateMaybeMessage< ::EmulatorActions_Instruction >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::EmulatorActions_Instruction >(arena);
+}
+template<> PROTOBUF_NOINLINE ::EmulatorActions* Arena::CreateMaybeMessage< ::EmulatorActions >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::EmulatorActions >(arena);
+}
+PROTOBUF_NAMESPACE_CLOSE
+
 // @@protoc_insertion_point(global_scope)
-#include "google/protobuf/port_undef.inc"
+#include <google/protobuf/port_undef.inc>
