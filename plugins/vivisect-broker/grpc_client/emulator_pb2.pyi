@@ -28,16 +28,18 @@ class EmulatorActions(_message.Message):
         is_mispredict: bool
         def __init__(self, is_mispredict: bool = ...) -> None: ...
     class Instruction(_message.Message):
-        __slots__ = ("opcode", "addr", "memory_access", "branch_flow")
+        __slots__ = ("opcode", "addr", "size", "memory_access", "branch_flow")
         OPCODE_FIELD_NUMBER: _ClassVar[int]
         ADDR_FIELD_NUMBER: _ClassVar[int]
+        SIZE_FIELD_NUMBER: _ClassVar[int]
         MEMORY_ACCESS_FIELD_NUMBER: _ClassVar[int]
         BRANCH_FLOW_FIELD_NUMBER: _ClassVar[int]
         opcode: bytes
         addr: int
+        size: int
         memory_access: EmulatorActions.MemoryAccess
         branch_flow: EmulatorActions.BranchFlow
-        def __init__(self, opcode: _Optional[bytes] = ..., addr: _Optional[int] = ..., memory_access: _Optional[_Union[EmulatorActions.MemoryAccess, _Mapping]] = ..., branch_flow: _Optional[_Union[EmulatorActions.BranchFlow, _Mapping]] = ...) -> None: ...
+        def __init__(self, opcode: _Optional[bytes] = ..., addr: _Optional[int] = ..., size: _Optional[int] = ..., memory_access: _Optional[_Union[EmulatorActions.MemoryAccess, _Mapping]] = ..., branch_flow: _Optional[_Union[EmulatorActions.BranchFlow, _Mapping]] = ...) -> None: ...
     INSTRUCTIONS_FIELD_NUMBER: _ClassVar[int]
     instructions: _containers.RepeatedCompositeFieldContainer[EmulatorActions.Instruction]
     def __init__(self, instructions: _Optional[_Iterable[_Union[EmulatorActions.Instruction, _Mapping]]] = ...) -> None: ...

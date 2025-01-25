@@ -765,9 +765,10 @@ class EmulatorActions_Instruction final :
 
   enum : int {
     kOpcodeFieldNumber = 1,
-    kMemoryAccessFieldNumber = 3,
-    kBranchFlowFieldNumber = 4,
+    kMemoryAccessFieldNumber = 4,
+    kBranchFlowFieldNumber = 5,
     kAddrFieldNumber = 2,
+    kSizeFieldNumber = 3,
   };
   // bytes opcode = 1;
   void clear_opcode() ;
@@ -785,7 +786,7 @@ class EmulatorActions_Instruction final :
   std::string* _internal_mutable_opcode();
 
   public:
-  // optional .EmulatorActions.MemoryAccess memory_access = 3;
+  // optional .EmulatorActions.MemoryAccess memory_access = 4;
   bool has_memory_access() const;
   void clear_memory_access() ;
   const ::EmulatorActions_MemoryAccess& memory_access() const;
@@ -800,7 +801,7 @@ class EmulatorActions_Instruction final :
   ::EmulatorActions_MemoryAccess* _internal_mutable_memory_access();
 
   public:
-  // optional .EmulatorActions.BranchFlow branch_flow = 4;
+  // optional .EmulatorActions.BranchFlow branch_flow = 5;
   bool has_branch_flow() const;
   void clear_branch_flow() ;
   const ::EmulatorActions_BranchFlow& branch_flow() const;
@@ -825,13 +826,23 @@ class EmulatorActions_Instruction final :
   void _internal_set_addr(::uint64_t value);
 
   public:
+  // uint32 size = 3;
+  void clear_size() ;
+  ::uint32_t size() const;
+  void set_size(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_size() const;
+  void _internal_set_size(::uint32_t value);
+
+  public:
   // @@protoc_insertion_point(class_scope:EmulatorActions.Instruction)
  private:
   class _Internal;
 
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      2, 4, 2,
+      3, 5, 2,
       0, 2>
       _table_;
   friend class ::google::protobuf::MessageLite;
@@ -854,6 +865,7 @@ class EmulatorActions_Instruction final :
     ::EmulatorActions_MemoryAccess* memory_access_;
     ::EmulatorActions_BranchFlow* branch_flow_;
     ::uint64_t addr_;
+    ::uint32_t size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -1271,7 +1283,30 @@ inline void EmulatorActions_Instruction::_internal_set_addr(::uint64_t value) {
   _impl_.addr_ = value;
 }
 
-// optional .EmulatorActions.MemoryAccess memory_access = 3;
+// uint32 size = 3;
+inline void EmulatorActions_Instruction::clear_size() {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  _impl_.size_ = 0u;
+}
+inline ::uint32_t EmulatorActions_Instruction::size() const {
+  // @@protoc_insertion_point(field_get:EmulatorActions.Instruction.size)
+  return _internal_size();
+}
+inline void EmulatorActions_Instruction::set_size(::uint32_t value) {
+  _internal_set_size(value);
+  // @@protoc_insertion_point(field_set:EmulatorActions.Instruction.size)
+}
+inline ::uint32_t EmulatorActions_Instruction::_internal_size() const {
+  PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
+  return _impl_.size_;
+}
+inline void EmulatorActions_Instruction::_internal_set_size(::uint32_t value) {
+  PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
+  ;
+  _impl_.size_ = value;
+}
+
+// optional .EmulatorActions.MemoryAccess memory_access = 4;
 inline bool EmulatorActions_Instruction::has_memory_access() const {
   bool value = (_impl_._has_bits_[0] & 0x00000001u) != 0;
   PROTOBUF_ASSUME(!value || _impl_.memory_access_ != nullptr);
@@ -1367,7 +1402,7 @@ inline void EmulatorActions_Instruction::set_allocated_memory_access(::EmulatorA
   // @@protoc_insertion_point(field_set_allocated:EmulatorActions.Instruction.memory_access)
 }
 
-// optional .EmulatorActions.BranchFlow branch_flow = 4;
+// optional .EmulatorActions.BranchFlow branch_flow = 5;
 inline bool EmulatorActions_Instruction::has_branch_flow() const {
   bool value = (_impl_._has_bits_[0] & 0x00000002u) != 0;
   PROTOBUF_ASSUME(!value || _impl_.branch_flow_ != nullptr);

@@ -165,7 +165,20 @@ static cl::opt<unsigned>
           cl::desc("Latency for accessing the main memory"),
           cl::init(300U));
 
+enum BranchPredictor {
+  None, Naive, Skylake, IndirectBPU, LocalBPU
+};
+static cl::opt<BranchPredictor>
+  EnableBranchPredictor("enable-branch-predictor",
+                        cl::desc("Simuate the branch predictor hardware with one of the given models"),
+                        cl::init(BranchPredictor::Naive),
+                        cl::values(clEnumVal(None, "Branch predictor is not modeled"),
+                                   clEnumVal(Naive, "Naive branch predictor"),
+                                   clEnumVal(Skylake, "Predictor modeled after Intel Skylake"))
+  );
+
 namespace {
+
 std::tuple<std::optional<CacheUnit>, std::optional<CacheUnit>> buildCache() {
   if (!EnableCache)
     return std::make_tuple(std::nullopt, std::nullopt);
@@ -177,7 +190,28 @@ std::tuple<std::optional<CacheUnit>, std::optional<CacheUnit>> buildCache() {
   CacheUnit L1I(L1ISize, NumWays, L2, L1Latency);
   return std::make_tuple(L1I, L1D);
 }
+
+std::unique_ptr<AbstractBranchPredictorUnit> buildBranchPredictor() {
+  switch(EnableBranchPredictor) {
+    case Naive: {
+      auto BPU = std::make_unique<NaiveBranchPredictorUnit>(20, 20);
+      // TODO: Make penalty and history table size command-line parameters
+      return BPU;
+    }
+    case Skylake: {
+      auto BPU = std::make_unique<SkylakeBranchUnit>(20);
+      // TODO: Make penalty command-line parameter
+      return BPU;
+    }
+    case None:
+    default: 
+      return nullptr;
+  }
+}
+
 } // anonymous namespace
+
+MCADFetchDelayStage::Statistics *FetchDelayStats = nullptr; // TODO: ugly; move this elsewhere using hardware events
 
 void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
@@ -258,11 +292,12 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
                                           MCAPO.StoreQueueSize,
                                           MCAPO.AssumeNoAlias, &MDRegistry, L1D);
   auto HWS = std::make_unique<Scheduler>(SM, *LSU);
-  auto BPU = std::make_unique<SkylakeBranchUnit>(20);
+  auto BPU = buildBranchPredictor();
 
   // Create the pipeline stages.
   auto Fetch = std::make_unique<EntryStage>(SrcMgr);
-  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, *BPU, L1I);
+  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, BPU.get(), L1I);
+  FetchDelayStats = &FetchDelay->stats; // TODO: ugly; move this elsewhere using hardware events
   auto Dispatch = std::make_unique<DispatchStage>(STI, MRI, MCAPO.DispatchWidth,
                                                   *RCU, *PRF);
   auto Execute =
@@ -304,11 +339,11 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
   auto LSU = std::make_unique<MCADLSUnit>(SM, MCAPO.LoadQueueSize,
                                           MCAPO.StoreQueueSize,
                                           MCAPO.AssumeNoAlias, &MDRegistry);
-  auto BPU = std::make_unique<SkylakeBranchUnit>(20);
+  auto BPU = buildBranchPredictor();
 
   // Create the pipeline stages.
   auto Entry = std::make_unique<EntryStage>(SrcMgr);
-  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, *BPU, L1I);
+  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, BPU.get(), L1I);
   auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF, *CB, *LSU);
   auto StagePipeline = std::make_unique<Pipeline>();
 
@@ -578,6 +613,10 @@ void MCAWorker::printMCA(StringRef RegionDescription) {
        << RegionDescription << " ===\n";
 
   MCAPipelinePrinter->printReport(OS);
+  if(FetchDelayStats) {
+    OS << "Branch Instructions: " << FetchDelayStats->numBranches.count << (FetchDelayStats->numBranches.overflowed ? " (overflowed)" : "") << "\n";
+    OS << "Branch Mispredictions: " << FetchDelayStats->numMispredictions.count << (FetchDelayStats->numMispredictions.overflowed ? " (overflowed)" : "") << "\n";
+  }
 }
 
 MCAWorker::~MCAWorker() {

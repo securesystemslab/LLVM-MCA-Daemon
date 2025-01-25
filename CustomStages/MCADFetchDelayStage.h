@@ -27,10 +27,11 @@ class MCADFetchDelayStage : public llvm::mca::Stage {
         llvm::mca::InstRef IR;
     };
 
+
     const llvm::MCInstrInfo &MCII;
     std::deque<DelayedInstr> instrQueue = {};
 
-    AbstractBranchPredictorUnit &BPU;
+    AbstractBranchPredictorUnit *BPU;
     MetadataRegistry &MD;
 
     // Whenever a branch instruction is executed, we run the branch predictor 
@@ -48,9 +49,32 @@ class MCADFetchDelayStage : public llvm::mca::Stage {
     std::optional<MDInstrAddr> previousInstrAddr = std::nullopt;
     std::optional<unsigned> previousInstrSize = std::nullopt;
 
+public: 
+    // Stats
+    // TODO: Move these elsewhere, as they are useful outside of just branch
+    // prediction or the FetchDelayStage; we could also make use of the event
+    // infrastructure that already exists (grep for STALL event)
+    struct OverflowableCount {
+        unsigned long long count;
+        bool overflowed;
+        void inc() {
+            if(count + 1 < count) {
+                overflowed = true;
+            }
+            count++;
+        }
+    };
+
+    struct Statistics {
+        OverflowableCount numBranches = {};
+        OverflowableCount numMispredictions = {};
+    };
+
+    Statistics stats = {};
+
 public:
     MCADFetchDelayStage(const llvm::MCInstrInfo &MCII, MetadataRegistry &MD,
-                        AbstractBranchPredictorUnit &BPU,
+                        AbstractBranchPredictorUnit *BPU,
                         std::optional<CacheUnit> CU = std::nullopt)
         : MCII(MCII), MD(MD), BPU(BPU), CU(std::move(CU)) {}
 
@@ -61,6 +85,9 @@ public:
     llvm::Error cycleStart() override;
 
     llvm::Error forwardDueInstrs();
+
+    bool enableInstructionCacheModeling = true;
+    bool enableBranchPredictorModeling = true;
 
 };
 

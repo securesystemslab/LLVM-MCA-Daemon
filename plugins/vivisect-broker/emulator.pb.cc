@@ -88,7 +88,8 @@ inline constexpr EmulatorActions_Instruction::Impl_::Impl_(
             ::_pbi::ConstantInitialized()),
         memory_access_{nullptr},
         branch_flow_{nullptr},
-        addr_{::uint64_t{0u}} {}
+        addr_{::uint64_t{0u}},
+        size_{0u} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR EmulatorActions_Instruction::EmulatorActions_Instruction(::_pbi::ConstantInitialized)
@@ -169,8 +170,10 @@ const ::uint32_t TableStruct_emulator_2eproto::offsets[] PROTOBUF_SECTION_VARIAB
     ~0u,  // no sizeof(Split)
     PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, _impl_.opcode_),
     PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, _impl_.addr_),
+    PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, _impl_.size_),
     PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, _impl_.memory_access_),
     PROTOBUF_FIELD_OFFSET(::EmulatorActions_Instruction, _impl_.branch_flow_),
+    ~0u,
     ~0u,
     ~0u,
     0,
@@ -191,8 +194,8 @@ static const ::_pbi::MigrationSchema
         {0, 9, -1, sizeof(::NextAction)},
         {10, -1, -1, sizeof(::EmulatorActions_MemoryAccess)},
         {21, -1, -1, sizeof(::EmulatorActions_BranchFlow)},
-        {30, 42, -1, sizeof(::EmulatorActions_Instruction)},
-        {46, -1, -1, sizeof(::EmulatorActions)},
+        {30, 43, -1, sizeof(::EmulatorActions_Instruction)},
+        {48, -1, -1, sizeof(::EmulatorActions)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -205,24 +208,24 @@ static const ::_pb::Message* const file_default_instances[] = {
 const char descriptor_table_protodef_emulator_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
     "\n\016emulator.proto\"@\n\nNextAction\022\035\n\020num_in"
     "structions\030\001 \001(\005H\000\210\001\001B\023\n\021_num_instructio"
-    "ns\"\353\002\n\017EmulatorActions\0222\n\014instructions\030\001"
+    "ns\"\371\002\n\017EmulatorActions\0222\n\014instructions\030\001"
     " \003(\0132\034.EmulatorActions.Instruction\032=\n\014Me"
     "moryAccess\022\r\n\005vaddr\030\001 \001(\004\022\014\n\004size\030\002 \001(\r\022"
     "\020\n\010is_store\030\003 \001(\010\032#\n\nBranchFlow\022\025\n\ris_mi"
-    "spredict\030\001 \001(\010\032\277\001\n\013Instruction\022\016\n\006opcode"
-    "\030\001 \001(\014\022\014\n\004addr\030\002 \001(\004\0229\n\rmemory_access\030\003 "
-    "\001(\0132\035.EmulatorActions.MemoryAccessH\000\210\001\001\022"
-    "5\n\013branch_flow\030\004 \001(\0132\033.EmulatorActions.B"
-    "ranchFlowH\001\210\001\001B\020\n\016_memory_accessB\016\n\014_bra"
-    "nch_flow2B\n\010Emulator\0226\n\025RecordEmulatorAc"
-    "tions\022\020.EmulatorActions\032\013.NextActionb\006pr"
-    "oto3"
+    "spredict\030\001 \001(\010\032\315\001\n\013Instruction\022\016\n\006opcode"
+    "\030\001 \001(\014\022\014\n\004addr\030\002 \001(\004\022\014\n\004size\030\003 \001(\r\0229\n\rme"
+    "mory_access\030\004 \001(\0132\035.EmulatorActions.Memo"
+    "ryAccessH\000\210\001\001\0225\n\013branch_flow\030\005 \001(\0132\033.Emu"
+    "latorActions.BranchFlowH\001\210\001\001B\020\n\016_memory_"
+    "accessB\016\n\014_branch_flow2B\n\010Emulator\0226\n\025Re"
+    "cordEmulatorActions\022\020.EmulatorActions\032\013."
+    "NextActionb\006proto3"
 };
 static ::absl::once_flag descriptor_table_emulator_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_emulator_2eproto = {
     false,
     false,
-    524,
+    538,
     descriptor_table_protodef_emulator_2eproto,
     "emulator.proto",
     &descriptor_table_emulator_2eproto_once,
@@ -880,7 +883,13 @@ EmulatorActions_Instruction::EmulatorActions_Instruction(
   _impl_.branch_flow_ = (cached_has_bits & 0x00000002u)
                 ? CreateMaybeMessage<::EmulatorActions_BranchFlow>(arena, *from._impl_.branch_flow_)
                 : nullptr;
-  _impl_.addr_ = from._impl_.addr_;
+  ::memcpy(reinterpret_cast<char *>(&_impl_) +
+               offsetof(Impl_, addr_),
+           reinterpret_cast<const char *>(&from._impl_) +
+               offsetof(Impl_, addr_),
+           offsetof(Impl_, size_) -
+               offsetof(Impl_, addr_) +
+               sizeof(Impl_::size_));
 
   // @@protoc_insertion_point(copy_constructor:EmulatorActions.Instruction)
 }
@@ -895,9 +904,9 @@ inline void EmulatorActions_Instruction::SharedCtor(::_pb::Arena* arena) {
   ::memset(reinterpret_cast<char *>(&_impl_) +
                offsetof(Impl_, memory_access_),
            0,
-           offsetof(Impl_, addr_) -
+           offsetof(Impl_, size_) -
                offsetof(Impl_, memory_access_) +
-               sizeof(Impl_::addr_));
+               sizeof(Impl_::size_));
 }
 EmulatorActions_Instruction::~EmulatorActions_Instruction() {
   // @@protoc_insertion_point(destructor:EmulatorActions.Instruction)
@@ -931,7 +940,9 @@ PROTOBUF_NOINLINE void EmulatorActions_Instruction::Clear() {
       _impl_.branch_flow_->Clear();
     }
   }
-  _impl_.addr_ = ::uint64_t{0u};
+  ::memset(&_impl_.addr_, 0, static_cast<::size_t>(
+      reinterpret_cast<char*>(&_impl_.size_) -
+      reinterpret_cast<char*>(&_impl_.addr_)) + sizeof(_impl_.size_));
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
@@ -944,32 +955,38 @@ const char* EmulatorActions_Instruction::_InternalParse(
 
 
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 4, 2, 0, 2> EmulatorActions_Instruction::_table_ = {
+const ::_pbi::TcParseTable<3, 5, 2, 0, 2> EmulatorActions_Instruction::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_._has_bits_),
     0, // no _extensions_
-    4, 24,  // max_field_number, fast_idx_mask
+    5, 56,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967280,  // skipmap
+    4294967264,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    4,  // num_field_entries
+    5,  // num_field_entries
     2,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     &_EmulatorActions_Instruction_default_instance_._instance,
     ::_pbi::TcParser::GenericFallback,  // fallback
   }, {{
-    // optional .EmulatorActions.BranchFlow branch_flow = 4;
-    {::_pbi::TcParser::FastMtS1,
-     {34, 1, 1, PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.branch_flow_)}},
+    {::_pbi::TcParser::MiniParse, {}},
     // bytes opcode = 1;
     {::_pbi::TcParser::FastBS1,
      {10, 63, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.opcode_)}},
     // uint64 addr = 2;
     {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(EmulatorActions_Instruction, _impl_.addr_), 63>(),
      {16, 63, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.addr_)}},
-    // optional .EmulatorActions.MemoryAccess memory_access = 3;
+    // uint32 size = 3;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(EmulatorActions_Instruction, _impl_.size_), 63>(),
+     {24, 63, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.size_)}},
+    // optional .EmulatorActions.MemoryAccess memory_access = 4;
     {::_pbi::TcParser::FastMtS1,
-     {26, 0, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.memory_access_)}},
+     {34, 0, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.memory_access_)}},
+    // optional .EmulatorActions.BranchFlow branch_flow = 5;
+    {::_pbi::TcParser::FastMtS1,
+     {42, 1, 1, PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.branch_flow_)}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
   }}, {{
     65535, 65535
   }}, {{
@@ -979,10 +996,13 @@ const ::_pbi::TcParseTable<2, 4, 2, 0, 2> EmulatorActions_Instruction::_table_ =
     // uint64 addr = 2;
     {PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.addr_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
-    // optional .EmulatorActions.MemoryAccess memory_access = 3;
+    // uint32 size = 3;
+    {PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.size_), -1, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kUInt32)},
+    // optional .EmulatorActions.MemoryAccess memory_access = 4;
     {PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.memory_access_), _Internal::kHasBitsOffset + 0, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
-    // optional .EmulatorActions.BranchFlow branch_flow = 4;
+    // optional .EmulatorActions.BranchFlow branch_flow = 5;
     {PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.branch_flow_), _Internal::kHasBitsOffset + 1, 1,
     (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
   }}, {{
@@ -1012,18 +1032,25 @@ const ::_pbi::TcParseTable<2, 4, 2, 0, 2> EmulatorActions_Instruction::_table_ =
         2, this->_internal_addr(), target);
   }
 
+  // uint32 size = 3;
+  if (this->_internal_size() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
+        3, this->_internal_size(), target);
+  }
+
   cached_has_bits = _impl_._has_bits_[0];
-  // optional .EmulatorActions.MemoryAccess memory_access = 3;
+  // optional .EmulatorActions.MemoryAccess memory_access = 4;
   if (cached_has_bits & 0x00000001u) {
     target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
-        3, _Internal::memory_access(this),
+        4, _Internal::memory_access(this),
         _Internal::memory_access(this).GetCachedSize(), target, stream);
   }
 
-  // optional .EmulatorActions.BranchFlow branch_flow = 4;
+  // optional .EmulatorActions.BranchFlow branch_flow = 5;
   if (cached_has_bits & 0x00000002u) {
     target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
-        4, _Internal::branch_flow(this),
+        5, _Internal::branch_flow(this),
         _Internal::branch_flow(this).GetCachedSize(), target, stream);
   }
 
@@ -1052,13 +1079,13 @@ const ::_pbi::TcParseTable<2, 4, 2, 0, 2> EmulatorActions_Instruction::_table_ =
 
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000003u) {
-    // optional .EmulatorActions.MemoryAccess memory_access = 3;
+    // optional .EmulatorActions.MemoryAccess memory_access = 4;
     if (cached_has_bits & 0x00000001u) {
       total_size +=
           1 + ::google::protobuf::internal::WireFormatLite::MessageSize(*_impl_.memory_access_);
     }
 
-    // optional .EmulatorActions.BranchFlow branch_flow = 4;
+    // optional .EmulatorActions.BranchFlow branch_flow = 5;
     if (cached_has_bits & 0x00000002u) {
       total_size +=
           1 + ::google::protobuf::internal::WireFormatLite::MessageSize(*_impl_.branch_flow_);
@@ -1069,6 +1096,12 @@ const ::_pbi::TcParseTable<2, 4, 2, 0, 2> EmulatorActions_Instruction::_table_ =
   if (this->_internal_addr() != 0) {
     total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
         this->_internal_addr());
+  }
+
+  // uint32 size = 3;
+  if (this->_internal_size() != 0) {
+    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
+        this->_internal_size());
   }
 
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
@@ -1107,6 +1140,9 @@ void EmulatorActions_Instruction::MergeImpl(::google::protobuf::Message& to_msg,
   if (from._internal_addr() != 0) {
     _this->_internal_set_addr(from._internal_addr());
   }
+  if (from._internal_size() != 0) {
+    _this->_internal_set_size(from._internal_size());
+  }
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -1132,8 +1168,8 @@ void EmulatorActions_Instruction::InternalSwap(EmulatorActions_Instruction* PROT
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.opcode_, &other->_impl_.opcode_, arena);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.addr_)
-      + sizeof(EmulatorActions_Instruction::_impl_.addr_)
+      PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.size_)
+      + sizeof(EmulatorActions_Instruction::_impl_.size_)
       - PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.memory_access_)>(
           reinterpret_cast<char*>(&_impl_.memory_access_),
           reinterpret_cast<char*>(&other->_impl_.memory_access_));

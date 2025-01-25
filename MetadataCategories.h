@@ -29,15 +29,16 @@ MD_BinaryRegionMarkers
 
 struct MDInstrAddr {
     unsigned long long addr;
+    unsigned size;
 
     const bool operator<(const MDInstrAddr &b) const {
-        return addr < b.addr;
+        return addr + size < b.addr;
     }
     const bool operator==(const MDInstrAddr &b) const {
-        return addr == b.addr;
+        return addr == b.addr && size == b.size;
     }
     const bool operator!=(const MDInstrAddr &b) const {
-        return addr != b.addr;
+        return addr != b.addr || size != b.size;
     }
 };
 

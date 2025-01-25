@@ -48,46 +48,52 @@ llvm::Error MCADFetchDelayStage::execute(llvm::mca::InstRef &IR) {
     bool immediatelyExecute = true;
     unsigned delayCyclesLeft = 0;
     std::optional<MDInstrAddr> instrAddr = getMDInstrAddrForInstr(MD, IR);
-    std::optional<unsigned> instrSize = MCID.getSize(); 
-    assert(MCID.getSize() > 0);
+    // assert(MCID.getSize() > 0);
+    // There may be some instructions whose size is unknown at this time;  those will have size zero.
+    // For example, even if we know the instruction opcode in x86, different operands (reg vs. mem vs. imm)
+    // will have encodings of different sizes.
 
     // fetch instruction from the cache
-    if(CU.has_value()) {
+    if(CU.has_value() && instrAddr.has_value()) {
         delayCyclesLeft += CU->load(*instrAddr);
     }
 
-    // Check if previous instruction was a branch, and if so if the predicted
-    // branch target matched what we ended up executing
-    if(predictedBranchDirection.has_value() && instrAddr.has_value() && previousInstrAddr.has_value() && previousInstrSize.has_value()) {
-        bool fellThrough = instrAddr->addr == (previousInstrAddr->addr + *previousInstrSize); 
-        AbstractBranchPredictorUnit::BranchDirection actualBranchDirection = 
-            (fellThrough ? AbstractBranchPredictorUnit::NOT_TAKEN 
-                         : AbstractBranchPredictorUnit::TAKEN);
-        BPU.recordTakenBranch(*previousInstrAddr, actualBranchDirection);
-
-        if(actualBranchDirection != predictedBranchDirection) {
-            // Previous prediction was wrong; this instruction will have extra
-            // latency due to misprediction.
-            delayCyclesLeft += BPU.getMispredictionPenalty();
-            LLVM_DEBUG(dbgs() << "[MCAD FetchDelayStage] Previous branch at "); 
-            LLVM_DEBUG(dbgs().write_hex(instrAddr->addr));
-            LLVM_DEBUG(dbgs() << " mispredicted, delaying next instruction by " 
-                       << delayCyclesLeft << " cycle(s).\n");
+    if(BPU && enableBranchPredictorModeling) {
+        // Check if previous instruction was a branch, and if so if the predicted
+        // branch target matched what we ended up executing
+        if(predictedBranchDirection.has_value() && instrAddr.has_value() && previousInstrAddr.has_value()) {
+            bool fellThrough = instrAddr->addr == (previousInstrAddr->addr + previousInstrAddr->size); 
+            AbstractBranchPredictorUnit::BranchDirection actualBranchDirection =
+                (fellThrough ? AbstractBranchPredictorUnit::NOT_TAKEN 
+                            : AbstractBranchPredictorUnit::TAKEN);
+            BPU->recordTakenBranch(*previousInstrAddr, actualBranchDirection);
+            
+            stats.numBranches.inc();
+            if(actualBranchDirection != predictedBranchDirection) {
+                // Previous prediction was wrong; this instruction will have extra
+                // latency due to misprediction.
+                delayCyclesLeft += BPU->getMispredictionPenalty();
+                stats.numMispredictions.inc();
+                LLVM_DEBUG(dbgs() << "[MCAD FetchDelayStage] Previous branch at "); 
+                LLVM_DEBUG(dbgs().write_hex(instrAddr->addr));
+                LLVM_DEBUG(dbgs() << " mispredicted, delaying next instruction by " 
+                        << delayCyclesLeft << " cycle(s).\n");
+            } else {
+                LLVM_DEBUG(dbgs() << "[MCAD FetchDelayStage] Previous branch at ");
+                LLVM_DEBUG(dbgs().write_hex(instrAddr->addr));
+                LLVM_DEBUG(dbgs() << " predicted correctly.\n" );
+            }
+        }
+        // Update branch prediction state
+        if(MCID.isBranch() && instrAddr.has_value()) {
+            predictedBranchDirection = BPU->predictBranch(*instrAddr);
         } else {
-            LLVM_DEBUG(dbgs() << "[MCAD FetchDelayStage] Previous branch at ");
-            LLVM_DEBUG(dbgs().write_hex(instrAddr->addr));
-            LLVM_DEBUG(dbgs() << " predicted correctly.\n" );
+            predictedBranchDirection = std::nullopt;
         }
     }
-    // Update branch prediction state
-    if(MCID.isBranch() && instrAddr.has_value()) {
-        predictedBranchDirection = BPU.predictBranch(*instrAddr);
-    } else {
-        predictedBranchDirection = std::nullopt;
-    }
+
     instrQueue.emplace_back(DelayedInstr { delayCyclesLeft, IR });
     previousInstrAddr = instrAddr;
-    previousInstrSize = instrSize;
     // if the instruction is not delayed, execute it immediately (it will
     // have a delayCyclesLeft of 0 and be at the top of the queue)
     return forwardDueInstrs();
