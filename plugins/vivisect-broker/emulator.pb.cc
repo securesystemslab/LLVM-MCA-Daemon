@@ -89,7 +89,7 @@ inline constexpr EmulatorActions_Instruction::Impl_::Impl_(
         memory_access_{nullptr},
         branch_flow_{nullptr},
         addr_{::uint64_t{0u}},
-        size_{::uint64_t{0u}} {}
+        size_{0u} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR EmulatorActions_Instruction::EmulatorActions_Instruction(::_pbi::ConstantInitialized)
@@ -213,7 +213,7 @@ const char descriptor_table_protodef_emulator_2eproto[] PROTOBUF_SECTION_VARIABL
     "moryAccess\022\r\n\005vaddr\030\001 \001(\004\022\014\n\004size\030\002 \001(\r\022"
     "\020\n\010is_store\030\003 \001(\010\032#\n\nBranchFlow\022\025\n\ris_mi"
     "spredict\030\001 \001(\010\032\315\001\n\013Instruction\022\016\n\006opcode"
-    "\030\001 \001(\014\022\014\n\004addr\030\002 \001(\004\022\014\n\004size\030\003 \001(\004\0229\n\rme"
+    "\030\001 \001(\014\022\014\n\004addr\030\002 \001(\004\022\014\n\004size\030\003 \001(\r\0229\n\rme"
     "mory_access\030\004 \001(\0132\035.EmulatorActions.Memo"
     "ryAccessH\000\210\001\001\0225\n\013branch_flow\030\005 \001(\0132\033.Emu"
     "latorActions.BranchFlowH\001\210\001\001B\020\n\016_memory_"
@@ -976,8 +976,8 @@ const ::_pbi::TcParseTable<3, 5, 2, 0, 2> EmulatorActions_Instruction::_table_ =
     // uint64 addr = 2;
     {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(EmulatorActions_Instruction, _impl_.addr_), 63>(),
      {16, 63, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.addr_)}},
-    // uint64 size = 3;
-    {::_pbi::TcParser::SingularVarintNoZag1<::uint64_t, offsetof(EmulatorActions_Instruction, _impl_.size_), 63>(),
+    // uint32 size = 3;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(EmulatorActions_Instruction, _impl_.size_), 63>(),
      {24, 63, 0, PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.size_)}},
     // optional .EmulatorActions.MemoryAccess memory_access = 4;
     {::_pbi::TcParser::FastMtS1,
@@ -996,9 +996,9 @@ const ::_pbi::TcParseTable<3, 5, 2, 0, 2> EmulatorActions_Instruction::_table_ =
     // uint64 addr = 2;
     {PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.addr_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
-    // uint64 size = 3;
+    // uint32 size = 3;
     {PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.size_), -1, 0,
-    (0 | ::_fl::kFcSingular | ::_fl::kUInt64)},
+    (0 | ::_fl::kFcSingular | ::_fl::kUInt32)},
     // optional .EmulatorActions.MemoryAccess memory_access = 4;
     {PROTOBUF_FIELD_OFFSET(EmulatorActions_Instruction, _impl_.memory_access_), _Internal::kHasBitsOffset + 0, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
@@ -1032,10 +1032,10 @@ const ::_pbi::TcParseTable<3, 5, 2, 0, 2> EmulatorActions_Instruction::_table_ =
         2, this->_internal_addr(), target);
   }
 
-  // uint64 size = 3;
+  // uint32 size = 3;
   if (this->_internal_size() != 0) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteUInt64ToArray(
+    target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
         3, this->_internal_size(), target);
   }
 
@@ -1098,9 +1098,9 @@ const ::_pbi::TcParseTable<3, 5, 2, 0, 2> EmulatorActions_Instruction::_table_ =
         this->_internal_addr());
   }
 
-  // uint64 size = 3;
+  // uint32 size = 3;
   if (this->_internal_size() != 0) {
-    total_size += ::_pbi::WireFormatLite::UInt64SizePlusOne(
+    total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
         this->_internal_size());
   }
 

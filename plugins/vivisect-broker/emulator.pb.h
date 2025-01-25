@@ -826,14 +826,14 @@ class EmulatorActions_Instruction final :
   void _internal_set_addr(::uint64_t value);
 
   public:
-  // uint64 size = 3;
+  // uint32 size = 3;
   void clear_size() ;
-  ::uint64_t size() const;
-  void set_size(::uint64_t value);
+  ::uint32_t size() const;
+  void set_size(::uint32_t value);
 
   private:
-  ::uint64_t _internal_size() const;
-  void _internal_set_size(::uint64_t value);
+  ::uint32_t _internal_size() const;
+  void _internal_set_size(::uint32_t value);
 
   public:
   // @@protoc_insertion_point(class_scope:EmulatorActions.Instruction)
@@ -865,7 +865,7 @@ class EmulatorActions_Instruction final :
     ::EmulatorActions_MemoryAccess* memory_access_;
     ::EmulatorActions_BranchFlow* branch_flow_;
     ::uint64_t addr_;
-    ::uint64_t size_;
+    ::uint32_t size_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -1283,24 +1283,24 @@ inline void EmulatorActions_Instruction::_internal_set_addr(::uint64_t value) {
   _impl_.addr_ = value;
 }
 
-// uint64 size = 3;
+// uint32 size = 3;
 inline void EmulatorActions_Instruction::clear_size() {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
-  _impl_.size_ = ::uint64_t{0u};
+  _impl_.size_ = 0u;
 }
-inline ::uint64_t EmulatorActions_Instruction::size() const {
+inline ::uint32_t EmulatorActions_Instruction::size() const {
   // @@protoc_insertion_point(field_get:EmulatorActions.Instruction.size)
   return _internal_size();
 }
-inline void EmulatorActions_Instruction::set_size(::uint64_t value) {
+inline void EmulatorActions_Instruction::set_size(::uint32_t value) {
   _internal_set_size(value);
   // @@protoc_insertion_point(field_set:EmulatorActions.Instruction.size)
 }
-inline ::uint64_t EmulatorActions_Instruction::_internal_size() const {
+inline ::uint32_t EmulatorActions_Instruction::_internal_size() const {
   PROTOBUF_TSAN_READ(&_impl_._tsan_detect_race);
   return _impl_.size_;
 }
-inline void EmulatorActions_Instruction::_internal_set_size(::uint64_t value) {
+inline void EmulatorActions_Instruction::_internal_set_size(::uint32_t value) {
   PROTOBUF_TSAN_WRITE(&_impl_._tsan_detect_race);
   ;
   _impl_.size_ = value;
