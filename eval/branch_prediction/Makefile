@@ -2,24 +2,24 @@ perf?=/usr/lib/linux-tools-5.15.0-130/perf  # Path to perf binary $(which perf)
 # May be hard-coded like this when using a modified kernel and the corresponding
 # linux-tools aren't installed (at your own risk)
 
+BP_TARGETS=bp_0 bp_1 bp_2 bp_3 bp_4 bp_5 bp_6 bp_7 bp_8
+
 .PHONY: all
-all: bp_random bp_deterministic
+all: $(BP_TARGETS)
 
-bp_deterministic.S: gen_bp.py
-	./gen_bp.py 0 > $@
+bp_%.S: gen_bp.py
+	./gen_bp.py $* > $@
 
-bp_random.S: gen_bp.py
-	./gen_bp.py 1 > $@
-
+.NOTINTERMEDIATE: $(BP_TARGETS:%=%.S)
 bp_%: bp_%.S
 	gcc -no-pie -nostdlib -O0 -o $@ $<
 
 .PHONY: eval
-eval: bp_random.perf bp_deterministic.perf
+eval: $(BP_TARGETS:%=eval_%.txt)
 
-%.perf: %
-	$(perf) record -o $@ -F max -e cycles,branches,branch-misses,cache-misses ./$^ 
+eval_%.txt: %
+	$(perf) stat -e cycles,branches,branch-misses ./$^ 2>&1 | tee $@
 
 .PHONY: clean
 clean:
-	rm bp_deterministic bp_deterministic.S bp_random bp_random.S bp_random.perf bp_deterministic.perf
+	rm bp_* eval_*.txt
