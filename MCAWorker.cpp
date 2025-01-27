@@ -194,12 +194,12 @@ std::tuple<std::optional<CacheUnit>, std::optional<CacheUnit>> buildCache() {
 std::unique_ptr<AbstractBranchPredictorUnit> buildBranchPredictor() {
   switch(EnableBranchPredictor) {
     case Naive: {
-      auto BPU = std::make_unique<NaiveBranchPredictorUnit>(20, 20);
+      auto BPU = std::make_unique<NaiveBranchPredictorUnit>(BranchMispredictionDelay, BranchHistoryTableSize);
       // TODO: Make penalty and history table size command-line parameters
       return BPU;
     }
     case Skylake: {
-      auto BPU = std::make_unique<SkylakeBranchUnit>(20);
+      auto BPU = std::make_unique<SkylakeBranchUnit>(BranchMispredictionDelay);
       // TODO: Make penalty command-line parameter
       return BPU;
     }
