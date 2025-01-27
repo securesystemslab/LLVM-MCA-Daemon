@@ -8,7 +8,12 @@ it=10_000
 inlined_iters_p2 = 3  # 2**3 = 8
 assert it % (2**inlined_iters_p2) == 0
 assert it < 2**64
-n_randbits_p2=12  # 2**12 = 4096
+# If we have less randomness below than total iterations, the branch predictor
+# will learn form the global history: The first branch in the iteration of 8
+# can then be used to predict the behavior of the next 7, because they will all
+# use the same randomness as on an earlier iteration. It might be possible to
+# estimate the size of the global history by adjusting the amount of randomness.
+n_randbits_p2=15  # 2**12 = 4096
 
 n_random=int(sys.argv[1])  # number out of 8 that will be made random
 assert 0 <= n_random <= 8
