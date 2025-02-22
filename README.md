@@ -58,7 +58,7 @@ $ # Port mappings are different for different Brokers. 50051 - Vivisect, 50052 -
 $ docker run -p 50052:50052 mcad_dev --debug -mtriple="armv7-linux-gnueabihf" -mcpu="cortex-a57" --use-call-inst --use-return-inst --noalias=false -load-broker-plugin=/work/LLVM-MCA-Daemon/build/plugins/binja-broker/libMCADBinjaBroker.so
 ```
 
-## Usages
+## Usage
 Here is an example of using `llvm-mcad` -- the main command line tool -- with the qemu-broker Broker plugin (Please refer to the `plugins/qemu-broker` folder for more details about how to build this plugin).
 
 First, on the server side:
@@ -109,6 +109,16 @@ Here are some other important command line arguments:
  - `-load-broker-plugin=<plugin library file>`. Load a Broker plugin. This option implicitly selects the **plugin** Broker kind.
  - `-broker-plugin-arg.*`. Supply addition arguments to the Broker plugin. For example, if `-broker-plugin-arg-foo=bar` is given, the plugin will receive `-foo=bar` argument when it's registering with the core component.
  - `-cache-sim-config=<config file>`. Please refer to [this document](doc/cache-simulation.md) for more details.
+
+The following additional command line arguments are available to increase the accuracy of modeling through branch predictor and cache modeling when a dynamic trace is available.
+Please note that these are only implemented for the QEMU and Vivisect broker plugins which provide dynamic traces:
+- `-enable_cache=<0|1>`: Enable cache modeling (instruction and data caches). The following options only have an effect if cache modeling is enabled:
+   - `-num-ways`: associativity of all caches
+   - `-l1i-size`, `-l1d-size`, `-l2-size`, `l3-size`: Sizes of L1, L2 and L3 caches
+   - `-l1-latency`, `-l2-latency`, `-l3-latency`, `-memory-latency`: latency (cycle penalty paid for accesses) if a memory access has to go down to the designated level
+- `-enable-branch-predictor=<None|Naive|Skylake>`: which branch predictor model to use. The following options only have an effect if this option is not set to `None`:
+   - `-mispredict-delay`: Amount of cycles to delay fetching of the next instruction if a branch was mispredicted according to our model
+   - `-bht-size`: Size of the branch history table
 
 ## Testing
 
