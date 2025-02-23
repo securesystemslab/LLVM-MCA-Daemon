@@ -317,14 +317,18 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
   auto LSU = std::make_unique<MCADLSUnit>(SM, MCAPO.LoadQueueSize,
                                           MCAPO.StoreQueueSize,
                                           MCAPO.AssumeNoAlias, &MDRegistry, L1D);
-  CacheStats.L1DStats = &LSU->CU->stats;
+  if(LSU->CU) {
+    CacheStats.L1DStats = &LSU->CU->stats;
+  }
   auto HWS = std::make_unique<Scheduler>(SM, *LSU);
   auto BPU = buildBranchPredictor();
 
   // Create the pipeline stages.
   auto Fetch = std::make_unique<EntryStage>(SrcMgr);
   auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, BPU.get(), L1I, MaxNumIdleCycles);
-  CacheStats.L1IStats = &FetchDelay->CU->stats;
+  if(FetchDelay->CU) {
+    CacheStats.L1IStats = &FetchDelay->CU->stats;
+  }
   FetchDelayStats = &FetchDelay->stats; // TODO: ugly; move this elsewhere using hardware events
   auto Dispatch = std::make_unique<DispatchStage>(STI, MRI, MCAPO.DispatchWidth,
                                                   *RCU, *PRF);
@@ -367,13 +371,17 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
   auto LSU = std::make_unique<MCADLSUnit>(SM, MCAPO.LoadQueueSize,
                                           MCAPO.StoreQueueSize,
                                           MCAPO.AssumeNoAlias, &MDRegistry);
-  CacheStats.L1DStats = &LSU->CU->stats;
+  if(LSU->CU) {
+    CacheStats.L1DStats = &LSU->CU->stats;
+  }
   auto BPU = buildBranchPredictor();
 
   // Create the pipeline stages.
   auto Entry = std::make_unique<EntryStage>(SrcMgr);
   auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, BPU.get(), L1I, MaxNumIdleCycles);
-  CacheStats.L1IStats = &FetchDelay->CU->stats;
+  if(FetchDelay->CU) {
+    CacheStats.L1IStats = &FetchDelay->CU->stats;
+  }
   auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF, *CB, *LSU);
   auto StagePipeline = std::make_unique<Pipeline>();
 
