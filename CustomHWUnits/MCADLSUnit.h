@@ -99,14 +99,15 @@ protected:
 
   MetadataRegistry *MDRegistry;
 
-  /// The memory cache hierachy unit.
-  std::optional<CacheUnit> CU;
   /// Timer to keep track of the memory access latency.
   uint64_t clock = 0;
   /// Map from the ongoing memory request address to the time it will be done.
   std::unordered_map<uint64_t, uint64_t> ongoing_requests;
 
 public:
+  /// The memory cache hierachy unit.
+  std::optional<CacheUnit> CU;
+
   MCADLSUnit(const MCSchedModel &SM, MetadataRegistry *MDR)
       : MCADLSUnit(SM, /* LQSize */ 0, /* SQSize */ 0, /* NoAlias */ false, MDR) {}
   MCADLSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ,

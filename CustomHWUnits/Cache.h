@@ -3,6 +3,8 @@
 
 #include "CustomHWUnits/AbstractBranchPredictorUnit.h"
 #include "MetadataCategories.h"
+#include "Statistics.h"
+
 #include <map>
 #include <memory>
 
@@ -32,6 +34,15 @@ protected:
     CacheUnit() = default;
 
 public:
+
+  struct Statistics {
+    OverflowableCount numLoadMisses = {};
+    OverflowableCount numLoadCycles = {};
+    OverflowableCount numStoreCycles = {};
+  };
+
+  Statistics stats = {};
+
   CacheUnit(unsigned size, unsigned numWays, std::shared_ptr<CacheUnit> nextLevelCache, unsigned latency)
       : size(size), numWays(numWays), numLines(size / lineSize),
         numSets(numLines / numWays),
@@ -40,6 +51,7 @@ public:
         latency(latency) {
             assert(size % lineSize == 0);
             assert(nextLevelCache != nullptr);
+            assert(stats.numLoadMisses.count == 0);
         };
 
   /// Loads the cacheline from the cache.
@@ -51,7 +63,9 @@ public:
       entry = evictEntry(IA);
       *entry = getCachelineAddress(IA);
       rtn += nextLevelCache->load(IA);
+      stats.numLoadMisses.inc(1);
     }
+    stats.numLoadCycles.inc(rtn);
     return rtn;
   }
 
@@ -63,7 +77,9 @@ public:
       entry = evictEntry(IA);
       *entry = getCachelineAddress(IA);
     } 
-    return latency + nextLevelCache->store(IA); 
+    const unsigned rtn = latency + nextLevelCache->store(IA); 
+    stats.numStoreCycles.inc(rtn);
+    return rtn;
   }
 
   /// Return the entry if it is in the cache, otherwise return nullptr.

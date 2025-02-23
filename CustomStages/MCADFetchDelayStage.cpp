@@ -45,17 +45,15 @@ llvm::Error MCADFetchDelayStage::execute(llvm::mca::InstRef &IR) {
     const llvm::mca::Instruction *I = IR.getInstruction();
     const llvm::mca::InstrDesc &ID = I->getDesc();
     const llvm::MCInstrDesc &MCID = MCII.get(I->getOpcode());
-    bool immediatelyExecute = true;
+
     unsigned delayCyclesLeft = 0;
     std::optional<MDInstrAddr> instrAddr = getMDInstrAddrForInstr(MD, IR);
-    // assert(MCID.getSize() > 0);
-    // There may be some instructions whose size is unknown at this time;  those will have size zero.
-    // For example, even if we know the instruction opcode in x86, different operands (reg vs. mem vs. imm)
-    // will have encodings of different sizes.
 
     // fetch instruction from the cache
     if(CU.has_value() && instrAddr.has_value()) {
-        delayCyclesLeft += CU->load(*instrAddr);
+        const unsigned loadDelay = CU->load(*instrAddr);
+        stats.numInstrLoadCycles.inc(loadDelay);
+        delayCyclesLeft += loadDelay;
     }
 
     if(BPU && enableBranchPredictorModeling) {
@@ -68,12 +66,12 @@ llvm::Error MCADFetchDelayStage::execute(llvm::mca::InstRef &IR) {
                             : AbstractBranchPredictorUnit::TAKEN);
             BPU->recordTakenBranch(*previousInstrAddr, actualBranchDirection);
             
-            stats.numBranches.inc();
+            stats.numBranches.inc(1);
             if(actualBranchDirection != predictedBranchDirection) {
                 // Previous prediction was wrong; this instruction will have extra
                 // latency due to misprediction.
                 delayCyclesLeft += BPU->getMispredictionPenalty();
-                stats.numMispredictions.inc();
+                stats.numMispredictions.inc(1);
                 LLVM_DEBUG(dbgs() << "[MCAD FetchDelayStage] Previous branch at "); 
                 LLVM_DEBUG(dbgs().write_hex(instrAddr->addr));
                 LLVM_DEBUG(dbgs() << " mispredicted, delaying next instruction by " 
@@ -90,6 +88,13 @@ llvm::Error MCADFetchDelayStage::execute(llvm::mca::InstRef &IR) {
         } else {
             predictedBranchDirection = std::nullopt;
         }
+    }
+
+    unsigned delayCyclesSkipped = 0;
+    if(maxNumberSimulatedStallCycles > -1 && delayCyclesLeft > maxNumberSimulatedStallCycles) {
+        delayCyclesSkipped = delayCyclesLeft - maxNumberSimulatedStallCycles;
+        stats.numSkippedDelayCycles.inc(delayCyclesSkipped);
+        delayCyclesLeft = maxNumberSimulatedStallCycles;
     }
 
     instrQueue.emplace_back(DelayedInstr { delayCyclesLeft, IR });

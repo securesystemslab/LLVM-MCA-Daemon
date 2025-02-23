@@ -12,6 +12,7 @@
 #include "CustomHWUnits/AbstractBranchPredictorUnit.h"
 #include "CustomHWUnits/Cache.h"
 #include "MetadataRegistry.h"
+#include "Statistics.h"
 
 #include <vector>
 #include <queue>
@@ -27,7 +28,6 @@ class MCADFetchDelayStage : public llvm::mca::Stage {
         llvm::mca::InstRef IR;
     };
 
-
     const llvm::MCInstrInfo &MCII;
     std::deque<DelayedInstr> instrQueue = {};
 
@@ -41,33 +41,28 @@ class MCADFetchDelayStage : public llvm::mca::Stage {
     // there is a mismatch.
     // Non-branch instructions set this member to nullopt.
     std::optional<AbstractBranchPredictorUnit::BranchDirection> predictedBranchDirection = std::nullopt;
-
-    // The memory cache unit.
-    std::optional<CacheUnit> CU = std::nullopt;
     
     // Stores the address and size of the last executed instruction.
     std::optional<MDInstrAddr> previousInstrAddr = std::nullopt;
     std::optional<unsigned> previousInstrSize = std::nullopt;
 
+    // This limits the number of cycles that the FetchDelay stage will simulate
+    // a stalled fetch unit (-1 = unlimited, 0 = skip any cycles where fetch
+    // stage would be stalled). This improves MCAD runtime (fewer cycles need
+    // to be simulated) but it also reduces accuracy (other units may still
+    // perform useful work when the fetch stage is stalled).
+    int maxNumberSimulatedStallCycles = -1;
+
 public: 
-    // Stats
-    // TODO: Move these elsewhere, as they are useful outside of just branch
-    // prediction or the FetchDelayStage; we could also make use of the event
-    // infrastructure that already exists (grep for STALL event)
-    struct OverflowableCount {
-        unsigned long long count;
-        bool overflowed;
-        void inc() {
-            if(count + 1 < count) {
-                overflowed = true;
-            }
-            count++;
-        }
-    };
+
+    // The memory cache unit.
+    std::optional<CacheUnit> CU = std::nullopt;
 
     struct Statistics {
+        OverflowableCount numSkippedDelayCycles = {};
         OverflowableCount numBranches = {};
         OverflowableCount numMispredictions = {};
+        OverflowableCount numInstrLoadCycles = {};
     };
 
     Statistics stats = {};
@@ -75,8 +70,9 @@ public:
 public:
     MCADFetchDelayStage(const llvm::MCInstrInfo &MCII, MetadataRegistry &MD,
                         AbstractBranchPredictorUnit *BPU,
-                        std::optional<CacheUnit> CU = std::nullopt)
-        : MCII(MCII), MD(MD), BPU(BPU), CU(std::move(CU)) {}
+                        std::optional<CacheUnit> CU = std::nullopt,
+                        int maxNumberSimulatedStallCycles = -1)
+        : MCII(MCII), MD(MD), BPU(BPU), CU(std::move(CU)), maxNumberSimulatedStallCycles(maxNumberSimulatedStallCycles) {}
 
     bool hasWorkToComplete() const override;
     bool isAvailable(const llvm::mca::InstRef &IR) const override;

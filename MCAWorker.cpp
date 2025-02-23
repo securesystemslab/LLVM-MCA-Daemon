@@ -105,6 +105,11 @@ static cl::opt<bool>
   ShowTimelineView("mca-show-timeline-view",
                    cl::init(false));
 
+static cl::opt<int>
+  MaxNumIdleCycles("max-idle-cycles",
+                   cl::desc("Simulate at most N idle cycles in the FetchDelayStage; i.e., if a instruction stalls the pipeline for more than N cycles, do not simulate these cycles. Improves MCAD performance, reduces accuracy. Set to -1 to simulate all cycles."),
+                   cl::init(-1));
+
 static cl::opt<unsigned>
   BranchMispredictionDelay("mispredict-delay",
                            cl::desc("Delay (# cycles) added to the fetch stage of the next instruction after a branch misprediction"),
@@ -137,7 +142,7 @@ static cl::opt<unsigned>
 
 static cl::opt<unsigned>
   L1Latency("l1-latency",
-          cl::desc("Latency for accessing the L3 cache"),
+          cl::desc("Latency for accessing the L1 cache"),
           cl::init(3U));
 
 static cl::opt<unsigned>
@@ -147,7 +152,7 @@ static cl::opt<unsigned>
 
 static cl::opt<unsigned>
   L2Latency("l2-latency",
-          cl::desc("Latency for accessing the L3 cache"),
+          cl::desc("Latency for accessing the L2 cache"),
           cl::init(10U));
 
 static cl::opt<unsigned>
@@ -177,6 +182,19 @@ static cl::opt<BranchPredictor>
                                    clEnumVal(Skylake, "Predictor modeled after Intel Skylake"))
   );
 
+// FIXME: the way we are keeping these stats is obviously ugly, but let's just
+// get something working for now; a more elegant solution would be to use
+// custom hardware events and counting those -- this would also allow
+// associating these counts with individual instructions
+MCADFetchDelayStage::Statistics *FetchDelayStats = nullptr; 
+struct CacheStatistics {
+  CacheUnit::Statistics *L1IStats = nullptr;
+  CacheUnit::Statistics *L1DStats = nullptr;
+  CacheUnit::Statistics *L2Stats = nullptr;
+  CacheUnit::Statistics *L3Stats = nullptr;
+};
+struct CacheStatistics CacheStats = {};
+
 namespace {
 
 std::tuple<std::optional<CacheUnit>, std::optional<CacheUnit>> buildCache() {
@@ -188,6 +206,16 @@ std::tuple<std::optional<CacheUnit>, std::optional<CacheUnit>> buildCache() {
   auto L2 = std::make_shared<CacheUnit>(L2Size, NumWays, L3, L2Latency);
   CacheUnit L1D(L1DSize, NumWays, L2, L1Latency);
   CacheUnit L1I(L1ISize, NumWays, L2, L1Latency);
+
+  // FIXME -- yes, it's ugly to mix just one set of global statistics in here,
+  // but realistically, we're never going to call buildCache() more than once
+  // per program execution anayway
+  // The L1D and L1S stats need to be assigned after they're copied into their
+  // respective hardware units, as they are copied by value, so we'd get a 
+  // useless address if we took a pointer here.
+  ::CacheStats.L2Stats = &L2->stats;
+  ::CacheStats.L3Stats = &L3->stats;
+
   return std::make_tuple(L1I, L1D);
 }
 
@@ -210,8 +238,6 @@ std::unique_ptr<AbstractBranchPredictorUnit> buildBranchPredictor() {
 }
 
 } // anonymous namespace
-
-MCADFetchDelayStage::Statistics *FetchDelayStats = nullptr; // TODO: ugly; move this elsewhere using hardware events
 
 void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
@@ -291,12 +317,14 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createDefaultPipeline() {
   auto LSU = std::make_unique<MCADLSUnit>(SM, MCAPO.LoadQueueSize,
                                           MCAPO.StoreQueueSize,
                                           MCAPO.AssumeNoAlias, &MDRegistry, L1D);
+  CacheStats.L1DStats = &LSU->CU->stats;
   auto HWS = std::make_unique<Scheduler>(SM, *LSU);
   auto BPU = buildBranchPredictor();
 
   // Create the pipeline stages.
   auto Fetch = std::make_unique<EntryStage>(SrcMgr);
-  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, BPU.get(), L1I);
+  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, BPU.get(), L1I, MaxNumIdleCycles);
+  CacheStats.L1IStats = &FetchDelay->CU->stats;
   FetchDelayStats = &FetchDelay->stats; // TODO: ugly; move this elsewhere using hardware events
   auto Dispatch = std::make_unique<DispatchStage>(STI, MRI, MCAPO.DispatchWidth,
                                                   *RCU, *PRF);
@@ -339,11 +367,13 @@ std::unique_ptr<mca::Pipeline> MCAWorker::createInOrderPipeline() {
   auto LSU = std::make_unique<MCADLSUnit>(SM, MCAPO.LoadQueueSize,
                                           MCAPO.StoreQueueSize,
                                           MCAPO.AssumeNoAlias, &MDRegistry);
+  CacheStats.L1DStats = &LSU->CU->stats;
   auto BPU = buildBranchPredictor();
 
   // Create the pipeline stages.
   auto Entry = std::make_unique<EntryStage>(SrcMgr);
-  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, BPU.get(), L1I);
+  auto FetchDelay = std::make_unique<MCADFetchDelayStage>(MCII, MDRegistry, BPU.get(), L1I, MaxNumIdleCycles);
+  CacheStats.L1IStats = &FetchDelay->CU->stats;
   auto InOrderIssue = std::make_unique<InOrderIssueStage>(STI, *PRF, *CB, *LSU);
   auto StagePipeline = std::make_unique<Pipeline>();
 
@@ -612,10 +642,39 @@ void MCAWorker::printMCA(StringRef RegionDescription) {
     OS << "\n=== Printing report for "
        << RegionDescription << " ===\n";
 
+  auto printStat = [&](std::string msg, OverflowableCount c) {
+    OS << msg << ": " << c.count << (c.overflowed ? "(overflowed)" : "") << "\n";
+  };
+
   MCAPipelinePrinter->printReport(OS);
   if(FetchDelayStats) {
-    OS << "Branch Instructions: " << FetchDelayStats->numBranches.count << (FetchDelayStats->numBranches.overflowed ? " (overflowed)" : "") << "\n";
-    OS << "Branch Mispredictions: " << FetchDelayStats->numMispredictions.count << (FetchDelayStats->numMispredictions.overflowed ? " (overflowed)" : "") << "\n";
+    printStat("Skipped Idle Cycles", FetchDelayStats->numSkippedDelayCycles);
+    printStat("Branch Instructions", FetchDelayStats->numBranches);
+    printStat("Branch Mispredictions", FetchDelayStats->numMispredictions);
+  }
+
+  if(CacheStats.L1IStats) {
+    printStat("L1i Load Misses", CacheStats.L1IStats->numLoadMisses);
+    printStat("L1i Load Cycles", CacheStats.L1IStats->numLoadCycles);
+    printStat("L1i Store Cycles", CacheStats.L1IStats->numStoreCycles);
+  }
+
+  if(CacheStats.L1DStats) {
+    printStat("L1d Load Misses", CacheStats.L1DStats->numLoadMisses);
+    printStat("L1d Load Cycles", CacheStats.L1DStats->numLoadCycles);
+    printStat("L1d Store Cycles", CacheStats.L1DStats->numStoreCycles);
+  }
+
+  if(CacheStats.L2Stats) {
+    printStat("L2 Load Misses", CacheStats.L2Stats->numLoadMisses);
+    printStat("L2 Load Cycles", CacheStats.L2Stats->numLoadCycles);
+    printStat("L2 Store Cycles", CacheStats.L2Stats->numStoreCycles);
+  }
+
+  if(CacheStats.L3Stats) {
+    printStat("L3 Load Misses", CacheStats.L3Stats->numLoadMisses);
+    printStat("L3 Load Cycles", CacheStats.L3Stats->numLoadCycles);
+    printStat("L3 Store Cycles", CacheStats.L3Stats->numStoreCycles);
   }
 }
 
