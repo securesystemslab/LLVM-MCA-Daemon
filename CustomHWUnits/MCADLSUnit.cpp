@@ -78,6 +78,36 @@ bool MCADLSUnit::noAlias(unsigned GID,
     return assumeNoAlias();
 }
 
+bool MCADLSUnit::isInstOperandWaitingForCache(const mca::InstRef &IR) const {
+  auto MaybeMDA = getMemoryAccessMD(IR);
+  bool cacheLoadWaiting = false;
+  // Check if the memory operands are ready.
+  if (MaybeMDA && CU && ongoing_requests.count(MaybeMDA->Addr)) {
+    const int cyclesLeft = ongoing_requests.at(MaybeMDA->Addr) - clock;
+    cacheLoadWaiting = cyclesLeft > 0;
+    if (cacheLoadWaiting) {
+      LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction at index " 
+                        << IR.getSourceIndex()
+                        << " is waiting for the cache at address " << *MaybeMDA 
+                        << " for "
+                        << cyclesLeft 
+                        << " cycles.\n");
+    } else {
+      LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction at index " 
+                        << IR.getSourceIndex()
+                        << " accessing the cache at address " << *MaybeMDA 
+                        << " is ready since "
+                        << cyclesLeft 
+                        << " cycles ("
+                        << ongoing_requests.at(MaybeMDA->Addr)
+                        << " - "
+                        << clock
+                        << ").\n");
+    }
+  }
+  return cacheLoadWaiting;
+}
+
 unsigned MCADLSUnit::dispatch(const mca::InstRef &IR) {
   const mca::Instruction &IS = *IR.getInstruction();
   auto MaybeMDA = getMemoryAccessMD(IR);
@@ -90,6 +120,14 @@ unsigned MCADLSUnit::dispatch(const mca::InstRef &IR) {
     } else {
       latency = CU->load({MaybeMDA->Addr});
     }
+    LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction at index " 
+                      << IR.getSourceIndex()
+                      << " accessing the cache at address " << *MaybeMDA 
+                      << " has latency "
+                      << latency 
+                      << ". It is now "
+                      << clock
+                      << ".\n");
     // We can update the ongoing requests directly.
     // If there are are multiple concurrent requests to the same address,
     // it wouldn't affect the final simulation result by much.
@@ -244,18 +282,6 @@ MCADLSUnit::Status MCADLSUnit::isAvailable(const mca::InstRef &IR) const {
   if (isStore(IS, MaybeMDA) && isSQFull())
     return MCADLSUnit::LSU_SQUEUE_FULL;
 
-  // Check if the memory operands are aready.
-  if (MaybeMDA && CU && ongoing_requests.count(MaybeMDA->Addr)) {
-    // FIXME: returning `LSU_LQUEUE_FULL` is a quick hack
-    if (ongoing_requests.at(MaybeMDA->Addr) > clock) {
-      LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << IR.getSourceIndex()
-                        << " is waiting for the cache at address " << *MaybeMDA << "\n");
-      return MCADLSUnit::LSU_LQUEUE_FULL;
-    }
-    LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << IR.getSourceIndex()
-                      << " is ready for the cache at address " << *MaybeMDA << "\n");
-  }
-  
   return MCADLSUnit::LSU_AVAILABLE;
 }
 

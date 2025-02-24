@@ -99,14 +99,15 @@ protected:
 
   MetadataRegistry *MDRegistry;
 
-  /// The memory cache hierachy unit.
-  std::optional<CacheUnit> CU;
   /// Timer to keep track of the memory access latency.
   uint64_t clock = 0;
   /// Map from the ongoing memory request address to the time it will be done.
   std::unordered_map<uint64_t, uint64_t> ongoing_requests;
 
 public:
+  /// The memory cache hierachy unit.
+  std::optional<CacheUnit> CU;
+
   MCADLSUnit(const MCSchedModel &SM, MetadataRegistry *MDR)
       : MCADLSUnit(SM, /* LQSize */ 0, /* SQSize */ 0, /* NoAlias */ false, MDR) {}
   MCADLSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ,
@@ -120,10 +121,12 @@ public:
 
   Status isAvailable(const mca::InstRef &IR) const override;
 
+  bool isInstOperandWaitingForCache(const mca::InstRef &IR) const;
+
   bool isReady(const mca::InstRef &IR) const override {
     unsigned GroupID = IR.getInstruction()->getLSUTokenID();
     const CustomMemoryGroup &Group = getCustomGroup(GroupID);
-    return Group.isReady();
+    return Group.isReady() && !isInstOperandWaitingForCache(IR);
   }
 
   bool isPending(const mca::InstRef &IR) const override {
@@ -135,7 +138,7 @@ public:
   bool isWaiting(const mca::InstRef &IR) const override {
     unsigned GroupID = IR.getInstruction()->getLSUTokenID();
     const CustomMemoryGroup &Group = getCustomGroup(GroupID);
-    return Group.isWaiting();
+    return Group.isWaiting() || isInstOperandWaitingForCache(IR);
   }
 
   bool hasDependentUsers(const mca::InstRef &IR) const override {
