@@ -23,6 +23,8 @@
 #include <cstdint>
 #include <numeric>
 
+#include <iostream>
+
 namespace llvm {
 namespace mcad {
 	
@@ -35,6 +37,31 @@ namespace mcad {
 		return penalty;
 	}
 
+    void SkylakeBranchUnit::printSingleTable(SkylakeBranchTable& pht) {
+        for (auto i = pht.begin(); i != pht.end(); i++) {
+            std::cout << "Index " << i->first.to_ullong() << ": ";
+            for (auto j = i->second.begin(); j != i->second.end(); j++)
+                std::cout << "(" << j->pc << ", " << j->useful << "), ";
+            std::cout << std::endl;
+        }
+
+    }
+
+    void SkylakeBranchUnit::printTable() {
+    
+/*
+        std::cout << "PHT 1\n";
+        printSingleTable(pht1);
+        std::cout << "PHT 2\n";
+        printSingleTable(pht2);
+        std::cout << "PHT 3\n";
+        printSingleTable(pht3);
+
+        std::cout << "Base\n";
+        printSingleTable(base);
+        */
+    }
+
     AbstractBranchPredictorUnit::BranchDirection SkylakeBranchUnit::predictBranch(MDInstrAddr pc) {
 		return predictBranch(pc, MDInstrAddr{0});
 	}
@@ -44,9 +71,9 @@ namespace mcad {
         // See if present in any table
         // Greedily accepts first table where present
         auto test = updatePHR(pc, target);
-		entry = getTable(pht1, getPHTIndex(test, 1, 6),      pc, entry);
-		entry = getTable(pht2, getPHTIndex(test, 10, 3),     pc, entry);
-		entry = getTable(pht3, getPHTIndex(test, 10, 3),     pc, entry);
+		entry = getTable(pht1, getPHTIndex(test, 0),      pc, entry);
+		entry = getTable(pht2, getPHTIndex(test, 3),     pc, entry);
+		entry = getTable(pht3, getPHTIndex(test, 11),     pc, entry);
         entry = getTable(base, SkylakePHR(pc.addr & 0x1FFF), pc, entry); // Check base last
 		
         if (entry != nullptr) {
@@ -66,10 +93,10 @@ namespace mcad {
 		
 		auto exists = pht.find(index);
 		if (exists != pht.end())
-			// If index exists, put into that table
 			for (int i = 0; i < exists->second.size(); i++)
-				if (exists->second[i].pc == pc.addr && exists->second[i].useful > 0)
-					return &exists->second[i];
+				if (exists->second[i].pc == pc.addr) 
+                    return &exists->second[i];
+                
 		return out;
 	}
 
@@ -126,30 +153,72 @@ namespace mcad {
         // PHTs
 	 	// See page 9 of H&H
         phr = updatePHR(pc, target);
-		insertTable(pht1, pc, getPHTIndex(phr, 1, 6)); 
-		insertTable(pht2, pc, getPHTIndex(phr, 10, 3));
-		insertTable(pht3, pc, getPHTIndex(phr, 10, 3));
+		insertTable(pht1, pc, getPHTIndex(phr, 0)); 
+		insertTable(pht2, pc, getPHTIndex(phr, 3));
+		insertTable(pht3, pc, getPHTIndex(phr, 11));
 	}
 
 
     // Each table has its own indexing
     // Work in progress
-    SkylakeBranchUnit::SkylakePHR SkylakeBranchUnit::getPHTIndex(SkylakePHR phr, int start1, int start2) {
-		// Convert PHR to the index for a PHT table
-        const SkylakePHR base("101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101");
+	// Convert PHR to the index for a PHT table
+    SkylakeBranchUnit::SkylakePHR SkylakeBranchUnit::getPHTIndex(SkylakePHR phr, int hist_length) { //int start1, int start2) {
+        SkylakePHR base;
+        // Make mask of 1010...
+        /*
+        for (int _ = 0; _ < 38; _++) {
+            base |= 5;
+            base = base << 4;
+        }
 
 		
 		// Get range of bits from 16(i)-6 to 16(i)+8
-		auto index = base << (93 - (start1+14));
-        index = index >> (93-14-start1);
+		auto index = base << (PHR_LENGTH - (start1+14));
+        index = index >> (PHR_LENGTH-14-start1);
         index &= phr;
 		
-		auto index2 = base << (93 - (start2+14));
-        index2 = index2 >> (93-14-start2);
+		auto index2 = base << (PHR_LENGTH - (start2+14));
+        index2 = index2 >> (PHR_LENGTH-14-start2);
         index2 &= phr;
 
 		// xor two indices together to get final index
 		return index ^ index2;
+        */
+        if (hist_length == 0) {
+            SkylakePHR index1, index2;
+            int start = 6;
+            int end = 20;
+            for (int index = start; index <= end; index += 2) {
+                index1[0] = phr[index];
+                index1 = index1 << 1;
+            }
+            start = 1;
+            end = 15;
+            for (int index = start; index <= end; index += 2) {
+                index2[0] = phr[index];
+                index2 = index2 << 1;
+            }
+
+        }
+        SkylakePHR result;
+        for (int i = 1; i <= hist_length; i++) {
+            SkylakePHR index1, index2;
+            int start = (16*i) - 6;
+            int end = (16*i) + 8;
+            for (int index = start; index <= end; index += 2) {
+                index1[0] = phr[index];
+                index1 = index1 << 1;
+            }
+            start = (16*i) - 13;
+            end = (16*i) + 1;
+            for (int index = start; index <= end; index += 2) {
+                index2[0] = phr[index];
+                index2 = index2 << 1;
+            }
+            result = result ^ index1 ^ index2;
+        }
+        return result;
+
 	}
 
 	// Part of PHR
