@@ -31,7 +31,7 @@ namespace llvm {
 		// Branch Predictor implemented according to Half&Half description
 		// of Intel Skylake Branch Predictor
 
-
+        
 		class BranchUnit {
             public:
 			virtual void recordTakenBranch(unsigned long long key, uint32_t target) = 0;
@@ -66,10 +66,13 @@ namespace llvm {
 				}
 
 			};
-        	using SkylakePHR = std::bitset<93>;
+		    const static uint32_t PHR_LENGTH = 93 * 2;
+        	using SkylakePHR = std::bitset<PHR_LENGTH>;
 			using SkylakeBranchTable = std::unordered_map<SkylakePHR, SmallVector<SkylakeBranchEntry, 4>>;		
 
 			SkylakeBranchUnit(uint32_t penalty_);
+            void printTable();
+            void printSingleTable(SkylakeBranchTable& pht);
 	        BranchDirection predictBranch(MDInstrAddr pc, MDInstrAddr target);
 	        BranchDirection predictBranch(MDInstrAddr pc) override;
 			void recordTakenBranch(MDInstrAddr pc, MDInstrAddr target);
@@ -84,7 +87,6 @@ namespace llvm {
 			SkylakeBranchTable pht3;  
             SkylakePHR phr;
 			uint32_t penalty;
-		
             
 
 			void insertTable(SkylakeBranchTable& pht, MDInstrAddr pc, SkylakePHR phr);
@@ -93,7 +95,7 @@ namespace llvm {
                                                     MDInstrAddr  pc, 
                                                     SkylakeBranchEntry* out); 
 			void phtSetPush(SkylakeBranchTable& pht, MDInstrAddr pc, SkylakePHR phr);
-	        SkylakePHR getPHTIndex(SkylakePHR phr, int start1, int start2);
+	        SkylakePHR getPHTIndex(SkylakePHR phr, int hist_length);
 			unsigned long long getFootprint(MDInstrAddr branchAddr, MDInstrAddr targetAddr);
 			SkylakePHR updatePHR(MDInstrAddr currentAddr, MDInstrAddr targetAddr);
             
