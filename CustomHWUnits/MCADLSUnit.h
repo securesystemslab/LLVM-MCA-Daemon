@@ -121,10 +121,12 @@ public:
 
   Status isAvailable(const mca::InstRef &IR) const override;
 
+  bool isInstOperandWaitingForCache(const mca::InstRef &IR) const;
+
   bool isReady(const mca::InstRef &IR) const override {
     unsigned GroupID = IR.getInstruction()->getLSUTokenID();
     const CustomMemoryGroup &Group = getCustomGroup(GroupID);
-    return Group.isReady();
+    return Group.isReady() && !isInstOperandWaitingForCache(IR);
   }
 
   bool isPending(const mca::InstRef &IR) const override {
@@ -136,7 +138,7 @@ public:
   bool isWaiting(const mca::InstRef &IR) const override {
     unsigned GroupID = IR.getInstruction()->getLSUTokenID();
     const CustomMemoryGroup &Group = getCustomGroup(GroupID);
-    return Group.isWaiting();
+    return Group.isWaiting() || isInstOperandWaitingForCache(IR);
   }
 
   bool hasDependentUsers(const mca::InstRef &IR) const override {

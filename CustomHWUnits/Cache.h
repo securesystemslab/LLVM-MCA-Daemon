@@ -88,7 +88,7 @@ public:
   virtual unsigned store(MDInstrAddr IA) {
     localClock++;
     struct CacheEntry *entry = getEntry(IA);
-    if (entry != nullptr) {
+    if (entry == nullptr) {
       entry = evictEntry(IA);
       entry->cachedAddress = getCachelineAddress(IA);
     } 
@@ -98,7 +98,7 @@ public:
     return rtn;
   }
 
-  /// Return the cacheline-agligned address.
+  /// Return the cacheline-aligned address.
   MDInstrAddr getCachelineAddress(MDInstrAddr IA) {
     MDInstrAddr rtn = IA;
     rtn.addr -= rtn.addr % lineSize;

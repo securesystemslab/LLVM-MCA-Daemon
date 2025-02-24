@@ -50,6 +50,10 @@ using namespace mcad;
 
 #define DEBUG_TYPE "llvm-mcad"
 
+
+// --------------------------------------------------------------------------
+// General Command Line Options
+
 static cl::opt<bool>
   TraceMCI("dump-trace-mc-inst", cl::desc("Dump collected MCInst in the trace"),
            cl::init(false));
@@ -94,16 +98,116 @@ static cl::opt<std::string>
   CacheConfigFile("cache-sim-config",
                   cl::desc("Path to config file for cache simulation"),
                   cl::Hidden);
-static cl::opt<bool>
-  UseLoadLatency("mca-use-load-latency",
-                 cl::desc("Use `MCSchedModel::LoadLatency` to "
-                          "model load instructions"),
-                 cl::init(true));
 
 // TODO: Put this into a separate CL option group
 static cl::opt<bool>
   ShowTimelineView("mca-show-timeline-view",
                    cl::init(false));
+
+
+// --------------------------------------------------------------------------
+// Cache Modeling Command Line Options
+
+enum CacheSimulationChoice {
+  L1i, 
+  L1d,
+  L2,
+  L3,
+};
+static cl::bits<CacheSimulationChoice>
+  EnableCache("enable-cache",
+              cl::desc("Select which parts of the cache hierarchy to model"),
+              cl::values(clEnumVal(L1i, "L1 instruction cache"),
+                         clEnumVal(L1d, "L1 data cache"),
+                         clEnumVal(L2, "L2 cache"),
+                         clEnumVal(L3, "L3 cache"))
+
+  );
+
+// For the following cache simulation options, we use the following default
+// values from our blackforest (Intel Core i9-990K) machine:
+//  L1d:                   256 KiB (8 instances)  -> 32 KB per core  -- 8-way
+//  L1i:                   256 KiB (8 instances)  -> 32 KB per core  -- 8-way
+//  L2:                    2 MiB (8 instances)                       -- 4-way 
+//  L3:                    16 MiB (1 instance)                       -- 16-way
+//
+// source: https://en.wikichip.org/wiki/intel/microarchitectures/skylake_(client)
+
+static cl::opt<unsigned>
+  NumWaysL1i("l1i-num-ways",
+             cl::desc("Number of ways of the set-associative L1 instruction cache"),
+             cl::init(8U));
+
+static cl::opt<unsigned>
+  NumWaysL1d("l1d-num-ways",
+             cl::desc("Number of ways of the set-associative L1 data cache"),
+             cl::init(8U));
+
+static cl::opt<unsigned>
+  NumWaysL2("l2-num-ways",
+            cl::desc("Number of ways of the set-associative L2 cache"),
+            cl::init(4U));
+
+static cl::opt<unsigned>
+  NumWaysL3("l3-num-ways",
+            cl::desc("Number of ways of the set-associative L2 cache"),
+            cl::init(16U));
+
+static cl::opt<unsigned>
+  L1ISize("l1i-size",
+          cl::desc("Size of the L1 Instruction cache"),
+          cl::init(32 * 1024U));
+
+static cl::opt<unsigned>
+  L1DSize("l1d-size",
+          cl::desc("Size of the L1 Data cache"),
+          cl::init(32 * 1024U));
+
+static cl::opt<unsigned>
+  L1Latency("l1-latency",
+          cl::desc("Latency for accessing the L1 cache"),
+          cl::init(3U));
+
+static cl::opt<unsigned>
+  L2Size("l2-size",
+          cl::desc("Size of the L2 cache"),
+          cl::init(2 * 1024 * 1024U));
+
+static cl::opt<unsigned>
+  L2Latency("l2-latency",
+          cl::desc("Latency for accessing the L2 cache"),
+          cl::init(10U));
+
+static cl::opt<unsigned>
+  L3Size("l3-size",
+          cl::desc("Size of the L3 cache"),
+          cl::init(16 * 1024 * 1024U));
+
+static cl::opt<unsigned>
+  L3Latency("l3-latency",
+          cl::desc("Latency for accessing the L3 cache"),
+          cl::init(30U));
+
+static cl::opt<unsigned>
+  MemoryLatency("memory-latency",
+          cl::desc("Latency for accessing the main memory"),
+          cl::init(300U));
+
+
+// --------------------------------------------------------------------------
+// Branch Predictor Command Line options
+
+enum BranchPredictor {
+  None, Naive, Skylake, IndirectBPU, LocalBPU
+};
+static cl::opt<BranchPredictor>
+  EnableBranchPredictor("enable-branch-predictor",
+                        cl::desc("Simuate the branch predictor hardware with one of the given models"),
+                        cl::init(BranchPredictor::Naive),
+                        cl::values(clEnumVal(None, "Branch predictor is not modeled"),
+                                   clEnumVal(Naive, "Naive branch predictor"),
+                                   clEnumVal(Skylake, "Predictor modeled after Intel Skylake"))
+  );
 
 static cl::opt<int>
   MaxNumIdleCycles("max-idle-cycles",
@@ -119,68 +223,10 @@ static cl::opt<unsigned>
   BranchHistoryTableSize("bht-size",
                          cl::desc("Size of the simulated branch history table for branch prediction"),
                          cl::init(10U));
+  
 
-static cl::opt<bool>
-  EnableCache("enable-cache",
-                          cl::desc("Simuate the memory cache hierachy"),
-                          cl::init(true));
-
-static cl::opt<unsigned>
-  NumWays("num-ways",
-          cl::desc("Number of ways for all the caches"),
-          cl::init(4U));
-
-static cl::opt<unsigned>
-  L1ISize("l1i-size",
-          cl::desc("Size of the L1 Instruction cache"),
-          cl::init(64 * 1024U));
-
-static cl::opt<unsigned>
-  L1DSize("l1d-size",
-          cl::desc("Size of the L1 Data cache"),
-          cl::init(64 * 1024U));
-
-static cl::opt<unsigned>
-  L1Latency("l1-latency",
-          cl::desc("Latency for accessing the L1 cache"),
-          cl::init(3U));
-
-static cl::opt<unsigned>
-  L2Size("l2-size",
-          cl::desc("Size of the L2 cache"),
-          cl::init(512 * 1024U));
-
-static cl::opt<unsigned>
-  L2Latency("l2-latency",
-          cl::desc("Latency for accessing the L2 cache"),
-          cl::init(10U));
-
-static cl::opt<unsigned>
-  L3Size("l3-size",
-          cl::desc("Size of the L3 cache"),
-          cl::init(4 * 1024 * 1024U));
-
-static cl::opt<unsigned>
-  L3Latency("l3-latency",
-          cl::desc("Latency for accessing the L3 cache"),
-          cl::init(30U));
-
-static cl::opt<unsigned>
-  MemoryLatency("memory-latency",
-          cl::desc("Latency for accessing the main memory"),
-          cl::init(300U));
-
-enum BranchPredictor {
-  None, Naive, Skylake, IndirectBPU, LocalBPU
-};
-static cl::opt<BranchPredictor>
-  EnableBranchPredictor("enable-branch-predictor",
-                        cl::desc("Simuate the branch predictor hardware with one of the given models"),
-                        cl::init(BranchPredictor::Naive),
-                        cl::values(clEnumVal(None, "Branch predictor is not modeled"),
-                                   clEnumVal(Naive, "Naive branch predictor"),
-                                   clEnumVal(Skylake, "Predictor modeled after Intel Skylake"))
-  );
+// --------------------------------------------------------------------------
+// Global Statistics
 
 // FIXME: the way we are keeping these stats is obviously ugly, but let's just
 // get something working for now; a more elegant solution would be to use
@@ -195,17 +241,42 @@ struct CacheStatistics {
 };
 struct CacheStatistics CacheStats = {};
 
+
+// --------------------------------------------------------------------------
+// Hardware Unit Creation Functions
+
 namespace {
 
 std::tuple<std::optional<CacheUnit>, std::optional<CacheUnit>> buildCache() {
-  if (!EnableCache)
+  if (!EnableCache.getBits())
     return std::make_tuple(std::nullopt, std::nullopt);
+  
+  std::optional<CacheUnit> maybeL1D = std::nullopt;
+  std::optional<CacheUnit> maybeL1I = std::nullopt;
+
+  std::shared_ptr<CacheUnit> L3 = nullptr;
+  std::shared_ptr<CacheUnit> L2 = nullptr;
 
   auto Memory = std::make_shared<MemoryUnit>(MemoryLatency);
-  auto L3 = std::make_shared<CacheUnit>(L3Size, NumWays, Memory, L3Latency);
-  auto L2 = std::make_shared<CacheUnit>(L2Size, NumWays, L3, L2Latency);
-  CacheUnit L1D(L1DSize, NumWays, L2, L1Latency);
-  CacheUnit L1I(L1ISize, NumWays, L2, L1Latency);
+
+  if (EnableCache.isSet(CacheSimulationChoice::L3)) {
+    L3 = std::make_shared<CacheUnit>(L3Size, NumWaysL3, Memory, L3Latency);
+  } else {
+    L3 = Memory;
+  }
+
+  if (EnableCache.isSet(CacheSimulationChoice::L2)) {
+    L2 = std::make_shared<CacheUnit>(L2Size, NumWaysL2, L3, L2Latency);
+  } else {
+    L2 = L3;
+  }
+
+  if (EnableCache.isSet(CacheSimulationChoice::L1i)) {
+    maybeL1I = CacheUnit(L1ISize, NumWaysL1i, L2, L1Latency);
+  }
+  if (EnableCache.isSet(CacheSimulationChoice::L1d)) {
+    maybeL1D = CacheUnit(L1DSize, NumWaysL1d, L2, L1Latency);
+  }
 
   // FIXME -- yes, it's ugly to mix just one set of global statistics in here,
   // but realistically, we're never going to call buildCache() more than once
@@ -213,10 +284,14 @@ std::tuple<std::optional<CacheUnit>, std::optional<CacheUnit>> buildCache() {
   // The L1D and L1S stats need to be assigned after they're copied into their
   // respective hardware units, as they are copied by value, so we'd get a 
   // useless address if we took a pointer here.
-  ::CacheStats.L2Stats = &L2->stats;
-  ::CacheStats.L3Stats = &L3->stats;
+  if (EnableCache.isSet(CacheSimulationChoice::L2)) {
+    ::CacheStats.L2Stats = &L2->stats;
+  }
+  if (EnableCache.isSet(CacheSimulationChoice::L3)) {
+    ::CacheStats.L3Stats = &L3->stats;
+  }
 
-  return std::make_tuple(L1I, L1D);
+  return std::make_tuple(maybeL1I, maybeL1D);
 }
 
 std::unique_ptr<AbstractBranchPredictorUnit> buildBranchPredictor() {
@@ -238,6 +313,10 @@ std::unique_ptr<AbstractBranchPredictorUnit> buildBranchPredictor() {
 }
 
 } // anonymous namespace
+
+
+// --------------------------------------------------------------------------
+// Broker Facade
 
 void BrokerFacade::setBroker(std::unique_ptr<Broker> &&B) {
   Worker.TheBroker = std::move(B);
@@ -269,6 +348,10 @@ const MCSubtargetInfo &BrokerFacade::getSTI() const {
 }
 
 SourceMgr &BrokerFacade::getSourceMgr() const { return Worker.SM; }
+
+
+// --------------------------------------------------------------------------
+// MCAWorker
 
 MCAWorker::MCAWorker(const Target &T, const MCSubtargetInfo &TheSTI,
                      mca::Context &MCA, const mca::PipelineOptions &PO,
