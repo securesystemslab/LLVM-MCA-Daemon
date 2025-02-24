@@ -106,7 +106,9 @@ public:
   }
 
   /// Returns the the index of the set that the address maps to.
-  unsigned getSetIndex(MDInstrAddr IA) { return getCachelineAddress(IA).addr % numSets; }
+  unsigned getSetIndex(MDInstrAddr IA) { 
+    return (getCachelineAddress(IA).addr / lineSize) % numSets; 
+  }
 
 private:
   /// Return the entry if it is in the cache, otherwise return nullptr.
