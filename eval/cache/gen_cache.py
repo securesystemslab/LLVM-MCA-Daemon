@@ -18,20 +18,28 @@
 #   dividing L1 cache size by 8; should se ~100,000 L1 cache misses
 
 import sys
+import argparse
+
+parser = argparse.ArgumentParser(
+    description="Generate cache assembly."
+)
+parser.add_argument("--set_size", required=True, type=int, help="Size of the active set.")
+parser.add_argument("--stride", required=True, type=int, help="Stride size.")
+args = parser.parse_args()
 
 n_to_read = 1<<30-1 # 1 GB
 
 it=10_000
 
 cache_line_size =    64  # in bytes
-active_set_size =   128  # number of cache lines that we use; once this increases past cache size, we should see a spike in cache misses
+active_set_size =   args.set_size  # number of cache lines that we use; once this increases past cache size, we should see a spike in cache misses
 
 # stride in units of `cache_line_size`; how many cache lines to stride between accesses; 1 means contiguous cache lines are accessed
 # contiguous accesses mean that the tag bits of the address are likely different between accesses;
 # meaning that there will be little contention / few conflict misses
 # making the stride large enough that only the bits outside of the tag change means that back-to-back accesses map to the
 # same cache set, leading to conflict misses once the active set size exceeds the number of ways of the cache
-stride = 24
+stride = args.stride
 
 print(f"""
 .globl	_start
