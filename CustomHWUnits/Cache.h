@@ -69,6 +69,7 @@ public:
   /// Loads the cacheline from the cache.
   /// If the cacheline is not in the cache, we will evict an entry and load the cacheline from the next level.
   virtual unsigned load(MDInstrAddr IA) {
+    IA = getCachelineAddress(IA);
     localClock++;
     unsigned rtn = latency;
     struct CacheEntry* entry = getEntry(IA);
