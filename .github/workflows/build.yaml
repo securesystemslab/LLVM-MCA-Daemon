@@ -23,5 +23,5 @@ jobs:
         run: cd LLVM-MCA-Daemon/docker && ./up
       - name: clean up - delete docker image
         if: always()  # this line is needed to make this action run even if the previous step fails
-        run: docker system prune -f  # remove image after we're done to conserve space
+        run: docker image rm mcad_dev; docker system prune -f  # remove image after we're done to conserve space
   
